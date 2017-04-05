@@ -1,6 +1,7 @@
 set(SRCS
             glad.cpp
             tests.cpp
+            common/param_package.cpp
             core/file_sys/path_parser.cpp
             )
 
@@ -12,7 +13,7 @@ create_directory_groups(${SRCS} ${HEADERS})
 include_directories(../../externals/catch/single_include/)
 
 add_executable(tests ${SRCS} ${HEADERS})
-target_link_libraries(tests core video_core audio_core common)
+target_link_libraries(tests core video_core audio_core net_core common)
 target_link_libraries(tests ${PLATFORM_LIBRARIES} Threads::Threads)
 
 add_test(NAME tests COMMAND $<TARGET_FILE:tests>)

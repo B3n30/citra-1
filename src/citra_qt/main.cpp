@@ -30,6 +30,8 @@
 #include "citra_qt/game_list.h"
 #include "citra_qt/hotkeys.h"
 #include "citra_qt/main.h"
+#include "citra_qt/multiplayer/start_server_dialog.h"
+#include "citra_qt/multiplayer/join_room_dialog.h"
 #include "citra_qt/ui_settings.h"
 #include "common/logging/backend.h"
 #include "common/logging/filter.h"
@@ -46,6 +48,7 @@
 #include "core/gdbstub/gdbstub.h"
 #include "core/loader/loader.h"
 #include "core/settings.h"
+#include "net_core/net_core.h"
 #include "video_core/video_core.h"
 
 #ifdef QT_STATICPLUGIN
@@ -68,6 +71,7 @@ GMainWindow::GMainWindow() : config(new Config()), emu_thread(nullptr) {
 
     ConnectMenuEvents();
     ConnectWidgetEvents();
+    ConnectMultiplayerEvents();
 
     setWindowTitle(QString("Citra %1| %2-%3")
                        .arg(Common::g_build_name, Common::g_scm_branch, Common::g_scm_desc));
@@ -283,6 +287,20 @@ void GMainWindow::ConnectMenuEvents() {
     connect(ui.action_Display_Dock_Widget_Headers, &QAction::triggered, this,
             &GMainWindow::OnDisplayTitleBars);
     connect(ui.action_Show_Status_Bar, &QAction::triggered, statusBar(), &QStatusBar::setVisible);
+
+    // Multiplayer
+    connect(ui.action_Start_Room, &QAction::triggered, this, &GMainWindow::OnStartRoom);
+    connect(ui.action_Connect_To_Room, &QAction::triggered, this, &GMainWindow::OnConnectToRoom);
+    connect(ui.action_Chat, &QAction::triggered, this, &GMainWindow::OnChat);
+}
+
+void GMainWindow::ConnectMultiplayerEvents() {
+    /*
+    TODO(B3N30): Implement those signals
+    RoomMember* member = NetCore::getRoomMember();
+    member->ConnectOnStateChanged(std::bind(&GMainWindow::OnMultiplayerStateChanged, this));
+    member->ConnectOnMessagesReceived(std::bind(&GMainWindow::OnMultiplayerMessagesReceived, this));
+    member->ConnectOnRoomChanged(std::bind(&GMainWindow::OnMultiplayerRoomChanged, this));*/
 }
 
 void GMainWindow::OnDisplayTitleBars(bool show) {
@@ -612,7 +630,6 @@ void GMainWindow::OnConfigure() {
     auto result = configureDialog.exec();
     if (result == QDialog::Accepted) {
         configureDialog.applyConfiguration();
-        render_window->ReloadSetKeymaps();
         config->Save();
     }
 }
@@ -627,6 +644,26 @@ void GMainWindow::OnCreateGraphicsSurfaceViewer() {
     addDockWidget(Qt::RightDockWidgetArea, graphicsSurfaceViewerWidget);
     // TODO: Maybe graphicsSurfaceViewerWidget->setFloating(true);
     graphicsSurfaceViewerWidget->show();
+}
+
+void GMainWindow::OnStartRoom() {
+    StartServerDialog start_server_dialog(this);
+    auto result = start_server_dialog.exec();
+    if (result == QDialog::Accepted) {
+        start_server_dialog.onAccept();
+    }
+}
+
+void GMainWindow::OnConnectToRoom() {
+    JoinRoomDialog join_room_dialog(this);
+    auto result = join_room_dialog.exec();
+    if (result == QDialog::Accepted) {
+        join_room_dialog.onAccept();
+    }
+}
+
+void GMainWindow::OnChat() {
+    // TODO(B3N30) : Write GUI to show room and chat
 }
 
 void GMainWindow::UpdateStatusBar() {

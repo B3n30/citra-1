@@ -78,7 +78,9 @@ void Timer::WakeupAllWaitingThreads() {
 }
 
 void Timer::Signal(int cycles_late) {
-    LOG_TRACE(Kernel, "Timer %08" PRIx64 " fired", timer_handle);
+    LOG_TRACE(Kernel, "Timer %u fired", GetObjectId());
+
+    signaled = true;
 
     // Resume all waiting threads
     WakeupAllWaitingThreads();
