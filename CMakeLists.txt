@@ -270,6 +270,7 @@ endif()
 
 # process subdirectories
 add_subdirectory(externals/soundtouch)
+add_subdirectory(externals/tunnler)
 
 enable_testing()
 

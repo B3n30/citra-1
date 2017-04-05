@@ -22,3 +22,6 @@
 [submodule "cryptopp"]
     path = externals/cryptopp/cryptopp
     url = https://github.com/weidai11/cryptopp.git
+[submodule "externals/tunnler"]
+	path = externals/tunnler
+	url = https://github.com/B3n30/tunnler

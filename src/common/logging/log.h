@@ -90,7 +90,8 @@ enum class Class : ClassType {
     Audio_Sink,        ///< Emulator audio output backend
     Loader,            ///< ROM loader
     Input,             ///< Input emulation
-    Count              ///< Total number of logging classes
+    Count,             ///< Total number of logging classes
+    Network            ///< Network emulation
 };
 
 /// Logs a message to the global logger.

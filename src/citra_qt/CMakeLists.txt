@@ -29,6 +29,8 @@ set(SRCS
             game_list.cpp
             hotkeys.cpp
             main.cpp
+            multiplayer/join_room_dialog.cpp
+            multiplayer/start_server_dialog.cpp
             ui_settings.cpp
             citra-qt.rc
             Info.plist
@@ -63,6 +65,8 @@ set(HEADERS
             game_list_p.h
             hotkeys.h
             main.h
+            multiplayer/join_room_dialog.h
+            multiplayer/start_server_dialog.h
             ui_settings.h
             )
 
@@ -79,7 +83,12 @@ set(UIS
             configure_input.ui
             hotkeys.ui
             main.ui
+            multiplayer/join_room.ui
+            multiplayer/start_server.ui
             )
+
+include_directories(../../externals/tunnler/include)
+include_directories(../../externals/tunnler/externals/RakNet/source)
 
 create_directory_groups(${SRCS} ${HEADERS} ${UIS})
 
@@ -97,7 +106,7 @@ if (APPLE)
 else()
     add_executable(citra-qt ${SRCS} ${HEADERS} ${UI_HDRS})
 endif()
-target_link_libraries(citra-qt core video_core audio_core common input_common)
+target_link_libraries(citra-qt core video_core audio_core net_core common input_common)
 target_link_libraries(citra-qt ${OPENGL_gl_LIBRARY} ${CITRA_QT_LIBS})
 target_link_libraries(citra-qt ${PLATFORM_LIBRARIES} Threads::Threads)
 
