@@ -45,7 +45,7 @@
      <x>0</x>
      <y>0</y>
      <width>1081</width>
-     <height>19</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">
@@ -97,10 +97,22 @@
     </property>
     <addaction name="action_About"/>
    </widget>
+   <widget class="QMenu" name="menu_Multiplayer">
+    <property name="enabled">
+     <bool>true</bool>
+    </property>
+    <property name="title">
+     <string>Multiplayer</string>
+    </property>
+    <addaction name="action_Start_Room"/>
+    <addaction name="action_Connect_To_Room"/>
+    <addaction name="action_Chat"/>
+   </widget>
    <addaction name="menu_File"/>
    <addaction name="menu_Emulation"/>
    <addaction name="menu_View"/>
    <addaction name="menu_Help"/>
+   <addaction name="menu_Multiplayer"/>
   </widget>
   <action name="action_Load_File">
    <property name="text">
@@ -188,6 +200,25 @@
     <string>Create Pica Surface Viewer</string>
    </property>
   </action>
+  <action name="action_Start_Room">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Create/Destory Room</string>
+   </property>
+  </action>
+  <action name="action_Connect_To_Room">
+   <property name="text">
+    <string>Connect to Room</string>
+   </property>
+  </action>
+  <action name="action_Chat">
+   <property name="text">
+    <string>Chat</string>
+   </property>
+  </action>
  </widget>
  <resources/>
+ <connections/>
 </ui>
