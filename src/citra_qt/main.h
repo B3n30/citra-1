@@ -73,7 +73,6 @@ private:
 
     void ConnectWidgetEvents();
     void ConnectMenuEvents();
-    void ConnectMultiplayerEvents();
 
     bool LoadROM(const QString& filename);
     void BootGame(const QString& filename);
@@ -128,8 +127,6 @@ private slots:
     void OnCreateGraphicsSurfaceViewer();
     void OnStartRoom();
     void OnConnectToRoom();
-    void OnChat();
-
 
 private:
     void UpdateStatusBar();

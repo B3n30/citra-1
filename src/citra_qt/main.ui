@@ -106,7 +106,6 @@
     </property>
     <addaction name="action_Start_Room"/>
     <addaction name="action_Connect_To_Room"/>
-    <addaction name="action_Chat"/>
    </widget>
    <addaction name="menu_File"/>
    <addaction name="menu_Emulation"/>
@@ -205,7 +204,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Create/Destory Room</string>
+    <string>Create Room</string>
    </property>
   </action>
   <action name="action_Connect_To_Room">

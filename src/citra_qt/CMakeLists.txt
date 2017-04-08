@@ -29,8 +29,8 @@ set(SRCS
             game_list.cpp
             hotkeys.cpp
             main.cpp
-            multiplayer/join_room_dialog.cpp
-            multiplayer/start_server_dialog.cpp
+            multiplayer/room_list_window.cpp
+            multiplayer/room_view_window.cpp
             ui_settings.cpp
             citra-qt.rc
             Info.plist
@@ -65,8 +65,8 @@ set(HEADERS
             game_list_p.h
             hotkeys.h
             main.h
-            multiplayer/join_room_dialog.h
-            multiplayer/start_server_dialog.h
+            multiplayer/room_list_window.h
+            multiplayer/room_view_window.h
             ui_settings.h
             )
 
@@ -83,8 +83,6 @@ set(UIS
             configure_input.ui
             hotkeys.ui
             main.ui
-            multiplayer/join_room.ui
-            multiplayer/start_server.ui
             )
 
 include_directories(../../externals/tunnler/include)
