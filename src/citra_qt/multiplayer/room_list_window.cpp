@@ -4,7 +4,6 @@
 
 #include "citra_qt/multiplayer/room_list_window.h"
 #include "citra_qt/multiplayer/room_view_window.h"
-#include "common/logging/log.h"
 
 #include <QGridLayout>
 #include <QLabel>
@@ -69,11 +68,9 @@ void RoomListWindow::ConnectWidgetEvents(Mode mode) {
     switch (mode) {
     case Join:
         connect(join_button, SIGNAL(clicked()), this, SLOT(OnJoin()));
-        LOG_DEBUG(Network, "connect join");
         break;
     case Create:
         connect(join_button, SIGNAL(clicked()), this, SLOT(OnCreate()));
-        LOG_DEBUG(Network, "connect create");
         break;
     }
 }
