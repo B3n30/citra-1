@@ -21,7 +21,7 @@ class RoomViewWindow : public QMainWindow {
     Q_OBJECT
 
 public:
-    explicit RoomViewWindow();
+    explicit RoomViewWindow(QWidget *parent = 0);
     ~RoomViewWindow();
 
 private:
@@ -31,14 +31,20 @@ private:
     void closeEvent(QCloseEvent* event);
     void ConnectWidgetEvents();
     void AddConnectionMessage(QString message);
-    void UpdateMemberList();
+    void ConnectRoomEvents();
     void SetUiState(bool connected);
 
 private slots:
-    void OnRefresh();
+    void OnSay();
+    void OnMessagesReceived();
     void OnStateChange();
     void OnConnected();
     void OnDisconnected();
+    void UpdateMemberList();
+
+    void InvokeOnStateChanged();
+    void InvokeOnRoomChanged();
+    void InvokeOnMessagesReceived();
 
 private:
     QWidget* chat_widget = nullptr;

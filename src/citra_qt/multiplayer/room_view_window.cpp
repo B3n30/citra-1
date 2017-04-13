@@ -2,6 +2,8 @@
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
+#include <deque>
+#include <functional>
 #include <QCloseEvent>
 #include <QHeaderView>
 #include <QMessageBox>
@@ -10,6 +12,7 @@
 #include <QStatusBar>
 
 #include "citra_qt/multiplayer/room_view_window.h"
+#include "common/logging/log.h"
 
 static void AppendHtml(QTextEdit* text_edit, QString html) {
     auto* scrollbar = text_edit->verticalScrollBar();
@@ -28,7 +31,7 @@ static void AppendHtml(QTextEdit* text_edit, QString html) {
     }
 }
 
-RoomViewWindow::RoomViewWindow() {
+RoomViewWindow::RoomViewWindow(QWidget *parent) : QMainWindow(parent) {
     InitializeWidgets();
     ConnectWidgetEvents();
 
@@ -37,6 +40,10 @@ RoomViewWindow::RoomViewWindow() {
 
     setWindowTitle(tr("Room"));
     show();
+    
+    ConnectRoomEvents();
+    OnStateChange();
+    UpdateMemberList();
 }
 
 RoomViewWindow::~RoomViewWindow() {}
@@ -110,7 +117,7 @@ void RoomViewWindow::InitializeWidgets() {
     say_line_edit = new QLineEdit(); // <item row="1" column="0" colspan="2" >
     splitter_left_layout->addWidget(say_line_edit);
 
-    say_button = new QPushButton(tr("Refresh")); // <item row="1" column="2" >
+    say_button = new QPushButton(tr("Say")); // <item row="1" column="2" >
     say_button->show();
     splitter_right_layout->addWidget(say_button);
 
@@ -155,13 +162,32 @@ void RoomViewWindow::closeEvent(QCloseEvent* event) {
 }
 
 void RoomViewWindow::ConnectWidgetEvents() {
-    connect(say_button, SIGNAL(clicked()), this, SLOT(OnRefresh()));
+    connect(say_line_edit, SIGNAL(returnPressed()), say_button, SIGNAL(clicked()));
+    connect(say_button, SIGNAL(clicked()), this, SLOT(OnSay()));
 }
 
 void RoomViewWindow::AddConnectionMessage(QString message) {
     QString html;
     html += "<font color=\"green\"><b>" + message.toHtmlEscaped() + "</b></font><br>";
     AppendHtml(chat_log, html);
+}
+
+void RoomViewWindow::ConnectRoomEvents() {
+    room_member->Connect(std::bind(&RoomViewWindow::InvokeOnStateChanged,this), RoomMember::EventType::OnStateChanged);
+    room_member->Connect(std::bind(&RoomViewWindow::InvokeOnRoomChanged,this), RoomMember::EventType::OnRoomChanged);
+    room_member->Connect(std::bind(&::RoomViewWindow::InvokeOnMessagesReceived,this), RoomMember::EventType::OnMessagesReceived);
+}
+
+void RoomViewWindow::InvokeOnStateChanged() {
+    QMetaObject::invokeMethod(this, "OnStateChange", Qt::QueuedConnection);
+}
+
+void RoomViewWindow::InvokeOnRoomChanged() {
+    QMetaObject::invokeMethod(this, "UpdateMemberList", Qt::QueuedConnection);
+}
+
+void RoomViewWindow::InvokeOnMessagesReceived() {
+    QMetaObject::invokeMethod(this, "OnMessagesReceived", Qt::QueuedConnection);
 }
 
 void RoomViewWindow::UpdateMemberList() {
@@ -209,13 +235,29 @@ void RoomViewWindow::SetUiState(bool connected) {
     } else {
         status_bar_label->setText(tr("Not connected"));
         say_line_edit->setEnabled(false);
-        item_model->clear();
+        item_model->removeRows(0, item_model->rowCount());
     }
 }
 
-void RoomViewWindow::OnRefresh() {
-    UpdateMemberList();
-    OnStateChange();
+
+void RoomViewWindow::OnSay() {
+    QString message = say_line_edit->text();
+    room_member->SendChatMessage(message.toStdString());
+    say_line_edit->setText("");
+    say_line_edit->setFocus();
+}
+
+void RoomViewWindow::OnMessagesReceived() {
+    std::deque<RoomMember::ChatEntry> entries(room_member->PopChatEntries());
+    for (auto entry : entries) {
+        QString html;
+        if (entry.nickname == room_member->GetNickname())
+            html += "<font color=\"Red\"><b>" + QString::fromStdString(entry.nickname).toHtmlEscaped() + ":</b></font> ";
+        else
+            html += "<font color=\"RoyalBlue\"><b>" + QString::fromStdString(entry.nickname).toHtmlEscaped() + ":</b></font> ";
+        html += QString::fromStdString(entry.message).toHtmlEscaped();
+        AppendHtml(chat_log, html);
+    }
 }
 
 void RoomViewWindow::OnStateChange() {
