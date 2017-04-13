@@ -203,6 +203,8 @@ static void InitializeWithVersion(Interface* self) {
 
     LOG_DEBUG(Service_NWM, "called sharedmem_size=0x%08X, version=0x%08X, sharedmem_handle=0x%08X",
               sharedmem_size, version, sharedmem_handle);
+    for (u8 i; i<16; ++i)
+        connection_status.nodes[i] = i+1;
 }
 
 /**
@@ -223,6 +225,7 @@ static void GetConnectionStatus(Interface* self) {
 
     rb.Push(RESULT_SUCCESS);
     rb.PushRaw(connection_status);
+    connection_status.changed_nodes = 0;
 
     LOG_DEBUG(Service_NWM, "called");
 }
@@ -275,21 +278,35 @@ static void Bind(Interface* self) {
 }
 
 static void PullPacket(Interface* self) {
+    LOG_DEBUG(Service_NWM, "called");
     u32* cmd_buff = Kernel::GetCommandBuffer();
-
     u32 bind_node_id = cmd_buff[1];
     u32 max_out_buf_size = cmd_buff[3];
 
     u32 out_buf_size = cmd_buff[64] >> 14;  //((out_buf_size * 8) << 14) | 2
     u32 out_buf_ptr = cmd_buff[65];
 
+    RoomMember* member = NetCore::getRoomMember();
+    u8 sender_node_id = 0;
+    u32 actual_size = 0;
+    std::deque<WifiPacket> packets = member->PopWifiPackets(WifiPacket::PacketType::Data);
+    if (packets.size() > 0) {
+        Memory::WriteBlock(out_buf_ptr, packets.at(0).data.data(), packets[0].data.size());
+        sender_node_id = 1;
+        actual_size = packets[0].data.size();
+        bind_node_events[2]->Signal();
+        LOG_WARNING(Service_NWM," actual_size=%d", actual_size);
+        if (connection_status.network_node_id != 1) {
+            sender_node_id = 2;
+        }
+    }
     cmd_buff[1] = RESULT_SUCCESS.raw; // No error
-    cmd_buff[2] = 0; // Actual data size
-    cmd_buff[3] = 0; // u16 NetworkNodeID
+    cmd_buff[2] = actual_size; // Actual data size
+    cmd_buff[3] = sender_node_id; // u16 NetworkNodeID
     cmd_buff[4] = (out_buf_size<<14) | 2;
     cmd_buff[5] = out_buf_ptr; // Ptr to out buff
     LOG_WARNING(Service_NWM,
-                "(STUBBED) called, bind_node_id=%d", bind_node_id);
+                " called, bind_node_id=%d", bind_node_id);
 }
 
 /**
@@ -391,6 +408,27 @@ static void DestroyNetwork(Interface* self) {
     LOG_WARNING(Service_NWM, "called");
 }
 
+static void SendTo(Interface* self) {
+    u32* cmd_buff = Kernel::GetCommandBuffer();
+    u8 data_channel = cmd_buff[3];
+    u32 actual_data_size = cmd_buff[5];
+    VAddr input_buff_ptr = cmd_buff[8];
+    WifiPacket packet;
+    packet.channel = 11;
+    packet.type = WifiPacket::PacketType::Data;
+    packet.transmitter_address = network_info.host_mac_address;
+    packet.destination_address = BroadcastMac; //Fix that!!!
+    packet.data.reserve(actual_data_size);
+    std::vector<u8> buffer(actual_data_size);
+    Memory::ReadBlock(input_buff_ptr, buffer.data(), actual_data_size);
+    packet.data = buffer;
+    RoomMember* member = NetCore::getRoomMember();
+    member->SendWifiPacket(packet);
+
+    cmd_buff[1] = RESULT_SUCCESS.raw;
+    LOG_DEBUG(Service_NWM, "called, data_channel=%hhu", data_channel);
+}
+
 /**
  * NWM_UDS::GetChannel service function.
  * Returns the WiFi channel in which the network we're connected to is transmitting.
@@ -467,11 +505,12 @@ static void ConnectToNetwork(Interface* self) {
     RoomMember::MemberList member_list = room_member->GetMemberInformation();
     if(member_list.size() > 1) {
         connection_status.status = static_cast<u32>(NetworkStatus::ConnectedAsClient);
-        connection_status.node_bitmask = 3; //(1<<member_list.size())-1;
-        connection_status.total_nodes = member_list.size();
-        connection_status_event->Signal();
+        connection_status.node_bitmask = (1<<member_list.size())-1;
+        connection_status.max_nodes = 2;
+        connection_status.network_node_id = member_list.size();
+        connection_status.total_nodes = member_list.size();        connection_status_event->Signal();
         WifiPacket packet;
-        packet.type=WifiPacket::PacketType::Data; //Fix this with a propper packet
+        packet.type=WifiPacket::PacketType::Management; //Fix this with a propper packet
         room_member->SendWifiPacket(packet);
     }
 }
@@ -518,7 +557,6 @@ static void DecryptBeaconData(Interface* self) {
     // TODO(Subv): Verify the MD5 hash of the data.
 
     u8 num_nodes = net_info.max_nodes;
-    LOG_DEBUG(Service_NWM, "AppDataSize: %hhu", net_info.application_data_size);
 
     std::vector<NodeInfo> nodes;
 
@@ -563,10 +601,11 @@ static void BeaconBroadcastCallback(u64 userdata, int cycles_late) {
     // Start broadcasting the network, send a beacon frame every 102.4ms.
     CoreTiming::ScheduleEvent(msToCycles(DefaultBeaconInterval * MillisecondsPerTU) - cycles_late,
                               beacon_broadcast_event, 0);
-    if (room_member->PopWifiPackets(WifiPacket::PacketType::Data).size() >0) {
+    if (room_member->PopWifiPackets(WifiPacket::PacketType::Management).size() >0) {
         RoomMember::MemberList member_list = room_member->GetMemberInformation();
         if(member_list.size() > 1) {
-            connection_status.node_bitmask = 3; //(1<<member_list.size())-1;
+            connection_status.node_bitmask = (1<<member_list.size())-1;
+            connection_status.changed_nodes = 2;
             connection_status.total_nodes = member_list.size();
             connection_status_event->Signal();
         }
@@ -594,7 +633,7 @@ const Interface::FunctionInfo FunctionTable[] = {
     {0x00130040, nullptr, "Unbind"},
     {0x001400C0, PullPacket, "PullPacket"},
     {0x00150080, nullptr, "SetMaxSendDelay"},
-    {0x00170182, nullptr, "SendTo"},
+    {0x00170182, SendTo, "SendTo"},
     {0x001A0000, GetChannel, "GetChannel"},
     {0x001B0302, InitializeWithVersion, "InitializeWithVersion"},
     {0x001D0044, BeginHostingNetwork, "BeginHostingNetwork"},

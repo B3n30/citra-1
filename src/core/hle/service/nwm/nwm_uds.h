@@ -47,8 +47,8 @@ struct ConnectionStatus {
     u32_le status;
     INSERT_PADDING_WORDS(1);
     u16_le network_node_id;
-    INSERT_PADDING_BYTES(2);
-    INSERT_PADDING_BYTES(32);
+    u16_le changed_nodes;
+    u16_le nodes[16];
     u8 total_nodes;
     u8 max_nodes;
     u16_le node_bitmask;
