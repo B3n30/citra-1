@@ -120,6 +120,8 @@ void Config::ReadValues() {
 
     qt_config->beginGroup("System");
     Settings::values.is_new_3ds = qt_config->value("is_new_3ds", false).toBool();
+    Settings::values.console_id =
+        qt_config->value("console_id", Settings::CONSOLE_ID_DEFAULT).toULongLong();
     Settings::values.region_value =
         qt_config->value("region_value", Settings::REGION_VALUE_AUTO_SELECT).toInt();
     qt_config->endGroup();
@@ -255,6 +257,7 @@ void Config::SaveValues() {
 
     qt_config->beginGroup("System");
     qt_config->setValue("is_new_3ds", Settings::values.is_new_3ds);
+    qt_config->setValue("console_id", Settings::values.console_id);
     qt_config->setValue("region_value", Settings::values.region_value);
     qt_config->endGroup();
 
