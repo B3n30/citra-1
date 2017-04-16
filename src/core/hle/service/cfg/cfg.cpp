@@ -48,8 +48,6 @@ static_assert(sizeof(SaveFileConfig) == 0x455C,
 enum ConfigBlockID {
     StereoCameraSettingsBlockID = 0x00050005,
     SoundOutputModeBlockID = 0x00070001,
-    ConsoleUniqueID1BlockID = 0x00090000,
-    ConsoleUniqueID2BlockID = 0x00090001,
     UsernameBlockID = 0x000A0000,
     BirthdayBlockID = 0x000A0001,
     LanguageBlockID = 0x000A0002,
@@ -86,7 +84,6 @@ struct ConsoleCountryInfo {
 static_assert(sizeof(ConsoleCountryInfo) == 4, "ConsoleCountryInfo must be exactly 4 bytes");
 }
 
-static const u64 CONSOLE_UNIQUE_ID = 0xDEADC0DE;
 static const ConsoleModelInfo CONSOLE_MODEL = {NINTENDO_3DS_XL, {0, 0, 0}};
 static const u8 CONSOLE_LANGUAGE = LANGUAGE_EN;
 static const UsernameBlock CONSOLE_USERNAME_BLOCK = {u"CITRA", 0, 0};
@@ -184,21 +181,16 @@ void GenHashConsoleUnique(Service::Interface* self) {
     IPC::RequestBuilder rb = rp.MakeBuilder(3, 0);
 
     std::array<u8, 12> buffer;
-    const ResultCode result = GetConfigInfoBlock(ConsoleUniqueID2BlockID, 8, 2, buffer.data());
-    rb.Push(result);
-    if (result.IsSuccess()) {
-        std::memcpy(&buffer[8], &app_id_salt, sizeof(u32));
-        std::array<u8, CryptoPP::SHA256::DIGESTSIZE> hash;
-        CryptoPP::SHA256().CalculateDigest(hash.data(), buffer.data(), sizeof(buffer));
-        u32 low, high;
-        memcpy(&low, &hash[hash.size() - 8], sizeof(u32));
-        memcpy(&high, &hash[hash.size() - 4], sizeof(u32));
-        rb.Push(low);
-        rb.Push(high);
-    } else {
-        rb.Push<u32>(0);
-        rb.Push<u32>(0);
-    }
+    memcpy(buffer.data(), &Settings::values.console_id, 8);
+    std::memcpy(&buffer[8], &app_id_salt, sizeof(u32));
+    std::array<u8, CryptoPP::SHA256::DIGESTSIZE> hash;
+    CryptoPP::SHA256().CalculateDigest(hash.data(), buffer.data(), sizeof(buffer));
+    u32 low, high;
+    memcpy(&low, &hash[hash.size() - 8], sizeof(u32));
+    memcpy(&high, &hash[hash.size() - 4], sizeof(u32));
+    rb.Push(RESULT_SUCCESS);
+    rb.Push(low);
+    rb.Push(high);
 
     LOG_DEBUG(Service_CFG, "called app_id_salt=0x%X", app_id_salt);
 }
@@ -435,16 +427,6 @@ ResultCode FormatConfig() {
 
     res = CreateConfigInfoBlk(SoundOutputModeBlockID, sizeof(SOUND_OUTPUT_MODE), 0xE,
                               &SOUND_OUTPUT_MODE);
-    if (!res.IsSuccess())
-        return res;
-
-    res = CreateConfigInfoBlk(ConsoleUniqueID1BlockID, sizeof(CONSOLE_UNIQUE_ID), 0xE,
-                              &CONSOLE_UNIQUE_ID);
-    if (!res.IsSuccess())
-        return res;
-
-    res = CreateConfigInfoBlk(ConsoleUniqueID2BlockID, sizeof(CONSOLE_UNIQUE_ID), 0xE,
-                              &CONSOLE_UNIQUE_ID);
     if (!res.IsSuccess())
         return res;
 
