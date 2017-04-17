@@ -221,7 +221,7 @@
          </widget>
         </item>
         <item row="4" column="1">
-         <widget class="QPushButton" name="button_refresh_console_id">
+         <widget class="QPushButton" name="button_regenerate_console_id">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
             <horstretch>0</horstretch>
@@ -232,7 +232,7 @@
            <enum>Qt::RightToLeft</enum>
           </property>
           <property name="text">
-           <string>Refresh Console ID</string>
+           <string>Generate new console ID</string>
           </property>
          </widget>
         </item>

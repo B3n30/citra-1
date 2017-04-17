@@ -4,7 +4,7 @@
 
 #include <algorithm>
 #include <array>
-#include <random>
+#include <cryptopp/osrng.h>
 #include <cryptopp/sha.h>
 #include "common/file_util.h"
 #include "common/logging/log.h"
@@ -117,9 +117,6 @@ static const std::vector<u8> cfg_system_savedata_id = {
 };
 
 static u32 preferred_region_code = 0;
-
-static std::mt19937_64 rng{};
-static std::uniform_int_distribution<u64> dis;
 
 void GetCountryCodeString(Service::Interface* self) {
     u32* cmd_buff = Kernel::GetCommandBuffer();
@@ -441,12 +438,7 @@ ResultCode FormatConfig() {
     if (!res.IsSuccess())
         return res;
 
-    const u64 console_id = dis(rng);
-    res = CreateConfigInfoBlk(ConsoleUniqueID1BlockID, sizeof(console_id), 0xE, &console_id);
-    if (!res.IsSuccess())
-        return res;
-
-    res = CreateConfigInfoBlk(ConsoleUniqueID2BlockID, sizeof(console_id), 0xE, &console_id);
+    res = GenerateConsoleUniqueId();
     if (!res.IsSuccess())
         return res;
 
@@ -665,10 +657,25 @@ SoundOutputMode GetSoundOutputMode() {
     return static_cast<SoundOutputMode>(block);
 }
 
-void GenerateConsoleUniqueId() {
-    const u64 console_id = dis(rng);
-    SetConfigInfoBlock(ConsoleUniqueID1BlockID, sizeof(console_id), 0xE, &console_id);
-    SetConfigInfoBlock(ConsoleUniqueID2BlockID, sizeof(console_id), 0xE, &console_id);
+ResultCode GenerateConsoleUniqueId() {
+    CryptoPP::AutoSeededRandomPool rng;
+    std::array<byte, 8> console_id;
+    rng.GenerateBlock(console_id.data(), console_id.size());
+    ResultCode res =
+        SetConfigInfoBlock(ConsoleUniqueID1BlockID, console_id.size(), 0xE, console_id.data());
+    if (!res.IsSuccess())
+        return res;
+
+    res = SetConfigInfoBlock(ConsoleUniqueID2BlockID, console_id.size(), 0xE, console_id.data());
+    if (!res.IsSuccess())
+        return res;
+    return RESULT_SUCCESS;
+}
+
+u64 GetConsoleUniqueId() {
+    u64 console_id;
+    GetConfigInfoBlock(ConsoleUniqueID2BlockID, sizeof(console_id), 0xE, &console_id);
+    return console_id;
 }
 
 } // namespace CFG

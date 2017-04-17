@@ -2,6 +2,7 @@
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
+#include <QMessageBox>
 #include "citra_qt/configuration/configure_system.h"
 #include "citra_qt/ui_settings.h"
 #include "core/core.h"
@@ -15,9 +16,11 @@ static const std::array<int, 12> days_in_month = {{
 
 ConfigureSystem::ConfigureSystem(QWidget* parent) : QWidget(parent), ui(new Ui::ConfigureSystem) {
     ui->setupUi(this);
-    connect(ui->combo_birthmonth, SIGNAL(currentIndexChanged(int)),
-            SLOT(updateBirthdayComboBox(int)));
-    connect(ui->button_refresh_console_id, SIGNAL(clicked()), this, SLOT(refreshConsoleID()));
+    connect(ui->combo_birthmonth,
+            static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this,
+            &ConfigureSystem::updateBirthdayComboBox);
+    connect(ui->button_regenerate_console_id, &QPushButton::clicked, this,
+            &ConfigureSystem::refreshConsoleID);
 
     this->setConfiguration();
 }
@@ -143,6 +146,19 @@ void ConfigureSystem::updateBirthdayComboBox(int birthmonth_index) {
 }
 
 void ConfigureSystem::refreshConsoleID() {
+    QMessageBox::StandardButton reply;
+    reply = QMessageBox::critical(
+        this, tr("Warning"),
+        tr("This is an advanced feature. Some of your games might lose their saves. Only "
+           "continue, if you know what you are doing. Do you want to continue?"),
+        QMessageBox::Abort | QMessageBox::Yes);
+    if (reply == QMessageBox::Abort)
+        return;
     Service::CFG::GenerateConsoleUniqueId();
     Service::CFG::UpdateConfigNANDSavegame();
+    const u64 console_id = Service::CFG::GetConsoleUniqueId();
+    QMessageBox::information(this, tr("New Console ID"),
+                             tr("Your new unique console ID is 0x") +
+                                 QString::number(console_id, 16).toUpper(),
+                             QMessageBox::Ok);
 }

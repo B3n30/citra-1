@@ -344,8 +344,15 @@ SoundOutputMode GetSoundOutputMode();
 
 /**
  * Generates and sets a new random console unique id.
+ * @returns ResultCode indicating the result of the operation, 0 on success
  */
-void GenerateConsoleUniqueId();
+ResultCode GenerateConsoleUniqueId();
+
+/**
+ * Gets the console unique id from config savegame.
+ * @returns the console unique id
+ */
+u64 GetConsoleUniqueId();
 
 } // namespace CFG
 } // namespace Service
