@@ -88,6 +88,7 @@ struct Values {
 
     // System Region
     int region_value;
+    u64 console_id;
 
     // Renderer
     bool use_hw_renderer;
@@ -131,6 +132,8 @@ struct Values {
 // a special value for Values::region_value indicating that citra will automatically select a region
 // value to fit the region lockout info of the game
 static constexpr int REGION_VALUE_AUTO_SELECT = -1;
+
+static constexpr u64 CONSOLE_ID_DEFAULT = 0xDEADC0DE;
 
 void Apply();
 }
