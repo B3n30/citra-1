@@ -140,3 +140,8 @@ void ConfigureSystem::updateBirthdayComboBox(int birthmonth_index) {
     // restore the day selection
     ui->combo_birthday->setCurrentIndex(birthday_index);
 }
+
+void ConfigureSystem::refreshConsoleID() {
+    Service::CFG::GenerateConsoleUniqueId();
+    Service::CFG::UpdateConfigNANDSavegame();
+}

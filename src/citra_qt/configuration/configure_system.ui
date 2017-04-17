@@ -220,6 +220,22 @@
           </item>
          </widget>
         </item>
+        <item row="4" column="1">
+         <widget class="QPushButton" name="button_refresh_console_id">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="layoutDirection">
+           <enum>Qt::RightToLeft</enum>
+          </property>
+          <property name="text">
+           <string>Refresh Console ID</string>
+          </property>
+         </widget>
+        </item>
        </layout>
       </widget>
      </item>
@@ -251,5 +267,12 @@
   </layout>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>button_refresh_console_id</sender>
+   <signal>clicked()</signal>
+   <receiver>ConfigureSystem</receiver>
+   <slot>refreshConsoleID()</slot>
+  </connection>
+ </connections>
 </ui>

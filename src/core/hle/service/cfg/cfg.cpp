@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <array>
 #include <cryptopp/sha.h>
+#include <random>
 #include "common/file_util.h"
 #include "common/logging/log.h"
 #include "common/string_util.h"
@@ -86,7 +87,6 @@ struct ConsoleCountryInfo {
 static_assert(sizeof(ConsoleCountryInfo) == 4, "ConsoleCountryInfo must be exactly 4 bytes");
 }
 
-static const u64 CONSOLE_UNIQUE_ID = 0xDEADC0DE;
 static const ConsoleModelInfo CONSOLE_MODEL = {NINTENDO_3DS_XL, {0, 0, 0}};
 static const u8 CONSOLE_LANGUAGE = LANGUAGE_EN;
 static const UsernameBlock CONSOLE_USERNAME_BLOCK = {u"CITRA", 0, 0};
@@ -117,6 +117,9 @@ static const std::vector<u8> cfg_system_savedata_id = {
 };
 
 static u32 preferred_region_code = 0;
+
+static std::mt19937_64 rng{};
+static std::uniform_int_distribution<u64> dis;
 
 void GetCountryCodeString(Service::Interface* self) {
     u32* cmd_buff = Kernel::GetCommandBuffer();
@@ -438,13 +441,12 @@ ResultCode FormatConfig() {
     if (!res.IsSuccess())
         return res;
 
-    res = CreateConfigInfoBlk(ConsoleUniqueID1BlockID, sizeof(CONSOLE_UNIQUE_ID), 0xE,
-                              &CONSOLE_UNIQUE_ID);
+    const u64 console_id = dis(rng);
+    res = CreateConfigInfoBlk(ConsoleUniqueID1BlockID, sizeof(console_id), 0xE, &console_id);
     if (!res.IsSuccess())
         return res;
 
-    res = CreateConfigInfoBlk(ConsoleUniqueID2BlockID, sizeof(CONSOLE_UNIQUE_ID), 0xE,
-                              &CONSOLE_UNIQUE_ID);
+    res = CreateConfigInfoBlk(ConsoleUniqueID2BlockID, sizeof(console_id), 0xE, &console_id);
     if (!res.IsSuccess())
         return res;
 
@@ -661,6 +663,12 @@ SoundOutputMode GetSoundOutputMode() {
     u8 block;
     GetConfigInfoBlock(SoundOutputModeBlockID, sizeof(block), 8, &block);
     return static_cast<SoundOutputMode>(block);
+}
+
+void GenerateConsoleUniqueId() {
+    const u64 console_id = dis(rng);
+    SetConfigInfoBlock(ConsoleUniqueID1BlockID, sizeof(console_id), 0xE, &console_id);
+    SetConfigInfoBlock(ConsoleUniqueID2BlockID, sizeof(console_id), 0xE, &console_id);
 }
 
 } // namespace CFG

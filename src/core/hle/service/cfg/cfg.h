@@ -342,5 +342,10 @@ void SetSoundOutputMode(SoundOutputMode mode);
  */
 SoundOutputMode GetSoundOutputMode();
 
+/**
+ * Generates and sets a new random console unique id.
+ */
+void GenerateConsoleUniqueId();
+
 } // namespace CFG
 } // namespace Service
