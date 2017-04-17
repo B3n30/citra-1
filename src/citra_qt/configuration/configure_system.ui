@@ -267,12 +267,5 @@
   </layout>
  </widget>
  <resources/>
- <connections>
-  <connection>
-   <sender>button_refresh_console_id</sender>
-   <signal>clicked()</signal>
-   <receiver>ConfigureSystem</receiver>
-   <slot>refreshConsoleID()</slot>
-  </connection>
- </connections>
+ <connections/>
 </ui>

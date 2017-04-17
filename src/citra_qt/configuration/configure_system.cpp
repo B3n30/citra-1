@@ -17,6 +17,7 @@ ConfigureSystem::ConfigureSystem(QWidget* parent) : QWidget(parent), ui(new Ui::
     ui->setupUi(this);
     connect(ui->combo_birthmonth, SIGNAL(currentIndexChanged(int)),
             SLOT(updateBirthdayComboBox(int)));
+    connect(ui->button_refresh_console_id, SIGNAL(clicked()), this, SLOT(refreshConsoleID()));
 
     this->setConfiguration();
 }
