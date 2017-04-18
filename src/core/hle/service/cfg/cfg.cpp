@@ -439,7 +439,18 @@ ResultCode FormatConfig() {
     if (!res.IsSuccess())
         return res;
 
-    res = GenerateConsoleUniqueId();
+    u32_le random_number;
+    u64_le console_id;
+    GenerateConsoleUniqueId(random_number, console_id);
+    res = CreateConfigInfoBlk(ConsoleUniqueID1BlockID, sizeof(console_id), 0xE, &console_id);
+    if (!res.IsSuccess())
+        return res;
+
+    res = CreateConfigInfoBlk(ConsoleUniqueID2BlockID, sizeof(console_id), 0xE, &console_id);
+    if (!res.IsSuccess())
+        return res;
+
+    res = CreateConfigInfoBlk(ConsoleUniqueID3BlockID, sizeof(random_number), 0xE, &random_number);
     if (!res.IsSuccess())
         return res;
 
@@ -658,12 +669,17 @@ SoundOutputMode GetSoundOutputMode() {
     return static_cast<SoundOutputMode>(block);
 }
 
-ResultCode GenerateConsoleUniqueId() {
+void GenerateConsoleUniqueId(u32_le& random_number, u64_le& console_id) {
     CryptoPP::AutoSeededRandomPool rng;
-    const u32 random_number = static_cast<u16>((CryptoPP::Integer(rng, 16).ConvertToLong()));
-    const u32 local_friend_code_seed = rng.GenerateWord32();
-    const u64 console_id =
-        ((0x3FFFFFFFF) & local_friend_code_seed) | (static_cast<u64>(random_number) << 48);
+    random_number = rng.GenerateWord32(0, 0xFFFF);
+    u64_le local_friend_code_seed;
+    rng.GenerateBlock(reinterpret_cast<byte*>(&local_friend_code_seed),
+                      sizeof(local_friend_code_seed));
+    console_id =
+        (local_friend_code_seed & 0x3FFFFFFFF) | (static_cast<u64_le>(random_number) << 48);
+}
+
+ResultCode SetConsoleUniqueId(u32_le random_number, u64_le console_id) {
     ResultCode res =
         SetConfigInfoBlock(ConsoleUniqueID1BlockID, sizeof(console_id), 0xE, &console_id);
     if (!res.IsSuccess())
@@ -674,10 +690,13 @@ ResultCode GenerateConsoleUniqueId() {
         return res;
 
     res = SetConfigInfoBlock(ConsoleUniqueID3BlockID, sizeof(random_number), 0xE, &random_number);
+    if (!res.IsSuccess())
+        return res;
+
     return RESULT_SUCCESS;
 }
 
-u64 GetConsoleUniqueId() {
+u64_le GetConsoleUniqueId() {
     u64 console_id;
     GetConfigInfoBlock(ConsoleUniqueID2BlockID, sizeof(console_id), 0xE, &console_id);
     return console_id;

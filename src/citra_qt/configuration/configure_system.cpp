@@ -147,16 +147,23 @@ void ConfigureSystem::updateBirthdayComboBox(int birthmonth_index) {
 
 void ConfigureSystem::refreshConsoleID() {
     QMessageBox::StandardButton reply;
-    reply = QMessageBox::critical(this, tr("Warning"),
-                                  tr("This will replace your virtual 3DS with a new one. Your "
-                                     "current 3DS will not be recoverable. "
-                                     "This might have unexpected effects in games. Continue?"),
-                                  QMessageBox::Abort | QMessageBox::Yes);
-    if (reply == QMessageBox::Abort)
+    QString warning_text = tr("This will replace your current virtual 3DS with a new one. "
+                              "Your current virtual 3DS will not be recoverable. "
+                              "This might have unexpected effects in games. Continue?");
+    reply = QMessageBox::critical(this, tr("Warning"), warning_text,
+                                  QMessageBox::No | QMessageBox::Yes);
+    if (reply == QMessageBox::No)
         return;
-    Service::CFG::GenerateConsoleUniqueId();
+    u32_le random_number;
+    u64_le console_id;
+    Service::CFG::GenerateConsoleUniqueId(random_number, console_id);
+    ResultCode res = Service::CFG::SetConsoleUniqueId(random_number, console_id);
+    if (res != RESULT_SUCCESS) {
+        QMessageBox::critical(this, tr("Failure"), tr("Failed to set a new console ID"),
+                              QMessageBox::Ok);
+        return;
+    }
     Service::CFG::UpdateConfigNANDSavegame();
-    const u64 console_id = Service::CFG::GetConsoleUniqueId();
     QMessageBox::information(this, tr("New Console ID"),
                              tr("Your new unique console ID is 0x") +
                                  QString::number(console_id, 16).toUpper(),
