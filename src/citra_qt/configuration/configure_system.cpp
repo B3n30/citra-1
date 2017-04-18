@@ -147,11 +147,11 @@ void ConfigureSystem::updateBirthdayComboBox(int birthmonth_index) {
 
 void ConfigureSystem::refreshConsoleID() {
     QMessageBox::StandardButton reply;
-    reply = QMessageBox::critical(
-        this, tr("Warning"),
-        tr("This is an advanced feature. Some of your games might lose their saves. Only "
-           "continue, if you know what you are doing. Do you want to continue?"),
-        QMessageBox::Abort | QMessageBox::Yes);
+    reply = QMessageBox::critical(this, tr("Warning"),
+                                  tr("This will replace your virtual 3DS with a new one. Your "
+                                     "current 3DS will not be recoverable. "
+                                     "This might have unexpected effects in games. Continue?"),
+                                  QMessageBox::Abort | QMessageBox::Yes);
     if (reply == QMessageBox::Abort)
         return;
     Service::CFG::GenerateConsoleUniqueId();

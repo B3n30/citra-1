@@ -51,6 +51,7 @@ enum ConfigBlockID {
     SoundOutputModeBlockID = 0x00070001,
     ConsoleUniqueID1BlockID = 0x00090000,
     ConsoleUniqueID2BlockID = 0x00090001,
+    ConsoleUniqueID3BlockID = 0x00090002,
     UsernameBlockID = 0x000A0000,
     BirthdayBlockID = 0x000A0001,
     LanguageBlockID = 0x000A0002,
@@ -659,16 +660,20 @@ SoundOutputMode GetSoundOutputMode() {
 
 ResultCode GenerateConsoleUniqueId() {
     CryptoPP::AutoSeededRandomPool rng;
-    std::array<byte, 8> console_id;
-    rng.GenerateBlock(console_id.data(), console_id.size());
+    const u32 random_number = static_cast<u16>((CryptoPP::Integer(rng, 16).ConvertToLong()));
+    const u32 local_friend_code_seed = rng.GenerateWord32();
+    const u64 console_id =
+        ((0x3FFFFFFFF) & local_friend_code_seed) | (static_cast<u64>(random_number) << 48);
     ResultCode res =
-        SetConfigInfoBlock(ConsoleUniqueID1BlockID, console_id.size(), 0xE, console_id.data());
+        SetConfigInfoBlock(ConsoleUniqueID1BlockID, sizeof(console_id), 0xE, &console_id);
     if (!res.IsSuccess())
         return res;
 
-    res = SetConfigInfoBlock(ConsoleUniqueID2BlockID, console_id.size(), 0xE, console_id.data());
+    res = SetConfigInfoBlock(ConsoleUniqueID2BlockID, sizeof(console_id), 0xE, &console_id);
     if (!res.IsSuccess())
         return res;
+
+    res = SetConfigInfoBlock(ConsoleUniqueID3BlockID, sizeof(random_number), 0xE, &random_number);
     return RESULT_SUCCESS;
 }
 
