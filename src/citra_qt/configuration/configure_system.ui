@@ -220,6 +220,13 @@
           </item>
          </widget>
         </item>
+        <item row="4" column="0">
+         <widget class="QLabel" name="label_console_id">
+          <property name="text">
+           <string>Console ID:</string>
+          </property>
+         </widget>
+        </item>
         <item row="4" column="1">
          <widget class="QPushButton" name="button_regenerate_console_id">
           <property name="sizePolicy">
@@ -232,7 +239,7 @@
            <enum>Qt::RightToLeft</enum>
           </property>
           <property name="text">
-           <string>Generate new console ID</string>
+           <string>Regenerate</string>
           </property>
          </widget>
         </item>

@@ -75,6 +75,10 @@ void ConfigureSystem::ReadSystemSettings() {
     // set sound output mode
     sound_index = Service::CFG::GetSoundOutputMode();
     ui->combo_sound->setCurrentIndex(sound_index);
+
+    // set the console id
+    u64_le console_id = Service::CFG::GetConsoleUniqueId();
+    ui->label_console_id->setText("Console ID: 0x" + QString::number(console_id, 16).toUpper());
 }
 
 void ConfigureSystem::applyConfiguration() {
@@ -149,7 +153,8 @@ void ConfigureSystem::refreshConsoleID() {
     QMessageBox::StandardButton reply;
     QString warning_text = tr("This will replace your current virtual 3DS with a new one. "
                               "Your current virtual 3DS will not be recoverable. "
-                              "This might have unexpected effects in games. Continue?");
+                              "This might have unexpected effects in games. This might fail, "
+                              "if you use an outdated config savegame. Continue?");
     reply = QMessageBox::critical(this, tr("Warning"), warning_text,
                                   QMessageBox::No | QMessageBox::Yes);
     if (reply == QMessageBox::No)
@@ -157,15 +162,7 @@ void ConfigureSystem::refreshConsoleID() {
     u32_le random_number;
     u64_le console_id;
     Service::CFG::GenerateConsoleUniqueId(random_number, console_id);
-    ResultCode res = Service::CFG::SetConsoleUniqueId(random_number, console_id);
-    if (res != RESULT_SUCCESS) {
-        QMessageBox::critical(this, tr("Failure"), tr("Failed to set a new console ID"),
-                              QMessageBox::Ok);
-        return;
-    }
+    Service::CFG::SetConsoleUniqueId(random_number, console_id);
     Service::CFG::UpdateConfigNANDSavegame();
-    QMessageBox::information(this, tr("New Console ID"),
-                             tr("Your new unique console ID is 0x") +
-                                 QString::number(console_id, 16).toUpper(),
-                             QMessageBox::Ok);
+    ui->label_console_id->setText("Console ID: 0x" + QString::number(console_id, 16).toUpper());
 }
