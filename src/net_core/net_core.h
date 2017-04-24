@@ -4,9 +4,7 @@
 
 #pragma once
 
-#include <tunnler/room.h>
 #include <tunnler/room_member.h>
-#include <tunnler/tunnler.h>
 
 namespace NetCore {
 
