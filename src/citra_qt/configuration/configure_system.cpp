@@ -77,7 +77,7 @@ void ConfigureSystem::ReadSystemSettings() {
     ui->combo_sound->setCurrentIndex(sound_index);
 
     // set the console id
-    u64_le console_id = Service::CFG::GetConsoleUniqueId();
+    u64 console_id = Service::CFG::GetConsoleUniqueId();
     ui->label_console_id->setText("Console ID: 0x" + QString::number(console_id, 16).toUpper());
 }
 
@@ -159,8 +159,8 @@ void ConfigureSystem::refreshConsoleID() {
                                   QMessageBox::No | QMessageBox::Yes);
     if (reply == QMessageBox::No)
         return;
-    u32_le random_number;
-    u64_le console_id;
+    u32 random_number;
+    u64 console_id;
     Service::CFG::GenerateConsoleUniqueId(random_number, console_id);
     Service::CFG::SetConsoleUniqueId(random_number, console_id);
     Service::CFG::UpdateConfigNANDSavegame();
