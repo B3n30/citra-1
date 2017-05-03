@@ -671,19 +671,15 @@ SoundOutputMode GetSoundOutputMode() {
 
 void GenerateConsoleUniqueId(u32& random_number, u64& console_id) {
     CryptoPP::AutoSeededRandomPool rng;
-    u32_le random_number_le = rng.GenerateWord32(0, 0xFFFF);
+    random_number = rng.GenerateWord32(0, 0xFFFF);
     u64_le local_friend_code_seed;
     rng.GenerateBlock(reinterpret_cast<byte*>(&local_friend_code_seed),
                       sizeof(local_friend_code_seed));
-    u64_le console_id_le =
-        (local_friend_code_seed & 0x3FFFFFFFF) | (static_cast<u64_le>(random_number_le) << 48);
-
-    random_number = random_number_le;
-    console_id = console_id_le;
+    console_id =
+        (local_friend_code_seed & 0x3FFFFFFFF) | (static_cast<u64_le>(random_number) << 48);
 }
 
 ResultCode SetConsoleUniqueId(u32 random_number, u64 console_id) {
-    u32_le random_number_le = random_number;
     u64_le console_id_le = console_id;
     ResultCode res =
         SetConfigInfoBlock(ConsoleUniqueID1BlockID, sizeof(console_id_le), 0xE, &console_id_le);
@@ -694,6 +690,7 @@ ResultCode SetConsoleUniqueId(u32 random_number, u64 console_id) {
     if (!res.IsSuccess())
         return res;
 
+    u32_le random_number_le = random_number;
     res = SetConfigInfoBlock(ConsoleUniqueID3BlockID, sizeof(random_number_le), 0xE,
                              &random_number_le);
     if (!res.IsSuccess())
