@@ -16,6 +16,7 @@
 #include "core/settings.h"
 #include "input_common/keyboard.h"
 #include "input_common/main.h"
+#include "net_core/net_core.h"
 #include "video_core/debug_utils/debug_utils.h"
 #include "video_core/video_core.h"
 
@@ -108,9 +109,11 @@ GRenderWindow::GRenderWindow(QWidget* parent, EmuThread* emu_thread)
     setWindowTitle(QString::fromStdString(window_title));
 
     InputCommon::Init();
+    NetCore::Init();
 }
 
 GRenderWindow::~GRenderWindow() {
+    NetCore::Shutdown();
     InputCommon::Shutdown();
 }
 
