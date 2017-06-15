@@ -28,6 +28,7 @@
 #include "citra_qt/game_list.h"
 #include "citra_qt/hotkeys.h"
 #include "citra_qt/main.h"
+#include "citra_qt/network/room_list_window.h"
 #include "citra_qt/ui_settings.h"
 #include "common/logging/backend.h"
 #include "common/logging/filter.h"
@@ -277,6 +278,10 @@ void GMainWindow::ConnectMenuEvents() {
     ui.action_Show_Filter_Bar->setShortcut(tr("CTRL+F"));
     connect(ui.action_Show_Filter_Bar, &QAction::triggered, this, &GMainWindow::OnToggleFilterBar);
     connect(ui.action_Show_Status_Bar, &QAction::triggered, statusBar(), &QStatusBar::setVisible);
+
+    // Multiplayer
+    connect(ui.action_Start_Room, &QAction::triggered, this, &GMainWindow::OnStartRoom);
+    connect(ui.action_Connect_To_Room, &QAction::triggered, this, &GMainWindow::OnConnectToRoom);
 }
 
 void GMainWindow::OnDisplayTitleBars(bool show) {
@@ -629,6 +634,16 @@ void GMainWindow::OnCreateGraphicsSurfaceViewer() {
     addDockWidget(Qt::RightDockWidgetArea, graphicsSurfaceViewerWidget);
     // TODO: Maybe graphicsSurfaceViewerWidget->setFloating(true);
     graphicsSurfaceViewerWidget->show();
+}
+
+void GMainWindow::OnStartRoom() {
+    auto room_list_window = new RoomListWindow(RoomListWindow::Create, this);
+    room_list_window->show();
+}
+
+void GMainWindow::OnConnectToRoom() {
+    auto room_list_window = new RoomListWindow(RoomListWindow::Join, this);
+    room_list_window->show();
 }
 
 void GMainWindow::UpdateStatusBar() {

@@ -126,6 +126,8 @@ private slots:
     void OnDisplayTitleBars(bool);
     void ToggleWindowMode();
     void OnCreateGraphicsSurfaceViewer();
+    void OnStartRoom();
+    void OnConnectToRoom();
     void OnCoreError(Core::System::ResultStatus, std::string);
 
 private:

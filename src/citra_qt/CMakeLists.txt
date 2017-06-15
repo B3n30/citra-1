@@ -21,6 +21,8 @@ set(SRCS
             debugger/profiler.cpp
             debugger/registers.cpp
             debugger/wait_tree.cpp
+            network/room_list_window.cpp
+            network/room_view_window.cpp
             util/spinbox.cpp
             util/util.cpp
             bootmanager.cpp
@@ -52,6 +54,8 @@ set(HEADERS
             debugger/profiler.h
             debugger/registers.h
             debugger/wait_tree.h
+            network/room_list_window.h
+            network/room_view_window.h
             util/spinbox.h
             util/util.h
             bootmanager.h
