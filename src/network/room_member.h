@@ -16,10 +16,10 @@ namespace Network {
 class RoomMember final {
 public:
     enum class State {
-        Idle,           ///< Default state
-        Error,          ///< Some error [permissions to network device missing or something]
-        Joining,        ///< The client is attempting to join a room.
-        Joined,         ///< The client is connected to the room and is ready to send/receive packets.
+        Idle,    ///< Default state
+        Error,   ///< Some error [permissions to network device missing or something]
+        Joining, ///< The client is attempting to join a room.
+        Joined,  ///< The client is connected to the room and is ready to send/receive packets.
         LostConnection, ///< Connection closed
 
         // Reasons why connection was rejected
