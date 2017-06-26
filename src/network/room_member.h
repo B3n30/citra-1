@@ -54,6 +54,13 @@ public:
         CouldNotConnect ///< The room is not responding to a connection attempt
     };
 
+    struct MemberInformation {
+        std::string nickname;      // Nickname of the member.
+        std::string game_name;     // Name of the game they're currently playing, or empty if they're not playing anything.
+        MacAddress mac_address;    // MAC address associated with this member.
+    };
+    using MemberList = std::vector<MemberInformation>;
+
     // The handle for the callback functions
     template<typename T>
     using Connection = std::shared_ptr<std::function<void(const T&)> >;
@@ -81,7 +88,21 @@ public:
      */
     State GetState() const {
         return state;
-    };
+    }
+
+    /**
+     * Returns information about the members in the room we're currently connected to.
+     */
+    const MemberList& GetMemberInformation() const {
+        return member_information;
+    }
+
+    /**
+     * Returns information about the room we're currently connected to.
+     */
+    RoomInformation GetRoomInformation() const {
+        return room_information;
+    }
 
     /**
      * Returns whether we're connected to a server or not.
@@ -122,33 +143,62 @@ private:
     std::atomic<State> state{State::Idle}; ///< Current state of the RoomMember.
 
     std::string nickname; ///< The nickname of this member.
+    MacAddress mac_address; ///< The mac_address of this member.
+    MemberList member_information; ///< Information about the clients connected to the same room as us.
+    RoomInformation room_information; ///< Information about the room we're connected to.
 
     std::mutex callback_mutex;  ///< The mutex used for handling callbacks
     Callbacks callbacks;        ///< All CallbackSets to all events
 
+    std::mutex network_mutex; ///< Mutex that controls access to the `client` variable.
+    std::unique_ptr<std::thread> receive_thread; ///< Thread that receives and dispatches network packets
+
+    /**
+     * Sends data to the room. It will be send on channel 0 with flag RELIABLE
+     * @param packet The data to send
+     */
+    void Send(Packet& packet);
+
+    /**
+     * Sends a request to the server, asking for permission to join a room with the specified nickname and preferred mac.
+     * @params nickname The desired nickname.
+     * @params preferred_mac The preferred MAC address to use in the room, the NoPreferredMac tells the server to assign one for us.
+     */
+    void SendJoinRequest(const std::string& nickname, const MacAddress& preferred_mac = NoPreferredMac);
+
+    /**
+     * Extracts a chat entry from a received ENet packet and adds it to the chat queue.
+     * @param packet The RakNet packet that was received.
+     */
+    void HandleChatPacket(const ENetEvent* event);
+
+    /**
+     * Extracts a WifiPacket from a received ENet packet and adds it to the proper queue.
+     * @param packet The RakNet packet that was received.
+     */
+    void HandleWifiPackets(const ENetEvent* event);
+
+    /**
+     * Extracts RoomInformation and MemberInformation from a received RakNet packet.
+     * @param packet The RakNet packet that was received.
+     */
+    void HandleRoomInformationPacket(const ENetEvent* event);
+
+    /**
+     * Extracts a MAC Address from a received ENet packet.
+     * @param packet The RakNet packet that was received.
+     */
+    void HandleJoinPacket(const ENetEvent* event);
+
+    /**
+     *  Invokes an envent. Calls all callbacks associated with the event of that data type
+     * @param data The data to send to the callback functions
+     */
     template<typename T>
     void Invoke(const T& data);
+
+    /// Thread function that will receive and dispatch messages until connection is lost.
+    void ReceiveLoop();
 };
-
-
-template<>
-RoomMember::CallbackSet<WifiPacket>& RoomMember::Callbacks::Get() {
-    return callback_set_wifi_packet;
-}
-
-template<>
-RoomMember::CallbackSet<RoomInformation>& RoomMember::Callbacks::Get() {
-    return callback_set_room_information;
-}
-
-template<>
-RoomMember::CallbackSet<ChatEntry>& RoomMember::Callbacks::Get() {
-    return callback_set_chat_messages;
-}
-
-template<>
-RoomMember::CallbackSet<RoomMember::State>& RoomMember::Callbacks::Get() {
-    return callback_set_state;
-}
 
 } // namespace
