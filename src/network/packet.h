@@ -105,7 +105,7 @@ public:
     template <typename T>
     Packet& operator>>(std::vector<T>& out_data);
     template <typename T, std::size_t S>
-    Packet& operator>>(std::array<T,S>& out_data);
+    Packet& operator>>(std::array<T, S>& out_data);
 
     /**
      * Overloads of operator << to write data into the packet
@@ -124,7 +124,7 @@ public:
     template <typename T>
     Packet& operator<<(const std::vector<T>& in_data);
     template <typename T, std::size_t S>
-    Packet& operator<<(const std::array<T,S>& in_data);
+    Packet& operator<<(const std::array<T, S>& in_data);
 
 private:
     /**

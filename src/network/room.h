@@ -95,7 +95,7 @@ private:
     RoomInformation room_information; ///< Information about this room.
     MemberList members;               ///< Information about the members of this room.
 
-     /// Thread that receives and dispatches network packets
+    /// Thread that receives and dispatches network packets
     std::unique_ptr<std::thread> room_thread;
 
     /// Thread function that will receive and dispatch messages until the room is destroyed.

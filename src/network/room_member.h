@@ -153,7 +153,7 @@ private:
 
     std::mutex network_mutex; ///< Mutex that controls access to the `client` variable.
 
-     /// Thread that receives and dispatches network packets
+    /// Thread that receives and dispatches network packets
     std::unique_ptr<std::thread> receive_thread;
 
     /**

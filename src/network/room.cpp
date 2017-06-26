@@ -203,8 +203,8 @@ void Room::HandleChatPacket(const ENetEvent* event) {
     out_packet << sending_member->nickname;
     out_packet << message;
 
-    ENetPacket* enet_packet =
-        enet_packet_create(out_packet.GetData(), out_packet.GetDataSize(),  ENET_PACKET_FLAG_RELIABLE);
+    ENetPacket* enet_packet = enet_packet_create(out_packet.GetData(), out_packet.GetDataSize(),
+                                                 ENET_PACKET_FLAG_RELIABLE);
     enet_host_broadcast(server, 0, enet_packet);
     enet_host_flush(server);
 }
