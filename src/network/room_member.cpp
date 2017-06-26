@@ -228,7 +228,6 @@ void RoomMember::Leave() {
     enet_peer_reset(server);
 }
 
-
 template<>
 RoomMember::CallbackSet<WifiPacket>& RoomMember::Callbacks::Get() {
     return callback_set_wifi_packet;
