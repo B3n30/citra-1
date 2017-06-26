@@ -7,6 +7,7 @@
 #else
 #include <arpa/inet.h>
 #endif
+#include <cstring>
 #include <string>
 #include "network/packet.h"
 
