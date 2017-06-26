@@ -19,6 +19,33 @@ RoomMember::~RoomMember() {
     enet_host_destroy(client);
 }
 
+template<typename T>
+RoomMember::Connection<T> RoomMember::Connect(std::function<void(const T&)> callback) {
+    std::lock_guard<std::mutex> lock(callback_mutex);
+    Connection<T> connection;
+    connection =  std::make_shared<std::function<void(const T&)> >(callback);
+    callbacks.Get<T>().insert(connection);
+    return connection;
+}
+
+template<typename T>
+void RoomMember::Disconnect(Connection<T> connection) {
+    std::lock_guard<std::mutex> lock(callback_mutex);
+    callbacks.Get<T>().erase(connection.callback);
+}
+
+template<typename T>
+void RoomMember::Invoke(const T& data)
+{
+    CallbackSet<T> callback_set;
+    {
+        std::lock_guard<std::mutex> lock(callback_mutex);
+        callback_set = callbacks.Get<T>();
+    }
+    for(auto const& callback: callback_set)
+        (*callback)(data);
+}
+
 void RoomMember::Join(const std::string& nickname, const std::string& server, uint16_t server_port,
                       uint16_t client_port) {
     ENetAddress address;

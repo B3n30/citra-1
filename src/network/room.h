@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <array>
 #include <atomic>
 #include <string>
 #include "enet/enet.h"
@@ -12,6 +13,10 @@ namespace Network {
 
 const uint16_t DefaultRoomPort = 1234;
 const size_t NumChannels = 1; // Number of channels used for the connection
+
+using MacAddress = std::array<u8, 6>;
+/// A special MAC address that tells the room we're joining to assign us a MAC address automatically.
+const MacAddress NoPreferredMac = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 
 struct RoomInformation {
     std::string name;      // Name of the server
