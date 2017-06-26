@@ -61,6 +61,25 @@ void RoomMember::SendJoinRequest(const std::string& nickname, const MacAddress& 
     Send(packet);
 }
 
+void RoomMember::SendChatMessage(const std::string& message) {
+    Packet packet;
+    packet << static_cast<MessageID>(IdChatMessage);
+    packet << message;
+    Send(packet);
+}
+
+void RoomMember::SendWifiPacket(const WifiPacket& wifi_packet) {
+    Packet packet;
+    packet << static_cast<MessageID>(IdWifiPacket);
+    packet << static_cast<uint8_t>(wifi_packet.type);
+    packet << wifi_packet.channel;
+    packet << wifi_packet.transmitter_address;
+    packet << wifi_packet.destination_address;
+    packet << static_cast<uint32_t>(wifi_packet.data.size());
+    packet << wifi_packet.data;
+    Send(packet);
+}
+
 void RoomMember::HandleWifiPackets(const ENetEvent* event) {
     WifiPacket wifi_packet{};
     Packet packet;

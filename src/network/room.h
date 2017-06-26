@@ -50,10 +50,10 @@ public:
     };
 
     struct Member {
-        std::string nickname;        ///< The nickname of the member.
-        std::string game_name;       ///< The current game of the member
-        MacAddress mac_address;      ///< The assigned mac address of the member.
-        ENetAddress network_address; ///< The network address of the remote peer.
+        std::string nickname;   ///< The nickname of the member.
+        std::string game_name;  ///< The current game of the member
+        MacAddress mac_address; ///< The assigned mac address of the member.
+        ENetPeer* peer;         ///< The remote peer.
     };
 
     using MemberList = std::vector<Member>;
@@ -114,6 +114,12 @@ private:
      * @param packet The packet containing the message
      */
     void HandleChatPacket(const ENetEvent* event);
+
+    /**
+     * Broadcasts this packet to all members except the sender.
+     * @param packet The packet containing the message
+     */
+    void HandleWifiPacket(const ENetEvent* event);
 
     /**
      * Sends the information about the room, along with the list of members

@@ -102,6 +102,18 @@ public:
     }
 
     /**
+     * Sends a chat message to the room.
+     * @param message The contents of the message.
+     */
+    void SendChatMessage(const std::string& message);
+
+    /**
+     * Sends a WiFi packet to the room.
+     * @param packet The WiFi packet to send.
+     */
+    void SendWifiPacket(const WifiPacket& packet);
+
+    /**
      * Returns whether we're connected to a server or not.
      */
     bool IsConnected() const;

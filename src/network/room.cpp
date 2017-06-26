@@ -51,11 +51,7 @@ void Room::ServerLoop() {
             case ENET_EVENT_TYPE_RECEIVE:
                 switch (event.packet->data[0]) {
                 case IdWifiPacket:
-                    // Received a wifi packet, broadcast it to everyone else except the sender.
-                    // TODO(B3N30): Maybe change this to a loop over `members`, since we only want
-                    // to send this data to the people who have actually joined the room.
-                    enet_host_broadcast(server, 0, event.packet);
-                    enet_host_flush(server);
+                    HandleWifiPacket(&event);
                     break;
                 case IdChatMessage:
                     HandleChatPacket(&event);
@@ -104,7 +100,7 @@ void Room::HandleJoinRequest(const ENetEvent* event) {
     Member member{};
     member.mac_address = preferred_mac;
     member.nickname = nickname;
-    member.network_address = event->peer->address;
+    member.peer = event->peer;
 
     members.push_back(member);
 
@@ -194,7 +190,7 @@ void Room::HandleChatPacket(const ENetEvent* event) {
     std::string message;
     in_packet >> message;
     auto CompareNetworkAddress = [&](const Member member) -> bool {
-        return member.network_address.host == event->peer->address.host;
+        return member.peer == event->peer;
     };
     const auto sending_member = std::find_if(members.begin(), members.end(), CompareNetworkAddress);
     ASSERT_MSG(sending_member != members.end(), "Received a chat message from a unknown sender");
@@ -206,7 +202,18 @@ void Room::HandleChatPacket(const ENetEvent* event) {
 
     ENetPacket* enet_packet = enet_packet_create(out_packet.GetData(), out_packet.GetDataSize(),
                                                  ENET_PACKET_FLAG_RELIABLE);
-    enet_host_broadcast(server, 0, enet_packet);
+    for (auto it = members.begin(); it != members.end(); ++it) {
+        if(it->peer != event->peer)
+            enet_peer_send(it->peer, 0, enet_packet);
+    }
+    enet_host_flush(server);
+}
+
+void Room::HandleWifiPacket(const ENetEvent* event) {
+    for (auto it = members.begin(); it != members.end(); ++it) {
+        if(it->peer != event->peer)
+            enet_peer_send(it->peer, 0, event->packet);
+    }
     enet_host_flush(server);
 }
 
@@ -214,11 +221,11 @@ void Room::HandleClientDisconnection(ENetPeer* client) {
     // Remove the client from the members list.
     members.erase(std::remove_if(members.begin(), members.end(),
                                  [&](const Member& member) {
-                                     return member.network_address.host == client->address.host;
+                                     return member.peer == client;
                                  }),
                   members.end());
 
-    // Announce the change to all other clients.
+    // Announce the change to all clients.
     BroadcastRoomInformation();
 }
 
