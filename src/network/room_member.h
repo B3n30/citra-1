@@ -17,24 +17,20 @@ namespace Network {
 /// Information about the received WiFi packets.
 /// Acts as our own 802.11 header.
 struct WifiPacket {
-    enum class PacketType {
-        Beacon,
-        Data,
-        Management
-    };
-    PacketType type;                    ///< The type of 802.11 frame, Beacon / Data.
-    std::vector<uint8_t> data;          ///< Raw 802.11 frame data, starting at the management frame header for management frames.
-    MacAddress transmitter_address;     ///< Mac address of the transmitter.
-    MacAddress destination_address;     ///< Mac address of the receiver.
-    uint8_t channel;                    ///< WiFi channel where this frame was transmitted.
+    enum class PacketType { Beacon, Data, Management };
+    PacketType type;                ///< The type of 802.11 frame, Beacon / Data.
+    std::vector<uint8_t> data;      ///< Raw 802.11 frame data, starting at the management frame header
+                                    /// for management frames.
+    MacAddress transmitter_address; ///< Mac address of the transmitter.
+    MacAddress destination_address; ///< Mac address of the receiver.
+    uint8_t channel;                ///< WiFi channel where this frame was transmitted.
 };
 
 /// Represents a chat message.
 struct ChatEntry {
-    std::string nickname;    ///< Nickname of the client who sent this message.
-    std::string message;     ///< Body of the message.
+    std::string nickname; ///< Nickname of the client who sent this message.
+    std::string message;  ///< Body of the message.
 };
-
 
 // This is what a client [person joining a server] would use.
 // It also has to be used if you host a game yourself (You'd create both, a Room and a
@@ -55,22 +51,23 @@ public:
     };
 
     struct MemberInformation {
-        std::string nickname;      // Nickname of the member.
-        std::string game_name;     // Name of the game they're currently playing, or empty if they're not playing anything.
-        MacAddress mac_address;    // MAC address associated with this member.
+        std::string nickname;   ///< Nickname of the member.
+        std::string game_name;  ///< Name of the game they're currently playing, or empty if they're
+                                /// not playing anything.
+        MacAddress mac_address; ///< MAC address associated with this member.
     };
     using MemberList = std::vector<MemberInformation>;
 
     // The handle for the callback functions
-    template<typename T>
-    using Connection = std::shared_ptr<std::function<void(const T&)> >;
+    template <typename T>
+    using Connection = std::shared_ptr<std::function<void(const T&)>>;
 
-    template<typename T>
+    template <typename T>
     using CallbackSet = std::set<Connection<T>>;
 
     class Callbacks {
     public:
-        template<typename T>
+        template <typename T>
         CallbackSet<T>& Get();
 
     private:
@@ -111,18 +108,19 @@ public:
 
     /**
      * Register a function to an event. The function wil be called everytime the event occurs.
-     * Depending on the type of the parameter the function is only called for the coresponding event.
+     * Depending on the type of the parameter the function is only called for the coresponding
+     * event.
      * Allowed typenames are allow: WifiPacket, ChatEntry, RoomInformation, RoomMember::State
      * @param callback The function to call
      * @return A Connection used for removing the function from the registered list
      */
-    template<typename T>
+    template <typename T>
     Connection<T> Connect(std::function<void(const T&)> callback);
 
     /**
      * Disconnect a function from the events.
      */
-    template<typename T>
+    template <typename T>
     void Disconnect(Connection<T> connection);
 
     /**
@@ -142,16 +140,18 @@ private:
     ENetPeer* server;                      ///< The server peer the client is connected to
     std::atomic<State> state{State::Idle}; ///< Current state of the RoomMember.
 
-    std::string nickname; ///< The nickname of this member.
+    std::string nickname;   ///< The nickname of this member.
     MacAddress mac_address; ///< The mac_address of this member.
-    MemberList member_information; ///< Information about the clients connected to the same room as us.
+    MemberList
+        member_information;    ///< Information about the clients connected to the same room as us.
     RoomInformation room_information; ///< Information about the room we're connected to.
 
-    std::mutex callback_mutex;  ///< The mutex used for handling callbacks
-    Callbacks callbacks;        ///< All CallbackSets to all events
+    std::mutex callback_mutex; ///< The mutex used for handling callbacks
+    Callbacks callbacks;       ///< All CallbackSets to all events
 
     std::mutex network_mutex; ///< Mutex that controls access to the `client` variable.
-    std::unique_ptr<std::thread> receive_thread; ///< Thread that receives and dispatches network packets
+    std::unique_ptr<std::thread>
+        receive_thread; ///< Thread that receives and dispatches network packets
 
     /**
      * Sends data to the room. It will be send on channel 0 with flag RELIABLE
@@ -160,11 +160,14 @@ private:
     void Send(Packet& packet);
 
     /**
-     * Sends a request to the server, asking for permission to join a room with the specified nickname and preferred mac.
+     * Sends a request to the server, asking for permission to join a room with the specified
+     * nickname and preferred mac.
      * @params nickname The desired nickname.
-     * @params preferred_mac The preferred MAC address to use in the room, the NoPreferredMac tells the server to assign one for us.
+     * @params preferred_mac The preferred MAC address to use in the room, the NoPreferredMac tells
+     * the server to assign one for us.
      */
-    void SendJoinRequest(const std::string& nickname, const MacAddress& preferred_mac = NoPreferredMac);
+    void SendJoinRequest(const std::string& nickname,
+                         const MacAddress& preferred_mac = NoPreferredMac);
 
     /**
      * Extracts a chat entry from a received ENet packet and adds it to the chat queue.
@@ -194,7 +197,7 @@ private:
      *  Invokes an envent. Calls all callbacks associated with the event of that data type
      * @param data The data to send to the callback functions
      */
-    template<typename T>
+    template <typename T>
     void Invoke(const T& data);
 
     /// Thread function that will receive and dispatch messages until connection is lost.

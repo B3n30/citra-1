@@ -6,12 +6,11 @@
 
 #include <vector>
 
-class Packet
-{
+class Packet {
     // A bool-like type that cannot be converted to integer or pointer types
     typedef bool (Packet::*BoolType)(std::size_t);
 
-public :
+public:
 
     Packet();
     ~Packet() = default;
@@ -64,7 +63,8 @@ public:
     /**
      * Test the validity of the packet, for reading
      *
-     * This operator allows to test the packet as a boolean variable, to check if a reading operation was successful.
+     * This operator allows to test the packet as a boolean variable, to check if a reading
+     * operation was successful.
      * A packet will be in an invalid state if it has no more data to read.
      *  This behaviour is the same as standard C++ streams.
      * Usage example:
@@ -94,48 +94,48 @@ public:
     /**
      * Overloads of operator >> to read data from the packet
      */
-    Packet& operator >>(bool& out_data);
-    Packet& operator >>(int8_t& out_data);
-    Packet& operator >>(uint8_t& out_data);
-    Packet& operator >>(int16_t& out_data);
-    Packet& operator >>(uint16_t& out_data);
-    Packet& operator >>(int32_t& out_data);
-    Packet& operator >>(uint32_t& out_data);
-    Packet& operator >>(float& out_data);
-    Packet& operator >>(double& out_data);
-    Packet& operator >>(char* out_data);
-    Packet& operator >>(std::string& out_data);
-    template<typename T>
-        Packet& operator >>(std::vector<T>& out_data);
-    template<typename T, std::size_t S>
-        Packet& operator >>(std::array<T,S>& out_data);
+    Packet& operator>>(bool& out_data);
+    Packet& operator>>(int8_t& out_data);
+    Packet& operator>>(uint8_t& out_data);
+    Packet& operator>>(int16_t& out_data);
+    Packet& operator>>(uint16_t& out_data);
+    Packet& operator>>(int32_t& out_data);
+    Packet& operator>>(uint32_t& out_data);
+    Packet& operator>>(float& out_data);
+    Packet& operator>>(double& out_data);
+    Packet& operator>>(char* out_data);
+    Packet& operator>>(std::string& out_data);
+    template <typename T>
+        Packet& operator>>(std::vector<T>& out_data);
+    template <typename T, std::size_t S>
+        Packet& operator>>(std::array<T,S>& out_data);
 
     /**
      * Overloads of operator << to write data into the packet
      */
-    Packet& operator <<(bool in_data);
-    Packet& operator <<(int8_t in_data);
-    Packet& operator <<(uint8_t in_data);
-    Packet& operator <<(int16_t in_data);
-    Packet& operator <<(uint16_t in_data);
-    Packet& operator <<(int32_t in_data);
-    Packet& operator <<(uint32_t in_data);
-    Packet& operator <<(float in_data);
-    Packet& operator <<(double in_data);
-    Packet& operator <<(const char* in_data);
-    Packet& operator <<(const std::string& in_data);
-    template<typename T>
-        Packet& operator <<(const std::vector<T>& in_data);
-    template<typename T, std::size_t S>
-        Packet& operator <<(const std::array<T,S>& in_data);
+    Packet& operator<<(bool in_data);
+    Packet& operator<<(int8_t in_data);
+    Packet& operator<<(uint8_t in_data);
+    Packet& operator<<(int16_t in_data);
+    Packet& operator<<(uint16_t in_data);
+    Packet& operator<<(int32_t in_data);
+    Packet& operator<<(uint32_t in_data);
+    Packet& operator<<(float in_data);
+    Packet& operator<<(double in_data);
+    Packet& operator<<(const char* in_data);
+    Packet& operator<<(const std::string& in_data);
+    template <typename T>
+        Packet& operator<<(const std::vector<T>& in_data);
+    template <typename T, std::size_t S>
+        Packet& operator<<(const std::array<T,S>& in_data);
 
-private :
+private:
 
     /**
      * Disallow comparisons between packets
      */
-    bool operator ==(const Packet& right) const;
-    bool operator !=(const Packet& right) const;
+    bool operator==(const Packet& right) const;
+    bool operator!=(const Packet& right) const;
 
     /** Check if the packet can extract a given number of bytes
      *
@@ -145,41 +145,37 @@ private :
      */
     bool CheckSize(std::size_t size);
 
-    std::vector<char> data;     ///< Data stored in the packet
-    std::size_t       read_pos; ///< Current reading position in the packet
-    bool              is_valid; ///< Reading state of the packet
+    std::vector<char> data; ///< Data stored in the packet
+    std::size_t read_pos;   ///< Current reading position in the packet
+    bool is_valid;          ///< Reading state of the packet
 };
 
-template<typename T>
-Packet& Packet::operator >>(std::vector<T>& out_data)
-{
+template <typename T>
+Packet& Packet::operator>>(std::vector<T>& out_data) {
     for (uint32_t i = 0; i < out_data.size(); ++i) {
         *this >> out_data[i];
     }
     return *this;
 }
 
-template<typename T, std::size_t S>
-Packet& Packet::operator >>(std::array<T, S>& out_data)
-{
+template <typename T, std::size_t S>
+Packet& Packet::operator>>(std::array<T, S>& out_data) {
     for (uint32_t i = 0; i < out_data.size(); ++i) {
         *this >> out_data[i];
     }
     return *this;
 }
 
-template<typename T>
-Packet& Packet::operator <<(const std::vector<T>& in_data)
-{
+template <typename T>
+Packet& Packet::operator<<(const std::vector<T>& in_data) {
     for (uint32_t i = 0; i < in_data.size(); ++i) {
         *this << in_data[i];
     }
     return *this;
 }
 
-template<typename T, std::size_t S>
-Packet& Packet::operator <<(const std::array<T, S>& in_data)
-{
+template <typename T, std::size_t S>
+Packet& Packet::operator<<(const std::array<T, S>& in_data) {
     for (uint32_t i = 0; i < in_data.size(); ++i) {
         *this << in_data[i];
     }

@@ -20,35 +20,35 @@ RoomMember::~RoomMember() {
     enet_host_destroy(client);
 }
 
-template<typename T>
+template <typename T>
 RoomMember::Connection<T> RoomMember::Connect(std::function<void(const T&)> callback) {
     std::lock_guard<std::mutex> lock(callback_mutex);
     Connection<T> connection;
-    connection =  std::make_shared<std::function<void(const T&)> >(callback);
+    connection = std::make_shared<std::function<void(const T&)>>(callback);
     callbacks.Get<T>().insert(connection);
     return connection;
 }
 
-template<typename T>
+template <typename T>
 void RoomMember::Disconnect(Connection<T> connection) {
     std::lock_guard<std::mutex> lock(callback_mutex);
     callbacks.Get<T>().erase(connection.callback);
 }
 
-template<typename T>
-void RoomMember::Invoke(const T& data)
-{
+template <typename T>
+void RoomMember::Invoke(const T& data) {
     CallbackSet<T> callback_set;
     {
         std::lock_guard<std::mutex> lock(callback_mutex);
         callback_set = callbacks.Get<T>();
     }
-    for(auto const& callback: callback_set)
+    for (auto const& callback: callback_set)
         (*callback)(data);
 }
 
 void RoomMember::Send(Packet& packet) {
-    ENetPacket* enetPacket = enet_packet_create(packet.GetData(), packet.GetDataSize(),  ENET_PACKET_FLAG_RELIABLE);
+    ENetPacket* enetPacket =
+        enet_packet_create(packet.GetData(), packet.GetDataSize(),  ENET_PACKET_FLAG_RELIABLE);
     enet_peer_send(server, 0, enetPacket);
     enet_host_flush(client);
 }
@@ -121,7 +121,7 @@ void RoomMember::HandleJoinPacket(const ENetEvent* event) {
     // Ignore the first byte, which is the message id.
     packet.IgnoreBytes(sizeof(MessageID));
 
-    //Parse the MAC Address from the BitStream
+    // Parse the MAC Address from the BitStream
     packet >> mac_address;
     Invoke(State::Joined);
 }
@@ -168,8 +168,9 @@ void RoomMember::ReceiveLoop() {
                 case IdJoinSuccess:
                     // The join request was successful, we are now in the room.
                     // If we joined successfully, there must be at least one client in the room: us.
-                    ASSERT_MSG(GetMemberInformation().size() > 0, "We have not yet received member information.");
-                    HandleJoinPacket(&event);    // Get the MAC Address for the client
+                    ASSERT_MSG(GetMemberInformation().size() > 0,
+                               "We have not yet received member information.");
+                    HandleJoinPacket(&event); // Get the MAC Address for the client
                     state = State::Joined;
                     Invoke(State::Joined);
                     break;
@@ -228,22 +229,22 @@ void RoomMember::Leave() {
     enet_peer_reset(server);
 }
 
-template<>
+template <>
 RoomMember::CallbackSet<WifiPacket>& RoomMember::Callbacks::Get() {
     return callback_set_wifi_packet;
 }
 
-template<>
+template <>
 RoomMember::CallbackSet<RoomInformation>& RoomMember::Callbacks::Get() {
     return callback_set_room_information;
 }
 
-template<>
+template <>
 RoomMember::CallbackSet<ChatEntry>& RoomMember::Callbacks::Get() {
     return callback_set_chat_messages;
 }
 
-template<>
+template <>
 RoomMember::CallbackSet<RoomMember::State>& RoomMember::Callbacks::Get() {
     return callback_set_state;
 }

@@ -12,7 +12,7 @@ namespace Network {
 static const uint32_t MaxConcurrentConnections = 10;
 
 // This MAC address is used to generate a 'Nintendo' like Mac address.
-const MacAddress NintendoOUI = { 0x00, 0x1F, 0x32, 0x00, 0x00, 0x00 };
+const MacAddress NintendoOUI = {0x00, 0x1F, 0x32, 0x00, 0x00, 0x00};
 
 void Room::Create(const std::string& name, const std::string& server_address,
                   uint16_t server_port) {
@@ -51,8 +51,8 @@ void Room::ServerLoop() {
                 switch (event.packet->data[0]) {
                 case IdWifiPacket:
                     // Received a wifi packet, broadcast it to everyone else except the sender.
-                    // TODO(B3N30): Maybe change this to a loop over `members`, since we only want to
-                    // send this data to the people who have actually joined the room.
+                    // TODO(B3N30): Maybe change this to a loop over `members`, since we only want
+                    // to send this data to the people who have actually joined the room.
                     enet_host_broadcast(server, 0, event.packet);
                     enet_host_flush(server);
                     break;
@@ -138,7 +138,8 @@ void Room::SendNameCollision(ENetPeer* client) {
     Packet packet;
     packet << static_cast<MessageID>(IdNameCollision);
 
-    ENetPacket* enet_packet = enet_packet_create(packet.GetData(), packet.GetDataSize(),  ENET_PACKET_FLAG_RELIABLE);
+    ENetPacket* enet_packet =
+        enet_packet_create(packet.GetData(), packet.GetDataSize(),  ENET_PACKET_FLAG_RELIABLE);
     enet_peer_send(client, 0, enet_packet);
     enet_host_flush(server);
     enet_peer_disconnect(client, 0);
@@ -148,7 +149,8 @@ void Room::SendMacCollision(ENetPeer* client) {
     Packet packet;
     packet << static_cast<MessageID>(IdMacCollision);
 
-    ENetPacket* enet_packet = enet_packet_create(packet.GetData(), packet.GetDataSize(),  ENET_PACKET_FLAG_RELIABLE);
+    ENetPacket* enet_packet =
+        enet_packet_create(packet.GetData(), packet.GetDataSize(),  ENET_PACKET_FLAG_RELIABLE);
     enet_peer_send(client, 0, enet_packet);
     enet_host_flush(server);
     enet_peer_disconnect(client, 0);
@@ -158,7 +160,8 @@ void Room::SendJoinSuccess(ENetPeer* client) {
     Packet packet;
     packet << static_cast<MessageID>(IdJoinSuccess);
     packet << client->address.host;
-    ENetPacket* enet_packet = enet_packet_create(packet.GetData(), packet.GetDataSize(),  ENET_PACKET_FLAG_RELIABLE);
+    ENetPacket* enet_packet =
+        enet_packet_create(packet.GetData(), packet.GetDataSize(),  ENET_PACKET_FLAG_RELIABLE);
     enet_peer_send(client, 0, enet_packet);
     enet_host_flush(server);
 }
@@ -170,13 +173,14 @@ void Room::BroadcastRoomInformation() {
     packet << room_information.member_slots;
 
     packet << static_cast<uint32_t>(members.size());
-    for (const auto& member: members) {
+    for (const auto& member : members) {
         packet << member.nickname;
         packet << member.mac_address;
         packet << member.game_name;
     }
 
-    ENetPacket* enet_packet = enet_packet_create(packet.GetData(), packet.GetDataSize(),  ENET_PACKET_FLAG_RELIABLE);
+    ENetPacket* enet_packet =
+        enet_packet_create(packet.GetData(), packet.GetDataSize(),  ENET_PACKET_FLAG_RELIABLE);
     enet_host_broadcast(server, 0, enet_packet);
     enet_host_flush(server);
 }
@@ -199,16 +203,19 @@ void Room::HandleChatPacket(const ENetEvent* event) {
     out_packet << sending_member->nickname;
     out_packet << message;
 
-    ENetPacket* enet_packet = enet_packet_create(out_packet.GetData(), out_packet.GetDataSize(),  ENET_PACKET_FLAG_RELIABLE);
+    ENetPacket* enet_packet =
+        enet_packet_create(out_packet.GetData(), out_packet.GetDataSize(),  ENET_PACKET_FLAG_RELIABLE);
     enet_host_broadcast(server, 0, enet_packet);
     enet_host_flush(server);
 }
 
 void Room::HandleClientDisconnection(ENetPeer*  client) {
     // Remove the client from the members list.
-    members.erase(std::remove_if(members.begin(), members.end(), [&](const Member& member) {
-        return member.network_address.host == client->address.host;
-    }), members.end());
+    members.erase(std::remove_if(members.begin(), members.end(),
+                                 [&](const Member& member) {
+                                     return member.network_address.host == client->address.host;
+                                 }),
+                  members.end());
 
     // Announce the change to all other clients.
     BroadcastRoomInformation();
@@ -216,7 +223,7 @@ void Room::HandleClientDisconnection(ENetPeer*  client) {
 
 MacAddress Room::GenerateMacAddress() {
     MacAddress result_mac = NintendoOUI;
-    std::uniform_int_distribution<> dis(0x00, 0xFF); //Random byte between 0 and 0xFF
+    std::uniform_int_distribution<> dis(0x00, 0xFF); // Random byte between 0 and 0xFF
     do {
         for (int i = 3; i < result_mac.size(); ++i) {
             result_mac[i] = dis(random_gen);

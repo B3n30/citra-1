@@ -20,12 +20,12 @@ const size_t NumChannels = 1; // Number of channels used for the connection
 
 using MacAddress = std::array<uint8_t, 6>;
 
-/// A special MAC address that tells the room we're joining to assign us a MAC address automatically.
-const MacAddress NoPreferredMac = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+/// A special MAC address that tells the room we're joining to assign us a MAC address
+///automatically.
+const MacAddress NoPreferredMac = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 typedef char MessageID;
-enum RoomMessageTypes
-{
+enum RoomMessageTypes {
     IdJoinRequest,
     IdJoinSuccess,
     IdRoomInformation,
@@ -50,15 +50,15 @@ public:
     };
 
     struct Member {
-        std::string nickname; ///< The nickname of the member.
-        std::string game_name; //< The current game of the member
-        MacAddress mac_address; ///< The assigned mac address of the member.
+        std::string nickname;        ///< The nickname of the member.
+        std::string game_name;       ///< The current game of the member
+        MacAddress mac_address;      ///< The assigned mac address of the member.
         ENetAddress network_address; ///< The network address of the remote peer.
     };
 
     using MemberList = std::vector<Member>;
 
-    Room(): random_gen(std::random_device()()) { }
+    Room(): random_gen(std::random_device()()) {}
     ~Room() = default;
 
     /**
@@ -93,7 +93,7 @@ private:
     std::mt19937 random_gen; ///< Random number generator. Used for GenerateMacAddress
 
     RoomInformation room_information; ///< Information about this room.
-    MemberList members; ///< Information about the members of this room.
+    MemberList members;               ///< Information about the members of this room.
 
     std::unique_ptr<std::thread> room_thread; ///< Thread that receives and dispatches network packets
 
@@ -135,7 +135,8 @@ private:
     bool IsValidNickname(const std::string& nickname) const;
 
     /**
-     * Returns whether the MAC address is valid, ie. isn't already taken by someone else in the room.
+     * Returns whether the MAC address is valid, ie. isn't already taken by someone else in the
+     * room.
      */
     bool IsValidMacAddress(const MacAddress& address) const;
 
