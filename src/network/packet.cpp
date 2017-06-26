@@ -57,7 +57,7 @@ Packet& Packet::operator>>(bool& out_data) {
 
 Packet& Packet::operator>>(int8_t& out_data) {
     if (CheckSize(sizeof(out_data))) {
-        out_data = *reinterpret_cast<const int8_t*>(&data[read_pos]);
+        std::memcpy(&out_data, &data[read_pos], sizeof(out_data));
         read_pos += sizeof(out_data);
     }
 
@@ -66,7 +66,7 @@ Packet& Packet::operator>>(int8_t& out_data) {
 
 Packet& Packet::operator>>(uint8_t& out_data) {
     if (CheckSize(sizeof(out_data))) {
-        out_data = *reinterpret_cast<const uint8_t*>(&data[read_pos]);
+        std::memcpy(&out_data, &data[read_pos], sizeof(out_data));
         read_pos += sizeof(out_data);
     }
 
@@ -75,7 +75,9 @@ Packet& Packet::operator>>(uint8_t& out_data) {
 
 Packet& Packet::operator>>(int16_t& out_data) {
     if (CheckSize(sizeof(out_data))) {
-        out_data = ntohs(*reinterpret_cast<const int16_t*>(&data[read_pos]));
+        int16_t tmp_data;
+        std::memcpy(&tmp_data, &data[read_pos], sizeof(tmp_data));
+        out_data = ntohs(tmp_data);
         read_pos += sizeof(out_data);
     }
 
@@ -84,7 +86,9 @@ Packet& Packet::operator>>(int16_t& out_data) {
 
 Packet& Packet::operator>>(uint16_t& out_data) {
     if (CheckSize(sizeof(out_data))) {
-        out_data = ntohs(*reinterpret_cast<const uint16_t*>(&data[read_pos]));
+        uint16_t tmp_data;
+        std::memcpy(&tmp_data, &data[read_pos], sizeof(tmp_data));
+        out_data = ntohs(tmp_data);
         read_pos += sizeof(out_data);
     }
 
@@ -93,7 +97,9 @@ Packet& Packet::operator>>(uint16_t& out_data) {
 
 Packet& Packet::operator>>(int32_t& out_data) {
     if (CheckSize(sizeof(out_data))) {
-        out_data = ntohl(*reinterpret_cast<const int32_t*>(&data[read_pos]));
+        int32_t tmp_data;
+        std::memcpy(&tmp_data, &data[read_pos], sizeof(tmp_data));
+        out_data = ntohl(tmp_data);
         read_pos += sizeof(out_data);
     }
 
@@ -102,7 +108,9 @@ Packet& Packet::operator>>(int32_t& out_data) {
 
 Packet& Packet::operator>>(uint32_t& out_data) {
     if (CheckSize(sizeof(out_data))) {
-        out_data = ntohl(*reinterpret_cast<const uint32_t*>(&data[read_pos]));
+        uint32_t tmp_data;
+        std::memcpy(&tmp_data, &data[read_pos], sizeof(tmp_data));
+        out_data = ntohl(tmp_data);
         read_pos += sizeof(out_data);
     }
 
@@ -111,7 +119,7 @@ Packet& Packet::operator>>(uint32_t& out_data) {
 
 Packet& Packet::operator>>(float& out_data) {
     if (CheckSize(sizeof(out_data))) {
-        out_data = *reinterpret_cast<const float*>(&data[read_pos]);
+        std::memcpy(&out_data, &data[read_pos], sizeof(out_data));
         read_pos += sizeof(out_data);
     }
 
@@ -120,7 +128,7 @@ Packet& Packet::operator>>(float& out_data) {
 
 Packet& Packet::operator>>(double& out_data) {
     if (CheckSize(sizeof(out_data))) {
-        out_data = *reinterpret_cast<const double*>(&data[read_pos]);
+        std::memcpy(&out_data, &data[read_pos], sizeof(out_data));
         read_pos += sizeof(out_data);
     }
 
