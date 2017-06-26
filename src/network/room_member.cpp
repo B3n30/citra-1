@@ -42,13 +42,13 @@ void RoomMember::Invoke(const T& data) {
         std::lock_guard<std::mutex> lock(callback_mutex);
         callback_set = callbacks.Get<T>();
     }
-    for (auto const& callback: callback_set)
+    for (auto const& callback : callback_set)
         (*callback)(data);
 }
 
 void RoomMember::Send(Packet& packet) {
     ENetPacket* enetPacket =
-        enet_packet_create(packet.GetData(), packet.GetDataSize(),  ENET_PACKET_FLAG_RELIABLE);
+        enet_packet_create(packet.GetData(), packet.GetDataSize(), ENET_PACKET_FLAG_RELIABLE);
     enet_peer_send(server, 0, enetPacket);
     enet_host_flush(client);
 }

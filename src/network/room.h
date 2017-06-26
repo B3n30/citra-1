@@ -21,7 +21,7 @@ const size_t NumChannels = 1; // Number of channels used for the connection
 using MacAddress = std::array<uint8_t, 6>;
 
 /// A special MAC address that tells the room we're joining to assign us a MAC address
-///automatically.
+/// automatically.
 const MacAddress NoPreferredMac = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 typedef char MessageID;
@@ -58,7 +58,7 @@ public:
 
     using MemberList = std::vector<Member>;
 
-    Room(): random_gen(std::random_device()()) {}
+    Room() : random_gen(std::random_device()()) {}
     ~Room() = default;
 
     /**
@@ -95,7 +95,8 @@ private:
     RoomInformation room_information; ///< Information about this room.
     MemberList members;               ///< Information about the members of this room.
 
-    std::unique_ptr<std::thread> room_thread; ///< Thread that receives and dispatches network packets
+     /// Thread that receives and dispatches network packets
+    std::unique_ptr<std::thread> room_thread;
 
     /// Thread function that will receive and dispatch messages until the room is destroyed.
     void ServerLoop();

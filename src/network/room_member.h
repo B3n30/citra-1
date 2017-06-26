@@ -18,9 +18,9 @@ namespace Network {
 /// Acts as our own 802.11 header.
 struct WifiPacket {
     enum class PacketType { Beacon, Data, Management };
-    PacketType type;                ///< The type of 802.11 frame, Beacon / Data.
-    std::vector<uint8_t> data;      ///< Raw 802.11 frame data, starting at the management frame header
-                                    /// for management frames.
+    PacketType type;           ///< The type of 802.11 frame, Beacon / Data.
+    std::vector<uint8_t> data; ///< Raw 802.11 frame data, starting at the management frame header
+                               /// for management frames.
     MacAddress transmitter_address; ///< Mac address of the transmitter.
     MacAddress destination_address; ///< Mac address of the receiver.
     uint8_t channel;                ///< WiFi channel where this frame was transmitted.
@@ -142,16 +142,19 @@ private:
 
     std::string nickname;   ///< The nickname of this member.
     MacAddress mac_address; ///< The mac_address of this member.
-    MemberList
-        member_information;    ///< Information about the clients connected to the same room as us.
-    RoomInformation room_information; ///< Information about the room we're connected to.
+
+    /// Information about the clients connected to the same room as us.
+    MemberList member_information;
+    /// Information about the room we're connected to.
+    RoomInformation room_information;
 
     std::mutex callback_mutex; ///< The mutex used for handling callbacks
     Callbacks callbacks;       ///< All CallbackSets to all events
 
     std::mutex network_mutex; ///< Mutex that controls access to the `client` variable.
-    std::unique_ptr<std::thread>
-        receive_thread; ///< Thread that receives and dispatches network packets
+
+     /// Thread that receives and dispatches network packets
+    std::unique_ptr<std::thread> receive_thread;
 
     /**
      * Sends data to the room. It will be send on channel 0 with flag RELIABLE

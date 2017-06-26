@@ -139,7 +139,7 @@ void Room::SendNameCollision(ENetPeer* client) {
     packet << static_cast<MessageID>(IdNameCollision);
 
     ENetPacket* enet_packet =
-        enet_packet_create(packet.GetData(), packet.GetDataSize(),  ENET_PACKET_FLAG_RELIABLE);
+        enet_packet_create(packet.GetData(), packet.GetDataSize(), ENET_PACKET_FLAG_RELIABLE);
     enet_peer_send(client, 0, enet_packet);
     enet_host_flush(server);
     enet_peer_disconnect(client, 0);
@@ -150,7 +150,7 @@ void Room::SendMacCollision(ENetPeer* client) {
     packet << static_cast<MessageID>(IdMacCollision);
 
     ENetPacket* enet_packet =
-        enet_packet_create(packet.GetData(), packet.GetDataSize(),  ENET_PACKET_FLAG_RELIABLE);
+        enet_packet_create(packet.GetData(), packet.GetDataSize(), ENET_PACKET_FLAG_RELIABLE);
     enet_peer_send(client, 0, enet_packet);
     enet_host_flush(server);
     enet_peer_disconnect(client, 0);
@@ -161,7 +161,7 @@ void Room::SendJoinSuccess(ENetPeer* client) {
     packet << static_cast<MessageID>(IdJoinSuccess);
     packet << client->address.host;
     ENetPacket* enet_packet =
-        enet_packet_create(packet.GetData(), packet.GetDataSize(),  ENET_PACKET_FLAG_RELIABLE);
+        enet_packet_create(packet.GetData(), packet.GetDataSize(), ENET_PACKET_FLAG_RELIABLE);
     enet_peer_send(client, 0, enet_packet);
     enet_host_flush(server);
 }
@@ -180,7 +180,7 @@ void Room::BroadcastRoomInformation() {
     }
 
     ENetPacket* enet_packet =
-        enet_packet_create(packet.GetData(), packet.GetDataSize(),  ENET_PACKET_FLAG_RELIABLE);
+        enet_packet_create(packet.GetData(), packet.GetDataSize(), ENET_PACKET_FLAG_RELIABLE);
     enet_host_broadcast(server, 0, enet_packet);
     enet_host_flush(server);
 }
@@ -209,7 +209,7 @@ void Room::HandleChatPacket(const ENetEvent* event) {
     enet_host_flush(server);
 }
 
-void Room::HandleClientDisconnection(ENetPeer*  client) {
+void Room::HandleClientDisconnection(ENetPeer* client) {
     // Remove the client from the members list.
     members.erase(std::remove_if(members.begin(), members.end(),
                                  [&](const Member& member) {

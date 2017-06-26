@@ -3,7 +3,7 @@
 // Refer to the license.txt file included.
 
 #ifdef _WIN32
-#inclde <Winsock2.h>
+#include <Winsock2.h>
 #else
 #include <arpa/inet.h>
 #endif
@@ -46,7 +46,7 @@ Packet::operator BoolType() const {
     return is_valid ? &Packet::CheckSize : NULL;
 }
 
-Packet& Packet::operator >>(bool& out_data) {
+Packet& Packet::operator>>(bool& out_data) {
     uint8_t value;
     if (*this >> value)
         out_data = (value != 0);
@@ -54,7 +54,7 @@ Packet& Packet::operator >>(bool& out_data) {
     return *this;
 }
 
-Packet& Packet::operator >>(int8_t& out_data) {
+Packet& Packet::operator>>(int8_t& out_data) {
     if (CheckSize(sizeof(out_data))) {
         out_data = *reinterpret_cast<const int8_t*>(&data[read_pos]);
         read_pos += sizeof(out_data);
@@ -63,7 +63,7 @@ Packet& Packet::operator >>(int8_t& out_data) {
     return *this;
 }
 
-Packet& Packet::operator >>(uint8_t& out_data) {
+Packet& Packet::operator>>(uint8_t& out_data) {
     if (CheckSize(sizeof(out_data))) {
         out_data = *reinterpret_cast<const uint8_t*>(&data[read_pos]);
         read_pos += sizeof(out_data);
@@ -72,7 +72,7 @@ Packet& Packet::operator >>(uint8_t& out_data) {
     return *this;
 }
 
-Packet& Packet::operator >>(int16_t& out_data) {
+Packet& Packet::operator>>(int16_t& out_data) {
     if (CheckSize(sizeof(out_data))) {
         out_data = ntohs(*reinterpret_cast<const int16_t*>(&data[read_pos]));
         read_pos += sizeof(out_data);
@@ -81,7 +81,7 @@ Packet& Packet::operator >>(int16_t& out_data) {
     return *this;
 }
 
-Packet& Packet::operator >>(uint16_t& out_data) {
+Packet& Packet::operator>>(uint16_t& out_data) {
     if (CheckSize(sizeof(out_data))) {
         out_data = ntohs(*reinterpret_cast<const uint16_t*>(&data[read_pos]));
         read_pos += sizeof(out_data);
@@ -90,7 +90,7 @@ Packet& Packet::operator >>(uint16_t& out_data) {
     return *this;
 }
 
-Packet& Packet::operator >>(int32_t& out_data) {
+Packet& Packet::operator>>(int32_t& out_data) {
     if (CheckSize(sizeof(out_data))) {
         out_data = ntohl(*reinterpret_cast<const int32_t*>(&data[read_pos]));
         read_pos += sizeof(out_data);
@@ -99,7 +99,7 @@ Packet& Packet::operator >>(int32_t& out_data) {
     return *this;
 }
 
-Packet& Packet::operator >>(uint32_t& out_data) {
+Packet& Packet::operator>>(uint32_t& out_data) {
     if (CheckSize(sizeof(out_data))) {
         out_data = ntohl(*reinterpret_cast<const uint32_t*>(&data[read_pos]));
         read_pos += sizeof(out_data);
@@ -108,7 +108,7 @@ Packet& Packet::operator >>(uint32_t& out_data) {
     return *this;
 }
 
-Packet& Packet::operator >>(float& out_data) {
+Packet& Packet::operator>>(float& out_data) {
     if (CheckSize(sizeof(out_data))) {
         out_data = *reinterpret_cast<const float*>(&data[read_pos]);
         read_pos += sizeof(out_data);
@@ -117,7 +117,7 @@ Packet& Packet::operator >>(float& out_data) {
     return *this;
 }
 
-Packet& Packet::operator >>(double& out_data) {
+Packet& Packet::operator>>(double& out_data) {
     if (CheckSize(sizeof(out_data))) {
         out_data = *reinterpret_cast<const double*>(&data[read_pos]);
         read_pos += sizeof(out_data);
@@ -126,7 +126,7 @@ Packet& Packet::operator >>(double& out_data) {
     return *this;
 }
 
-Packet& Packet::operator >>(char* out_data) {
+Packet& Packet::operator>>(char* out_data) {
     // First extract string length
     uint32_t length = 0;
     *this >> length;
@@ -143,7 +143,7 @@ Packet& Packet::operator >>(char* out_data) {
     return *this;
 }
 
-Packet& Packet::operator >>(std::string& out_data) {
+Packet& Packet::operator>>(std::string& out_data) {
     // First extract string length
     uint32_t length = 0;
     *this >> length;
@@ -160,74 +160,74 @@ Packet& Packet::operator >>(std::string& out_data) {
     return *this;
 }
 
-Packet& Packet::operator <<(bool in_data) {
+Packet& Packet::operator<<(bool in_data) {
     *this << static_cast<uint8_t>(in_data);
     return *this;
 }
 
-Packet& Packet::operator <<(int8_t in_data) {
+Packet& Packet::operator<<(int8_t in_data) {
     Append(&in_data, sizeof(in_data));
     return *this;
 }
 
-Packet& Packet::operator <<(uint8_t in_data) {
+Packet& Packet::operator<<(uint8_t in_data) {
     Append(&in_data, sizeof(in_data));
     return *this;
 }
 
-Packet& Packet::operator <<(int16_t in_data) {
+Packet& Packet::operator<<(int16_t in_data) {
     int16_t to_write = htons(in_data);
     Append(&to_write, sizeof(to_write));
     return *this;
 }
 
-Packet& Packet::operator <<(uint16_t in_data) {
+Packet& Packet::operator<<(uint16_t in_data) {
     uint16_t to_write = htons(in_data);
     Append(&to_write, sizeof(to_write));
     return *this;
 }
 
-Packet& Packet::operator <<(int32_t in_data) {
+Packet& Packet::operator<<(int32_t in_data) {
     int32_t to_write = htonl(in_data);
     Append(&to_write, sizeof(to_write));
     return *this;
 }
 
-Packet& Packet::operator <<(uint32_t in_data) {
+Packet& Packet::operator<<(uint32_t in_data) {
     uint32_t to_write = htonl(in_data);
     Append(&to_write, sizeof(to_write));
     return *this;
 }
 
-Packet& Packet::operator <<(float in_data) {
+Packet& Packet::operator<<(float in_data) {
     Append(&in_data, sizeof(in_data));
     return *this;
 }
 
-Packet& Packet::operator <<(double in_data) {
+Packet& Packet::operator<<(double in_data) {
     Append(&in_data, sizeof(in_data));
     return *this;
 }
 
-Packet& Packet::operator <<(const char* in_data) {
+Packet& Packet::operator<<(const char* in_data) {
     // First insert string length
     uint32_t length = std::strlen(in_data);
     *this << length;
 
     // Then insert characters
-    Append(in_data, length*sizeof(char));
+    Append(in_data, length * sizeof(char));
 
     return *this;
 }
 
-Packet& Packet::operator <<(const std::string& in_data) {
+Packet& Packet::operator<<(const std::string& in_data) {
     // First insert string length
     uint32_t length = static_cast<uint32_t>(in_data.size());
     *this << length;
 
     // Then insert characters
     if (length > 0)
-        Append(in_data.c_str(), length*sizeof(std::string::value_type));
+        Append(in_data.c_str(), length * sizeof(std::string::value_type));
 
     return *this;
 }
