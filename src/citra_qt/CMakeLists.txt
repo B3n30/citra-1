@@ -22,6 +22,8 @@ set(SRCS
             debugger/profiler.cpp
             debugger/registers.cpp
             debugger/wait_tree.cpp
+            multiplayer/room_list_window.cpp
+            multiplayer/room_view_window.cpp
             util/spinbox.cpp
             util/util.cpp
             bootmanager.cpp
@@ -53,6 +55,8 @@ set(HEADERS
             debugger/profiler.h
             debugger/registers.h
             debugger/wait_tree.h
+            multiplayer/room_list_window.h
+            multiplayer/room_view_window.h
             util/spinbox.h
             util/util.h
             bootmanager.h
@@ -94,7 +98,7 @@ if (APPLE)
 else()
     add_executable(citra-qt ${SRCS} ${HEADERS} ${UI_HDRS} ${THEMES})
 endif()
-target_link_libraries(citra-qt PRIVATE audio_core common core input_common network video_core)
+target_link_libraries(citra-qt PRIVATE audio_core common core input_common video_core network)
 target_link_libraries(citra-qt PRIVATE Boost::boost glad nihstro-headers Qt5::OpenGL Qt5::Widgets)
 target_link_libraries(citra-qt PRIVATE ${PLATFORM_LIBRARIES} Threads::Threads)
 

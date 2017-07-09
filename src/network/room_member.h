@@ -64,13 +64,6 @@ public:
     template <typename T>
     using Connection = std::shared_ptr<std::function<void(const T&)>>;
 
-    /**
-     * Disconnect a callback function from the events.
-     * @param connection The connection handle to disconnect
-     */
-    template <typename T>
-    void Disconnect(Connection<T> connection);
-
     RoomMember();
     ~RoomMember();
 
@@ -130,23 +123,35 @@ public:
      */
     void SendGameInfo(const GameInfo& game_info);
 
+    // The handle for the callback functions
+    template <typename T>
+    using Connection = std::shared_ptr<std::function<void(const T&)>>;
     /**
      * Register a function to an event. The function wil be called everytime the event occurs.
      * Depending on the type of the parameter the function is only called for the coresponding
      * event.
-     * The events could be:
-     * - Change of the room member state
-     * -
+     * Allowed typenames are allow: WifiPacket, ChatEntry, RoomInformation, RoomMember::State
      * @param callback The function to call
      * @return A Connection used for removing the function from the registered list
      */
-    Connection<State> ConnectOnStateChanged(std::function<void(const State&)> callback);
+    template <typename T>
+    Connection<T> Connect(std::function<void(const T&)> callback);
+
+    Connection<State> ConnectOnStateChanged(
+        std::function<void(const State&)> callback);
     Connection<WifiPacket> ConnectOnWifiPacketReceived(
         std::function<void(const WifiPacket&)> callback);
     Connection<RoomInformation> ConnectOnRoomInformationChanged(
         std::function<void(const RoomInformation&)> callback);
     Connection<ChatEntry> ConnectOnChatMessageRecieved(
         std::function<void(const ChatEntry&)> callback);
+
+    /**
+     * Disconnect a function from the events.
+     */
+    template <typename T>
+    void Disconnect(Connection<T> connection);
+
 
     /**
      * Leaves the current room.

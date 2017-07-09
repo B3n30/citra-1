@@ -91,6 +91,16 @@
     <addaction name="action_Show_Status_Bar"/>
     <addaction name="menu_View_Debugging"/>
    </widget>
+   <widget class="QMenu" name="menu_Multiplayer">
+    <property name="enabled">
+     <bool>true</bool>
+    </property>
+    <property name="title">
+     <string>Multiplayer</string>
+    </property>
+    <addaction name="action_Start_Room"/>
+    <addaction name="action_Connect_To_Room"/>
+   </widget>
    <widget class="QMenu" name="menu_Help">
     <property name="title">
      <string>&amp;Help</string>
@@ -100,6 +110,7 @@
    <addaction name="menu_File"/>
    <addaction name="menu_Emulation"/>
    <addaction name="menu_View"/>
+   <addaction name="menu_Multiplayer"/>
    <addaction name="menu_Help"/>
   </widget>
   <action name="action_Load_File">
@@ -194,6 +205,24 @@
   <action name="action_Create_Pica_Surface_Viewer">
    <property name="text">
     <string>Create Pica Surface Viewer</string>
+   </property>
+  </action>
+  <action name="action_Start_Room">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Create Room</string>
+   </property>
+  </action>
+  <action name="action_Connect_To_Room">
+   <property name="text">
+    <string>Connect to Room</string>
+   </property>
+  </action>
+  <action name="action_Chat">
+   <property name="text">
+    <string>Chat</string>
    </property>
   </action>
  </widget>
