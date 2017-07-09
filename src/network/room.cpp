@@ -164,14 +164,6 @@ public:
     void HandleClientDisconnection(ENetPeer* client);
 
     /**
-<<<<<<< HEAD
-=======
-     * Sends the room information to the web service
-     */
-    void AnnounceToWebService();
-
-    /**
->>>>>>> Network: POST/GET/DELETE the room through web_service
      * Creates a random ID in the form 12345678-1234-1234-1234-123456789012
      */
     void CreateGUID();
@@ -613,7 +605,6 @@ void Room::Destroy() {
     if (room_impl->server) {
         enet_host_destroy(room_impl->server);
     }
-
     room_impl->room_information = {};
     room_impl->server = nullptr;
     {
