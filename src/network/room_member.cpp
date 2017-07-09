@@ -31,8 +31,7 @@ public:
     GameInfo current_game_info;
 
     template <typename T>
-    using CallbackSet = std::set<CallbackHandle<T>>;
-    std::mutex callback_mutex; ///< The mutex used for handling callbacks
+    using CallbackSet = std::set<Connection<T>>;
 
     class Callbacks {
     public:
@@ -46,6 +45,7 @@ public:
         CallbackSet<State> callback_set_state;
     };
 
+    std::mutex callback_mutex; ///< The mutex used for handling callbacks
     Callbacks callbacks;       ///< All CallbackSets to all events
 
     std::atomic<State> state{State::Idle}; ///< Current state of the RoomMember.
@@ -116,10 +116,15 @@ public:
      * @param data The data to send to the callback functions
      */
     template <typename T>
+    CallbackHandle<T> Bind(std::function<void(const T&)> callback);
+
+    /**
+     *  Invokes an envent. Calls all callbacks associated with the event of that data type
+     * @param data The data to send to the callback functions
+     */
+    template <typename T>
     void Invoke(const T& data);
 
-    template <typename T>
-    CallbackHandle<T> Bind(std::function<void(const T&)> callback);
 };
 
 // RoomMemberImpl

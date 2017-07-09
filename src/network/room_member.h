@@ -140,8 +140,7 @@ public:
      * event.
      * The callback function must not bind or unbind a function. Doing so will cause a deadlock
      * The events could be:
-     * - Change of the room member state
-     * -
+     * Allowed typenames are allow: WifiPacket, ChatEntry, RoomInformation, RoomMember::State
      * @param callback The function to call
      * @return A handle used for removing the function from the registered list
      */

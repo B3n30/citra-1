@@ -226,7 +226,6 @@ void RoomViewWindow::UpdateMemberList() {
         }
         item_model->invisibleRootItem()->appendRow(l);
     }
-
     // TODO(B3N30): Restore row selection
 }
 
