@@ -564,6 +564,7 @@ void Room::Destroy() {
     if (room_impl->server) {
         enet_host_destroy(room_impl->server);
     }
+    
     room_impl->room_information = {};
     room_impl->server = nullptr;
     {
