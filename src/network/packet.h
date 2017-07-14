@@ -63,7 +63,7 @@ public:
     bool EndOfPacket() const;
 
     explicit operator bool() const;
-
+    
     /// Overloads of operator >> to read data from the packet
     Packet& operator>>(bool& out_data);
     Packet& operator>>(s8& out_data);
