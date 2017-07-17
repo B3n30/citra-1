@@ -17,7 +17,7 @@ public:
     struct Member {
         std::string name{""};
         std::string game_name{""};
-        std::string game_id{""};
+        u64 game_id{};
         u16 game_version{0};
     };
     using MemberList = std::list<Member>;

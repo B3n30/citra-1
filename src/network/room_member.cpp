@@ -124,7 +124,6 @@ public:
      */
     template <typename T>
     void Invoke(const T& data);
-
 };
 
 // RoomMemberImpl
