@@ -13,7 +13,7 @@ void to_json(nlohmann::json& json, const RoomJson::Room& room) {
     json["port"] = room.port;
     json["name"] = room.name;
     json["maxPlayers"] = room.slots;
-    //json["netVersion"] = room.net_version;
+    json["netVersion"] = room.net_version;
     if (room.members.size() > 0) {
         nlohmann::json member_json = room.members;
         json["players"] = member_json;

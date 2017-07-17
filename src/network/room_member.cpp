@@ -60,23 +60,6 @@ public:
     std::mutex send_list_mutex;  ///< Mutex that controls access to the `send_list` variable.
     std::list<Packet> send_list; ///< A list that stores all packets to send the async
 
-    template <typename T>
-    using CallbackSet = std::set<Connection<T>>;
-    std::mutex callback_mutex; ///< The mutex used for handling callbacks
-
-    class Callbacks {
-    public:
-        template <typename T>
-        CallbackSet<T>& Get();
-
-    private:
-        CallbackSet<WifiPacket> callback_set_wifi_packet;
-        CallbackSet<ChatEntry> callback_set_chat_messages;
-        CallbackSet<RoomInformation> callback_set_room_information;
-        CallbackSet<State> callback_set_state;
-    };
-    Callbacks callbacks; ///< All CallbackSets to all events
-
     void MemberLoop();
 
     void StartLoop();
@@ -125,13 +108,6 @@ public:
      */
     void Disconnect();
 
-<<<<<<< HEAD
-    template <typename T>
-    void Invoke(const T& data);
-
-    template <typename T>
-    Connection<T> Connect(std::function<void(const T&)> callback);
-=======
     /**
      *  Invokes an envent. Calls all callbacks associated with the event of that data type
      * @param data The data to send to the callback functions
@@ -139,17 +115,14 @@ public:
     template <typename T>
     void Invoke(const T& data);
 
->>>>>>> Initial Network Test
+    template <typename T>
+    Connection<T> Connect(std::function<void(const T&)> callback);
 };
 
 // RoomMemberImpl
 void RoomMember::RoomMemberImpl::SetState(const State new_state) {
     if (state != new_state) {
         state = new_state;
-<<<<<<< HEAD
-=======
-        // TODO(B3N30): Invoke the callback functions
->>>>>>> Initial Network Test
         Invoke<State>(state);
     }
 }
@@ -263,10 +236,6 @@ void RoomMember::RoomMemberImpl::HandleRoomInformationPacket(const ENetEvent* ev
         packet >> member.game_info.id;
         packet >> member.game_info.version;
     }
-<<<<<<< HEAD
-=======
-    // TODO(B3N30): Invoke callbacks
->>>>>>> Initial Network Test
     Invoke(room_information);
 }
 
@@ -304,11 +273,6 @@ void RoomMember::RoomMemberImpl::HandleWifiPackets(const ENetEvent* event) {
     packet >> data_length;
 
     packet >> wifi_packet.data;
-
-<<<<<<< HEAD
-=======
-    // TODO(B3N30): Invoke callbacks
->>>>>>> Initial Network Test
     Invoke<WifiPacket>(wifi_packet);
 }
 
@@ -323,8 +287,6 @@ void RoomMember::RoomMemberImpl::HandleChatPacket(const ENetEvent* event) {
     packet >> chat_entry.nickname;
     packet >> chat_entry.message;
     Invoke<ChatEntry>(chat_entry);
-<<<<<<< HEAD
-=======
 }
 
 template<>
@@ -356,7 +318,6 @@ void RoomMember::RoomMemberImpl::Invoke(const T& data) {
     }
     for (auto const& callback : callback_set)
         (*callback)(data);
->>>>>>> Initial Network Test
 }
 
 void RoomMember::RoomMemberImpl::Disconnect() {
@@ -382,39 +343,6 @@ void RoomMember::RoomMemberImpl::Disconnect() {
     // didn't disconnect gracefully force disconnect
     enet_peer_reset(server);
     server = nullptr;
-}
-
-template <>
-RoomMember::RoomMemberImpl::CallbackSet<WifiPacket>& RoomMember::RoomMemberImpl::Callbacks::Get() {
-    return callback_set_wifi_packet;
-}
-
-template <>
-RoomMember::RoomMemberImpl::CallbackSet<RoomMember::State>&
-RoomMember::RoomMemberImpl::Callbacks::Get() {
-    return callback_set_state;
-}
-
-template <>
-RoomMember::RoomMemberImpl::CallbackSet<RoomInformation>&
-RoomMember::RoomMemberImpl::Callbacks::Get() {
-    return callback_set_room_information;
-}
-
-template <>
-RoomMember::RoomMemberImpl::CallbackSet<ChatEntry>& RoomMember::RoomMemberImpl::Callbacks::Get() {
-    return callback_set_chat_messages;
-}
-
-template <typename T>
-void RoomMember::RoomMemberImpl::Invoke(const T& data) {
-    CallbackSet<T> callback_set;
-    {
-        std::lock_guard<std::mutex> lock(callback_mutex);
-        callback_set = callbacks.Get<T>();
-    }
-    for (auto const& callback : callback_set)
-        (*callback)(data);
 }
 
 template <typename T>

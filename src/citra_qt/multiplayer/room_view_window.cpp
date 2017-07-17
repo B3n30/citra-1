@@ -215,7 +215,7 @@ void RoomViewWindow::UpdateMemberList() {
 
         std::vector<std::string> elements = {
             member.nickname,
-            member.game_name,
+            member.game_info.name,
             MacAddressString(member.mac_address).toStdString(),
             "- %",
             "- ms"
