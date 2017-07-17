@@ -18,6 +18,7 @@
 #include "core/loader/ncch.h"
 #include "core/loader/smdh.h"
 #include "core/memory.h"
+#include "network/network.h"
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Loader namespace
@@ -347,6 +348,19 @@ ResultStatus AppLoader_NCCH::Load() {
     LOG_INFO(Loader, "Program ID: %s", program_id.c_str());
 
     Core::Telemetry().AddField(Telemetry::FieldType::Session, "ProgramId", program_id);
+
+    if (auto room_member = Network::GetRoomMember().lock()) {
+        Network::GameInfo game_info;
+        std::vector<u8> smdh_data;
+        ReadIcon(smdh_data);
+        SMDH smdh;
+        std::memcpy(&smdh, smdh_data.data(), sizeof(SMDH));
+        auto title = smdh.GetShortTitle(SMDH::TitleLanguage::English);
+        game_info.name.assign(Common::UTF16ToUTF8(std::u16string{title.begin(), title.end()}));
+        game_info.id = ncch_header.program_id;
+        game_info.version = ncch_header.version;
+        room_member->SendGameInfo(game_info);
+    }
 
     is_loaded = true; // Set state to loaded
 

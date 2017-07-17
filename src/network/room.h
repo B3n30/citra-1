@@ -21,6 +21,12 @@ struct RoomInformation {
     u32 member_slots; ///< Maximum number of members in this room
 };
 
+struct GameInfo {
+    std::string name{""};
+    u64 id{0};
+    u16 version{0};
+};
+
 using MacAddress = std::array<u8, 6>;
 /// A special MAC address that tells the room we're joining to assign us a MAC address
 /// automatically.
@@ -34,7 +40,7 @@ enum RoomMessageTypes : u8 {
     IdJoinRequest = 1,
     IdJoinSuccess,
     IdRoomInformation,
-    IdSetGameName,
+    IdSetGameInfo,
     IdWifiPacket,
     IdChatMessage,
     IdNameCollision,
