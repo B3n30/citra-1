@@ -53,7 +53,7 @@ public:
 
     struct MemberInformation {
         std::string nickname;   ///< Nickname of the member.
-        std::string game_name;  ///< Name of the game they're currently playing, or empty if they're
+        GameInfo game_info;     ///< Name of the game they're currently playing, or empty if they're
                                 /// not playing anything.
         MacAddress mac_address; ///< MAC address associated with this member.
     };
@@ -113,10 +113,10 @@ public:
     void SendChatMessage(const std::string& message);
 
     /**
-     * Sends the current game name  to the room.
-     * @param game_name The game name.
+     * Sends the current game info to the room.
+     * @param game_info The game information.
      */
-    void SendGameName(const std::string& game_name);
+    void SendGameInfo(const GameInfo& game_info);
 
     /**
      * Leaves the current room.

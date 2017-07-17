@@ -29,7 +29,7 @@ public:
 
     struct Member {
         std::string nickname;   ///< The nickname of the member.
-        std::string game_name;  ///< The current game of the member
+        GameInfo game_info;     ///< The current game of the member
         MacAddress mac_address; ///< The assigned mac address of the member.
         ENetPeer* peer;         ///< The remote peer.
     };
@@ -147,7 +147,7 @@ void Room::RoomImpl::ServerLoop() {
                 case IdJoinRequest:
                     HandleJoinRequest(&event);
                     break;
-                case IdSetGameName:
+                case IdSetGameInfo:
                     HandleGameNamePacket(&event);
                     break;
                 case IdWifiPacket:
@@ -298,7 +298,9 @@ void Room::RoomImpl::BroadcastRoomInformation() {
     for (const auto& member : members) {
         packet << member.nickname;
         packet << member.mac_address;
-        packet << member.game_name;
+        packet << member.game_info.name;
+        packet << member.game_info.id;
+        packet << member.game_info.version;
     }
 
     ENetPacket* enet_packet =
@@ -385,13 +387,15 @@ void Room::RoomImpl::HandleGameNamePacket(const ENetEvent* event) {
     in_packet.Append(event->packet->data, event->packet->dataLength);
 
     in_packet.IgnoreBytes(sizeof(u8)); // Igonore the message type
-    std::string game_name;
-    in_packet >> game_name;
+    GameInfo game_info;
+    in_packet >> game_info.name;
+    in_packet >> game_info.id;
+    in_packet >> game_info.version;
     auto member =
         std::find_if(members.begin(), members.end(),
                      [event](const Member& member) -> bool { return member.peer == event->peer; });
     if (member != members.end()) {
-        member->game_name = game_name;
+        member->game_info = game_info;
         BroadcastRoomInformation();
     }
 }

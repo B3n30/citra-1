@@ -25,6 +25,9 @@ public:
     /// Information about the room we're connected to.
     RoomInformation room_information;
 
+    /// The current game name, id and version
+    GameInfo current_game_info;
+
     std::atomic<State> state{State::Idle}; ///< Current state of the RoomMember.
     void SetState(const State new_state);
     bool IsConnected() const;
@@ -195,7 +198,9 @@ void RoomMember::RoomMemberImpl::HandleRoomInformationPacket(const ENetEvent* ev
     for (auto& member : member_information) {
         packet >> member.nickname;
         packet >> member.mac_address;
-        packet >> member.game_name;
+        packet >> member.game_info.name;
+        packet >> member.game_info.id;
+        packet >> member.game_info.version;
     }
     // TODO(B3N30): Invoke callbacks
 }
@@ -339,6 +344,7 @@ void RoomMember::Join(const std::string& nick, const char* server_addr, u16 serv
         room_member_impl->SetState(State::Joining);
         room_member_impl->StartLoop();
         room_member_impl->SendJoinRequest(nick, preferred_mac);
+        SendGameInfo(room_member_impl->current_game_info);
     } else {
         room_member_impl->SetState(State::CouldNotConnect);
     }
@@ -366,10 +372,16 @@ void RoomMember::SendChatMessage(const std::string& message) {
     room_member_impl->Send(std::move(packet));
 }
 
-void RoomMember::SendGameName(const std::string& game_name) {
+void RoomMember::SendGameInfo(const GameInfo& game_info) {
+    room_member_impl->current_game_info = game_info;
+    if (!IsConnected())
+        return;
+
     Packet packet;
-    packet << static_cast<u8>(IdSetGameName);
-    packet << game_name;
+    packet << static_cast<u8>(IdSetGameInfo);
+    packet << game_info.name;
+    packet << game_info.id;
+    packet << game_info.version;
     room_member_impl->Send(std::move(packet));
 }
 
