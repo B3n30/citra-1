@@ -4,12 +4,10 @@
 
 #include <algorithm>
 #include <atomic>
-<<<<<<< HEAD
 #include <chrono>
-=======
->>>>>>> WebService: Added service to announce and get Netplay-Rooms
 #include <iomanip>
 #include <mutex>
+#include <chrono>
 #include <random>
 #include <sstream>
 #include <thread>
@@ -18,11 +16,15 @@
 #include "network/packet.h"
 #include "network/room.h"
 
-
 namespace Network {
 
 // Time between room is announced to web_service
 static constexpr std::chrono::seconds ping_interval(10);
+
+static constexpr size_t inet_addr_strlen = 16;
+
+// Time between room is announced to web_service
+static constexpr std::chrono::seconds announce_time_interval(15);
 
 static constexpr size_t inet_addr_strlen = 16;
 
@@ -55,11 +57,6 @@ public:
     std::chrono::high_resolution_clock::time_point last_time_pinged;
 
     RoomImpl();
-
-    /**
-     * Creates a random ID in the form 12345678-1234-1234-1234-123456789012
-     */
-    void CreateGUID();
 
     /// Thread that receives and dispatches network packets
     std::unique_ptr<std::thread> room_thread;
@@ -167,6 +164,14 @@ public:
     void HandleClientDisconnection(ENetPeer* client);
 
     /**
+<<<<<<< HEAD
+=======
+     * Sends the room information to the web service
+     */
+    void AnnounceToWebService();
+
+    /**
+>>>>>>> Network: POST/GET/DELETE the room through web_service
      * Creates a random ID in the form 12345678-1234-1234-1234-123456789012
      */
     void CreateGUID();
@@ -519,12 +524,41 @@ void Room::RoomImpl::HandleClientDisconnection(ENetPeer* client) {
     BroadcastRoomInformation();
 }
 
+void Room::RoomImpl::AnnounceToWebService() {
+#ifdef ENABLE_WEB_SERVICE
+    if (!announce_to_web_service)
+        return;
+
+    if (std::chrono::duration_cast<std::chrono::seconds>(
+            std::chrono::steady_clock::now() - last_time_announced) < announce_time_interval)
+        return;
+
+    last_time_announced = std::chrono::steady_clock::now();
+    room_json.Announce();
+
+#endif
+}
+
+void Room::RoomImpl::CreateGUID() {
+    std::uniform_int_distribution<> dis(0,9999);
+    std::ostringstream stream;
+    stream << std::setfill('0') << std::setw(4) << dis(random_gen) <<
+    std::setfill('0') << std::setw(4) << dis(random_gen) << "-" <<
+    std::setfill('0') << std::setw(4) << dis(random_gen) << "-" <<
+    std::setfill('0') << std::setw(4) << dis(random_gen) << "-" <<
+    std::setfill('0') << std::setw(4) << dis(random_gen) << "-" <<
+    std::setfill('0') << std::setw(4) << dis(random_gen) <<
+    std::setfill('0') << std::setw(4) << dis(random_gen) <<
+    std::setfill('0') << std::setw(4) << dis(random_gen);
+    guid = stream.str();
+}
+
 // Room
 Room::Room() : room_impl{std::make_unique<RoomImpl>()} {}
 
 Room::~Room() = default;
 
-bool Room::Create(const std::string& name, const std::string& server_address, u16 server_port) {
+void Room::Create(const std::string& name, const std::string& server_address, u16 server_port, bool announce) {
     ENetAddress address;
     address.host = ENET_HOST_ANY;
     if (!server_address.empty()) {

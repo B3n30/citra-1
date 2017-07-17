@@ -91,8 +91,8 @@ public:
      * Creates the socket for this room. Will bind to default address if
      * server is empty string.
      */
-    bool Create(const std::string& name, const std::string& server = "",
-                u16 server_port = DefaultRoomPort);
+    void Create(const std::string& name, const std::string& server = "",
+                u16 server_port = DefaultRoomPort, bool announce = true);
 
     /**
      * Destroys the socket
