@@ -89,7 +89,7 @@ public:
      * server is empty string.
      */
     void Create(const std::string& name, const std::string& server = "",
-                u16 server_port = DefaultRoomPort);
+                u16 server_port = DefaultRoomPort, bool announce = true);
 
     /**
      * Destroys the socket

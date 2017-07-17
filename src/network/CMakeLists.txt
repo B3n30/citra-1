@@ -15,4 +15,7 @@ set(HEADERS
 create_directory_groups(${SRCS} ${HEADERS})
 
 add_library(network STATIC ${SRCS} ${HEADERS})
+if (ENABLE_WEB_SERVICE)
+    target_link_libraries(network PUBLIC web_service)
+endif()
 target_link_libraries(network PRIVATE common enet)
