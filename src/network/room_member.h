@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -58,6 +59,17 @@ public:
         MacAddress mac_address; ///< MAC address associated with this member.
     };
     using MemberList = std::vector<MemberInformation>;
+
+    // The handle for the callback functions
+    template <typename T>
+    using Connection = std::shared_ptr<std::function<void(const T&)>>;
+
+    /**
+     * Disconnect a callback function from the events.
+     * @param connection The connection handle to disconnect
+     */
+    template <typename T>
+    void Disconnect(Connection<T> connection);
 
     RoomMember();
     ~RoomMember();
@@ -117,6 +129,24 @@ public:
      * @param game_info The game information.
      */
     void SendGameInfo(const GameInfo& game_info);
+
+    /**
+     * Register a function to an event. The function wil be called everytime the event occurs.
+     * Depending on the type of the parameter the function is only called for the coresponding
+     * event.
+     * The events could be:
+     * - Change of the room member state
+     * -
+     * @param callback The function to call
+     * @return A Connection used for removing the function from the registered list
+     */
+    Connection<State> ConnectOnStateChanged(std::function<void(const State&)> callback);
+    Connection<WifiPacket> ConnectOnWifiPacketReceived(
+        std::function<void(const WifiPacket&)> callback);
+    Connection<RoomInformation> ConnectOnRoomInformationChanged(
+        std::function<void(const RoomInformation&)> callback);
+    Connection<ChatEntry> ConnectOnChatMessageRecieved(
+        std::function<void(const ChatEntry&)> callback);
 
     /**
      * Leaves the current room.
