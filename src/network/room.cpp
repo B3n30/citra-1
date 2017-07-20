@@ -4,9 +4,9 @@
 
 #include <algorithm>
 #include <atomic>
+#include <mutex>
 #include <random>
 #include <thread>
-#include <vector>
 #include "enet/enet.h"
 #include "network/packet.h"
 #include "network/room.h"
@@ -34,7 +34,9 @@ public:
         ENetPeer* peer;         ///< The remote peer.
     };
     using MemberList = std::vector<Member>;
-    MemberList members; ///< Information about the members of this room.
+    MemberList members;              ///< Information about the members of this room
+    mutable std::mutex member_mutex; ///< Mutex for locking the members list
+    /// This should be a std::shared_mutex as soon as C++17 is supported
 
     RoomImpl()
         : random_gen(std::random_device()()), NintendoOUI{0x00, 0x1F, 0x32, 0x00, 0x00, 0x00} {}
@@ -213,7 +215,10 @@ void Room::RoomImpl::HandleJoinRequest(const ENetEvent* event) {
     member.nickname = nickname;
     member.peer = event->peer;
 
-    members.push_back(std::move(member));
+    {
+        std::lock_guard<std::mutex> lock(member_mutex);
+        members.push_back(std::move(member));
+    }
 
     // Notify everyone that the room information has changed.
     BroadcastRoomInformation();
@@ -223,12 +228,14 @@ void Room::RoomImpl::HandleJoinRequest(const ENetEvent* event) {
 bool Room::RoomImpl::IsValidNickname(const std::string& nickname) const {
     // A nickname is valid if it is not already taken by anybody else in the room.
     // TODO(B3N30): Check for empty names, spaces, etc.
+    std::lock_guard<std::mutex> lock(member_mutex);
     return std::all_of(members.begin(), members.end(),
                        [&nickname](const auto& member) { return member.nickname != nickname; });
 }
 
 bool Room::RoomImpl::IsValidMacAddress(const MacAddress& address) const {
     // A MAC address is valid if it is not already taken by anybody else in the room.
+    std::lock_guard<std::mutex> lock(member_mutex);
     return std::all_of(members.begin(), members.end(),
                        [&address](const auto& member) { return member.mac_address != address; });
 }
@@ -279,6 +286,7 @@ void Room::RoomImpl::SendCloseMessage() {
     packet << static_cast<u8>(IdCloseRoom);
     ENetPacket* enet_packet =
         enet_packet_create(packet.GetData(), packet.GetDataSize(), ENET_PACKET_FLAG_RELIABLE);
+    std::lock_guard<std::mutex> lock(member_mutex);
     for (auto& member : members) {
         enet_peer_send(member.peer, 0, enet_packet);
     }
@@ -295,12 +303,15 @@ void Room::RoomImpl::BroadcastRoomInformation() {
     packet << room_information.member_slots;
 
     packet << static_cast<u32>(members.size());
-    for (const auto& member : members) {
-        packet << member.nickname;
-        packet << member.mac_address;
-        packet << member.game_info.name;
-        packet << member.game_info.id;
-        packet << member.game_info.version;
+    {
+        std::lock_guard<std::mutex> lock(member_mutex);
+        for (const auto& member : members) {
+            packet << member.nickname;
+            packet << member.mac_address;
+            packet << member.game_info.name;
+            packet << member.game_info.id;
+            packet << member.game_info.version;
+        }
     }
 
     ENetPacket* enet_packet =
@@ -337,11 +348,13 @@ void Room::RoomImpl::HandleWifiPacket(const ENetEvent* event) {
                                                  ENET_PACKET_FLAG_RELIABLE);
 
     if (destination_address == BroadcastMac) { // Send the data to everyone except the sender
+        std::lock_guard<std::mutex> lock(member_mutex);
         for (const auto& member : members) {
             if (member.peer != event->peer)
                 enet_peer_send(member.peer, 0, enet_packet);
         }
     } else { // Send the data only to the destination client
+        std::lock_guard<std::mutex> lock(member_mutex);
         auto member = std::find_if(members.begin(), members.end(),
                                    [destination_address](const Member& member) -> bool {
                                        return member.mac_address == destination_address;
@@ -363,6 +376,8 @@ void Room::RoomImpl::HandleChatPacket(const ENetEvent* event) {
     auto CompareNetworkAddress = [event](const Member member) -> bool {
         return member.peer == event->peer;
     };
+
+    std::lock_guard<std::mutex> lock(member_mutex);
     const auto sending_member = std::find_if(members.begin(), members.end(), CompareNetworkAddress);
     if (sending_member == members.end()) {
         return; // Received a chat message from a unknown sender
@@ -391,20 +406,29 @@ void Room::RoomImpl::HandleGameNamePacket(const ENetEvent* event) {
     in_packet >> game_info.name;
     in_packet >> game_info.id;
     in_packet >> game_info.version;
-    auto member =
-        std::find_if(members.begin(), members.end(),
-                     [event](const Member& member) -> bool { return member.peer == event->peer; });
-    if (member != members.end()) {
-        member->game_info = game_info;
-        BroadcastRoomInformation();
+
+    {
+        std::lock_guard<std::mutex> lock(member_mutex);
+        auto member =
+            std::find_if(members.begin(), members.end(), [event](const Member& member) -> bool {
+                return member.peer == event->peer;
+            });
+        if (member != members.end()) {
+            member->game_info = game_info;
+        }
     }
+    BroadcastRoomInformation();
 }
 
 void Room::RoomImpl::HandleClientDisconnection(ENetPeer* client) {
     // Remove the client from the members list.
-    members.erase(std::remove_if(members.begin(), members.end(),
-                                 [client](const Member& member) { return member.peer == client; }),
-                  members.end());
+    {
+        std::lock_guard<std::mutex> lock(member_mutex);
+        members.erase(
+            std::remove_if(members.begin(), members.end(),
+                           [client](const Member& member) { return member.peer == client; }),
+            members.end());
+    }
 
     // Announce the change to all clients.
     enet_peer_disconnect(client, 0);
@@ -441,6 +465,19 @@ const RoomInformation& Room::GetRoomInformation() const {
     return room_impl->room_information;
 }
 
+const std::vector<Room::Member>&& Room::GetRoomMemberList() const {
+    std::vector<Room::Member> member_list;
+    std::lock_guard<std::mutex> lock(room_impl->member_mutex);
+    for (const auto& member_impl : room_impl->members) {
+        Member member;
+        member.nickname = member_impl.nickname;
+        member.mac_address = member_impl.mac_address;
+        member.game_info = member_impl.game_info;
+        member_list.push_back(member);
+    }
+    return std::move(member_list);
+};
+
 void Room::Destroy() {
     room_impl->state = State::Closed;
     room_impl->room_thread->join();
@@ -451,7 +488,10 @@ void Room::Destroy() {
     }
     room_impl->room_information = {};
     room_impl->server = nullptr;
-    room_impl->members.clear();
+    {
+        std::lock_guard<std::mutex> lock(room_impl->member_mutex);
+        room_impl->members.clear();
+    }
     room_impl->room_information.member_slots = 0;
     room_impl->room_information.name.clear();
 }
