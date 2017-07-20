@@ -7,6 +7,7 @@
 #include <array>
 #include <memory>
 #include <string>
+#include <vector>
 #include "common/common_types.h"
 
 namespace Network {
@@ -57,6 +58,12 @@ public:
         Closed, ///< The room is not opened and can not accept connections.
     };
 
+    struct Member {
+        std::string nickname;   ///< The nickname of the member.
+        GameInfo game_info;     ///< The current game of the member
+        MacAddress mac_address; ///< The assigned mac address of the member.
+    };
+
     Room();
     ~Room();
 
@@ -69,6 +76,11 @@ public:
      * Gets the room information of the room.
      */
     const RoomInformation& GetRoomInformation() const;
+
+    /**
+     * Gets a list of the mbmers connected to the room.
+     */
+    const std::vector<Member>&& GetRoomMemberList() const;
 
     /**
      * Creates the socket for this room. Will bind to default address if
