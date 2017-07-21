@@ -1,9 +1,11 @@
 set(SRCS
+            netplay_json.cpp
             telemetry_json.cpp
             web_backend.cpp
             )
 
 set(HEADERS
+            netplay_json.h
             telemetry_json.h
             web_backend.h
             )

@@ -34,6 +34,7 @@ set(SRCS
             memory_util.cpp
             microprofile.cpp
             misc.cpp
+            netplay_announce.cpp
             param_package.cpp
             scm_rev.cpp
             string_util.cpp
@@ -65,6 +66,7 @@ set(HEADERS
             memory_util.h
             microprofile.h
             microprofileui.h
+            netplay_announce.h
             param_package.h
             platform.h
             quaternion.h

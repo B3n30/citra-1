@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <future>
 #include <string>
 #include "common/common_types.h"
 
@@ -27,5 +28,18 @@ const std::string& GetToken();
  * @param data String of JSON data to use for the body of the POST request.
  */
 void PostJson(const std::string& url, const std::string& data);
+
+/**
+ * Get JSON from services.citra-emu.org.
+ * @param url URL of the services.citra-emu.org endpoint to get data from.
+ */
+std::future<std::string> GetJson(const std::string& url);
+
+/**
+ * Delete JSON to services.citra-emu.org.
+ * @param url URL of the services.citra-emu.org endpoint to post data to.
+ * @param data String of JSON data to use for the body of the DELETE request.
+ */
+void DeleteJson(const std::string& url, const std::string& data);
 
 } // namespace WebService

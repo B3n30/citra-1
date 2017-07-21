@@ -43,10 +43,42 @@ void PostJson(const std::string& url, const std::string& data) {
         return;
     }
 
-    cpr::PostAsync(cpr::Url{url}, cpr::Body{data}, cpr::Header{{"Content-Type", "application/json"},
-                                                               {"x-username", GetUsername()},
-                                                               {"x-token", GetToken()},
-                                                               {"api-version", API_VERSION}});
+    cpr::PostAsync(cpr::Url{url}, cpr::Body{data},
+                   cpr::Header{{"Content-Type", "application/json"},
+                               {"x-username", GetUsername()},
+                               {"x-token", GetToken()},
+                               {"api-version", API_VERSION}});
+}
+
+std::future<std::string> GetJson(const std::string& url) {
+    if (url.empty()) {
+        LOG_ERROR(WebService, "URL is invalid");
+        auto EmptyString = []() -> std::string { return std::string{}; };
+        return std::async(EmptyString);
+    }
+
+    cpr::AsyncResponse response = cpr::GetAsync(cpr::Url{url});
+    auto ResponseToString = [&]() -> std::string { return response.get().text; };
+    return std::async(ResponseToString);
+}
+
+void DeleteJson(const std::string& url, const std::string& data) {
+    if (url.empty()) {
+        LOG_ERROR(WebService, "URL is invalid");
+        return;
+    }
+
+    if (GetUsername().empty() || GetToken().empty()) {
+        LOG_ERROR(WebService, "Environment variables %s and %s must be set to DELETE JSON",
+                  ENV_VAR_USERNAME, ENV_VAR_TOKEN);
+        return;
+    }
+
+    cpr::DeleteAsync(cpr::Url{url}, cpr::Body{data},
+                     cpr::Header{{"Content-Type", "application/json"},
+                                 {"x-username", GetUsername()},
+                                 {"x-token", GetToken()},
+                                 {"api-version", API_VERSION}});
 }
 
 } // namespace WebService
