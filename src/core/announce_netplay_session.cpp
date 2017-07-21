@@ -25,16 +25,17 @@ NetplayAnnounceSession::NetplayAnnounceSession() {
 }
 
 void NetplayAnnounceSession::Start() {
-    ASSERT_MSG(announce != false, "");
+    ASSERT_MSG(announce == false, "Announce already running");
     announce = true;
     netplay_announce_thread =
         std::make_unique<std::thread>(&NetplayAnnounceSession::AnnounceNetplayLoop, this);
 }
 
 void NetplayAnnounceSession::Stop() {
-    ASSERT_MSG(announce, "");
+    ASSERT_MSG(announce, "No announce to stop");
     announce = false;
-    netplay_announce_thread->join();
+    // Detaching the loop, to not wait for the sleep to finish. The loop thread will finish soon.
+    netplay_announce_thread->detach();
     netplay_announce_thread.reset();
     backend->Delete();
 }

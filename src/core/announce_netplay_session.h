@@ -32,7 +32,7 @@ public:
     std::future<NetplayAnnounce::RoomList> GetRoomList();
 
 private:
-    std::atomic<bool> announce{true};
+    std::atomic<bool> announce{false};
     std::unique_ptr<std::thread> netplay_announce_thread;
 
     std::unique_ptr<NetplayAnnounce::Backend> backend; ///< Backend interface that logs fields
