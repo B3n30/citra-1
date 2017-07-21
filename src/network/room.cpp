@@ -4,7 +4,10 @@
 
 #include <algorithm>
 #include <atomic>
+<<<<<<< HEAD
 #include <chrono>
+=======
+>>>>>>> WebService: Added service to announce and get Netplay-Rooms
 #include <iomanip>
 #include <mutex>
 #include <random>
@@ -52,6 +55,11 @@ public:
     std::chrono::high_resolution_clock::time_point last_time_pinged;
 
     RoomImpl();
+
+    /**
+     * Creates a random ID in the form 12345678-1234-1234-1234-123456789012
+     */
+    void CreateGUID();
 
     /// Thread that receives and dispatches network packets
     std::unique_ptr<std::thread> room_thread;

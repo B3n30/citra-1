@@ -56,7 +56,6 @@ void NetplayAnnounceSession::AnnounceNetplayLoop() {
                                             room_information.port, room_information.member_slots,
                                             Network::network_version);
                 backend->ClearPlayers();
-                LOG_DEBUG(Network, "%lu", memberlist.size());
                 for (const auto& member : memberlist) {
                     backend->AddPlayer(member.nickname, member.mac_address, member.game_info.id,
                                        member.game_info.name, member.game_info.version);
