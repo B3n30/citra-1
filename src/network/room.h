@@ -12,7 +12,7 @@
 
 namespace Network {
 
-constexpr u32 network_version = 1; ///< The version of this Room and RoomMember
+constexpr u32 network_version = 2; ///< The version of this Room and RoomMember
 
 constexpr u16 DefaultRoomPort = 1234;
 constexpr size_t NumChannels = 1; // Number of channels used for the connection
@@ -20,6 +20,8 @@ constexpr size_t NumChannels = 1; // Number of channels used for the connection
 struct RoomInformation {
     std::string name; ///< Name of the server
     u32 member_slots; ///< Maximum number of members in this room
+    std::string guid; ///< The GUID of the room
+    u16 port;         ///< The port of this room
 };
 
 struct GameInfo {

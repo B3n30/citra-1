@@ -138,6 +138,10 @@ void Config::ReadValues() {
         qt_config->value("telemetry_endpoint_url", "https://services.citra-emu.org/api/telemetry")
             .toString()
             .toStdString();
+    Settings::values.announce_netplay_endpoint_url =
+        qt_config->value("netplay_endpoint_url", "https://services.citra-emu.org/api/netplay")
+            .toString()
+            .toStdString();
     qt_config->endGroup();
 
     qt_config->beginGroup("UI");
@@ -279,6 +283,8 @@ void Config::SaveValues() {
     qt_config->beginGroup("WebService");
     qt_config->setValue("telemetry_endpoint_url",
                         QString::fromStdString(Settings::values.telemetry_endpoint_url));
+    qt_config->setValue("netplay_endpoint_url",
+                        QString::fromStdString(Settings::values.announce_netplay_endpoint_url));
     qt_config->endGroup();
 
     qt_config->beginGroup("UI");

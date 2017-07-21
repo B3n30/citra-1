@@ -70,7 +70,7 @@ enum Values {
 static const std::array<const char*, NumAnalogs> mapping = {{
     "circle_pad", "c_stick",
 }};
-} // namespace NumAnalog
+} // namespace NativeAnalog
 
 struct Values {
     // CheckNew3DS
@@ -129,6 +129,7 @@ struct Values {
 
     // WebService
     std::string telemetry_endpoint_url;
+    std::string announce_netplay_endpoint_url;
 } extern values;
 
 // a special value for Values::region_value indicating that citra will automatically select a region
@@ -136,4 +137,4 @@ struct Values {
 static constexpr int REGION_VALUE_AUTO_SELECT = -1;
 
 void Apply();
-}
+} // namespace Settings
