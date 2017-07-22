@@ -75,6 +75,7 @@ void NetplayJson::AddPlayer(const std::string& nickname,
 
 void NetplayJson::Announce() {
     nlohmann::json json = room;
+    LOG_DEBUG(Network, "%s", json.dump(4).c_str());
     PostJson(Settings::values.announce_netplay_endpoint_url, json.dump());
 }
 

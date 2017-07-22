@@ -516,35 +516,6 @@ void Room::RoomImpl::HandleClientDisconnection(ENetPeer* client) {
     BroadcastRoomInformation();
 }
 
-void Room::RoomImpl::AnnounceToWebService() {
-#ifdef ENABLE_WEB_SERVICE
-    if (!announce_to_web_service)
-        return;
-
-    if (std::chrono::duration_cast<std::chrono::seconds>(
-            std::chrono::steady_clock::now() - last_time_announced) < announce_time_interval)
-        return;
-
-    last_time_announced = std::chrono::steady_clock::now();
-    room_json.Announce();
-
-#endif
-}
-
-void Room::RoomImpl::CreateGUID() {
-    std::uniform_int_distribution<> dis(0,9999);
-    std::ostringstream stream;
-    stream << std::setfill('0') << std::setw(4) << dis(random_gen) <<
-    std::setfill('0') << std::setw(4) << dis(random_gen) << "-" <<
-    std::setfill('0') << std::setw(4) << dis(random_gen) << "-" <<
-    std::setfill('0') << std::setw(4) << dis(random_gen) << "-" <<
-    std::setfill('0') << std::setw(4) << dis(random_gen) << "-" <<
-    std::setfill('0') << std::setw(4) << dis(random_gen) <<
-    std::setfill('0') << std::setw(4) << dis(random_gen) <<
-    std::setfill('0') << std::setw(4) << dis(random_gen);
-    guid = stream.str();
-}
-
 // Room
 Room::Room() : room_impl{std::make_unique<RoomImpl>()} {}
 
