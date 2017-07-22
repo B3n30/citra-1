@@ -88,7 +88,12 @@ void RoomListWindow::OnCreate() {
     if (!CloseOnConfirm())
         return;
     const std::string room_name(server->text().toStdString());
-    room->Create(room_name, "", port->value());
+    if (!room->Create(room_name, "", port->value())) {
+       QMessageBox::critical(this, tr("Citra"),
+                              tr("Failed to create room. Check your network settings"),
+                              QMessageBox::Ok, QMessageBox::Ok);
+        return;
+    }
     const std::string str_nickname(nickname->text().toStdString());
     room_member->Join(str_nickname, "127.0.0.1", port->value());
     announce_netplay_session = std::make_unique<Core::NetplayAnnounceSession>();

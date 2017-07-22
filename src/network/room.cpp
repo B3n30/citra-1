@@ -10,11 +10,11 @@
 #include <random>
 #include <sstream>
 #include <thread>
+#include "common/logging/log.h"
 #include "enet/enet.h"
 #include "network/packet.h"
 #include "network/room.h"
 
-#include "common/logging/log.h"
 
 namespace Network {
 
@@ -478,7 +478,7 @@ Room::Room() : room_impl{std::make_unique<RoomImpl>()} {}
 
 Room::~Room() = default;
 
-void Room::Create(const std::string& name, const std::string& server_address, u16 server_port,
+bool Room::Create(const std::string& name, const std::string& server_address, u16 server_port,
                   bool announce) {
     ENetAddress address;
     address.host = ENET_HOST_ANY;
@@ -488,6 +488,11 @@ void Room::Create(const std::string& name, const std::string& server_address, u1
     address.port = server_port;
 
     room_impl->server = enet_host_create(&address, MaxConcurrentConnections, NumChannels, 0, 0);
+    if (!room_impl->server) {
+        LOG_ERROR(Network, "Failed to create room");
+        return false;
+    }
+
     // TODO(B3N30): Allow specifying the maximum number of concurrent connections.
     room_impl->state = State::Open;
 
@@ -497,6 +502,7 @@ void Room::Create(const std::string& name, const std::string& server_address, u1
     room_impl->room_information.port = server_port;
 
     room_impl->StartLoop();
+    return true;
 }
 
 Room::State Room::GetState() const {
