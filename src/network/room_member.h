@@ -61,6 +61,17 @@ public:
     };
     using MemberList = std::vector<MemberInformation>;
 
+    // The handle for the callback functions
+    template <typename T>
+    using CallbackHandle = std::shared_ptr<std::function<void(const T&)>>;
+
+    /**
+     * Derigisters a callback function from the events.
+     * @param handle The connection handle to disconnect
+     */
+    template <typename T>
+    void Unbind(CallbackHandle<T> handle);
+
     RoomMember();
     ~RoomMember();
 
@@ -127,19 +138,19 @@ public:
      * Register a function to an event. The function wil be called everytime the event occurs.
      * Depending on the type of the parameter the function is only called for the coresponding
      * event.
-     * Allowed typenames are allow: WifiPacket, ChatEntry, RoomInformation, RoomMember::State
+     * The callback function must not bind or unbind a function. Doing so will cause a deadlock
+     * The events could be:
+     * - Change of the room member state
+     * -
      * @param callback The function to call
-     * @return A Connection used for removing the function from the registered list
+     * @return A handle used for removing the function from the registered list
      */
-    template <typename T>
-    Connection<T> Connect(std::function<void(const T&)> callback);
-
-    Connection<State> ConnectOnStateChanged(std::function<void(const State&)> callback);
-    Connection<WifiPacket> ConnectOnWifiPacketReceived(
+    CallbackHandle<State> BindOnStateChanged(std::function<void(const State&)> callback);
+    CallbackHandle<WifiPacket> BindOnWifiPacketReceived(
         std::function<void(const WifiPacket&)> callback);
-    Connection<RoomInformation> ConnectOnRoomInformationChanged(
+    CallbackHandle<RoomInformation> BindOnRoomInformationChanged(
         std::function<void(const RoomInformation&)> callback);
-    Connection<ChatEntry> ConnectOnChatMessageRecieved(
+    CallbackHandle<ChatEntry> BindOnChatMessageRecieved(
         std::function<void(const ChatEntry&)> callback);
 
     /**

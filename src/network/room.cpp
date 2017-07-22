@@ -376,7 +376,6 @@ void Room::RoomImpl::BroadcastRoomInformation() {
             packet << member.mac_address;
             packet << member.game_info.name;
             packet << member.game_info.id;
-            packet << member.game_info.version;
             packet << static_cast<float>(member.ping.count());
         }
     }
@@ -472,7 +471,6 @@ void Room::RoomImpl::HandleGameNamePacket(const ENetEvent* event) {
     GameInfo game_info;
     in_packet >> game_info.name;
     in_packet >> game_info.id;
-    in_packet >> game_info.version;
 
     {
         std::lock_guard<std::mutex> lock(member_mutex);
