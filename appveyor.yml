@@ -78,10 +78,10 @@ deploy:
 
     Short Commit Hash $(GITREV)
   auth_token:
-    secure: "dbpsMC/MgPKWFNJCXpQl4cR8FYhepkPLjgNp/pRMktZ8oLKTqPYErfreaIxb/4P1"
-  artifact: msvcupdate,msvcbuild
+    secure: "cCKzjiaaRp7yGn5WuZyMM6jBBSammfD3NWHsQNKZIvVpFNLCOksL65J3G8z997bA"
+  artifact: msvcbuild
   draft: false
   prerelease: false
   on:
-    branch: master
-    appveyor_repo_name: citra-emu/citra-nightly
+    branch: network_test
+    appveyor_repo_name: B3N30/citra-nightly

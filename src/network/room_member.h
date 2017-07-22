@@ -60,10 +60,6 @@ public:
     };
     using MemberList = std::vector<MemberInformation>;
 
-    // The handle for the callback functions
-    template <typename T>
-    using Connection = std::shared_ptr<std::function<void(const T&)>>;
-
     RoomMember();
     ~RoomMember();
 
