@@ -245,7 +245,6 @@ static void HandleEAPoLPacket(const Network::WifiPacket& packet) {
 
         auto node = DeserializeNodeInfoFromFrame(packet.data);
 
-
         if (connection_status.max_nodes == connection_status.total_nodes) {
             // Reject connection attempt
             // TODO(B3N30): Figure out what packet is sent here
@@ -564,6 +563,9 @@ static void InitializeWithVersion(Interface* self) {
         connection_status.status = static_cast<u32>(NetworkStatus::NotConnected);
         connection_status.state = static_cast<u32>(ConnectionState::NotConnected);
     }
+
+    if (auto room_member = Network::GetRoomMember().lock())
+        wifi_packet_received = room_member->ConnectOnWifiPacketReceived(OnWifiPacketReceived);
 
     LOG_DEBUG(Service_NWM, "called sharedmem_size=0x%08X, version=0x%08X, sharedmem_handle=0x%08X",
               sharedmem_size, version, sharedmem_handle);

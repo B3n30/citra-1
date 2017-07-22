@@ -7,7 +7,6 @@
 #include <chrono>
 #include <iomanip>
 #include <mutex>
-#include <chrono>
 #include <random>
 #include <sstream>
 #include <thread>
@@ -25,8 +24,6 @@ static constexpr size_t inet_addr_strlen = 16;
 
 // Time between room is announced to web_service
 static constexpr std::chrono::seconds announce_time_interval(15);
-
-static constexpr size_t inet_addr_strlen = 16;
 
 class Room::RoomImpl {
 public:
@@ -521,7 +518,8 @@ Room::Room() : room_impl{std::make_unique<RoomImpl>()} {}
 
 Room::~Room() = default;
 
-void Room::Create(const std::string& name, const std::string& server_address, u16 server_port, bool announce) {
+void Room::Create(const std::string& name, const std::string& server_address, u16 server_port,
+                  bool announce) {
     ENetAddress address;
     address.host = ENET_HOST_ANY;
     if (!server_address.empty()) {
