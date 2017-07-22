@@ -310,7 +310,6 @@ void Room::RoomImpl::BroadcastRoomInformation() {
             packet << member.mac_address;
             packet << member.game_info.name;
             packet << member.game_info.id;
-            packet << member.game_info.version;
         }
     }
 
@@ -405,7 +404,6 @@ void Room::RoomImpl::HandleGameNamePacket(const ENetEvent* event) {
     GameInfo game_info;
     in_packet >> game_info.name;
     in_packet >> game_info.id;
-    in_packet >> game_info.version;
 
     {
         std::lock_guard<std::mutex> lock(member_mutex);
@@ -465,7 +463,7 @@ const RoomInformation& Room::GetRoomInformation() const {
     return room_impl->room_information;
 }
 
-const std::vector<Room::Member>&& Room::GetRoomMemberList() const {
+const std::vector<Room::Member> Room::GetRoomMemberList() const {
     std::vector<Room::Member> member_list;
     std::lock_guard<std::mutex> lock(room_impl->member_mutex);
     for (const auto& member_impl : room_impl->members) {
@@ -475,7 +473,7 @@ const std::vector<Room::Member>&& Room::GetRoomMemberList() const {
         member.game_info = member_impl.game_info;
         member_list.push_back(member);
     }
-    return std::move(member_list);
+    return member_list;
 };
 
 void Room::Destroy() {

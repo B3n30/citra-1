@@ -25,7 +25,6 @@ struct RoomInformation {
 struct GameInfo {
     std::string name{""};
     u64 id{0};
-    u16 version{0};
 };
 
 using MacAddress = std::array<u8, 6>;
@@ -80,7 +79,7 @@ public:
     /**
      * Gets a list of the mbmers connected to the room.
      */
-    const std::vector<Member>&& GetRoomMemberList() const;
+    const std::vector<Member> GetRoomMemberList() const;
 
     /**
      * Creates the socket for this room. Will bind to default address if

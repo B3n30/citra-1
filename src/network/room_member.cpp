@@ -43,7 +43,7 @@ public:
     std::list<Packet> send_list; ///< A list that stores all packets to send the async
 
     template <typename T>
-    using CallbackSet = std::set<Connection<T>>;
+    using CallbackSet = std::set<CallbackHandle<T>>;
     std::mutex callback_mutex; ///< The mutex used for handling callbacks
 
     class Callbacks {
@@ -111,7 +111,7 @@ public:
     void Invoke(const T& data);
 
     template <typename T>
-    Connection<T> Connect(std::function<void(const T&)> callback);
+    CallbackHandle<T> Bind(std::function<void(const T&)> callback);
 };
 
 // RoomMemberImpl
@@ -227,7 +227,6 @@ void RoomMember::RoomMemberImpl::HandleRoomInformationPacket(const ENetEvent* ev
         packet >> member.mac_address;
         packet >> member.game_info.name;
         packet >> member.game_info.id;
-        packet >> member.game_info.version;
     }
     Invoke(room_information);
 }
@@ -332,23 +331,20 @@ RoomMember::RoomMemberImpl::CallbackSet<ChatEntry>& RoomMember::RoomMemberImpl::
 
 template <typename T>
 void RoomMember::RoomMemberImpl::Invoke(const T& data) {
-    CallbackSet<T> callback_set;
-    {
-        std::lock_guard<std::mutex> lock(callback_mutex);
-        callback_set = callbacks.Get<T>();
-    }
+    std::lock_guard<std::mutex> lock(callback_mutex);
+    CallbackSet<T> callback_set = callbacks.Get<T>();
     for (auto const& callback : callback_set)
         (*callback)(data);
 }
 
 template <typename T>
-RoomMember::Connection<T> RoomMember::RoomMemberImpl::Connect(
+RoomMember::CallbackHandle<T> RoomMember::RoomMemberImpl::Bind(
     std::function<void(const T&)> callback) {
     std::lock_guard<std::mutex> lock(callback_mutex);
-    Connection<T> connection;
-    connection = std::make_shared<std::function<void(const T&)>>(callback);
-    callbacks.Get<T>().insert(connection);
-    return connection;
+    CallbackHandle<T> handle;
+    handle = std::make_shared<std::function<void(const T&)>>(callback);
+    callbacks.Get<T>().insert(handle);
+    return handle;
 }
 
 // RoomMember
@@ -451,34 +447,33 @@ void RoomMember::SendGameInfo(const GameInfo& game_info) {
     packet << static_cast<u8>(IdSetGameInfo);
     packet << game_info.name;
     packet << game_info.id;
-    packet << game_info.version;
     room_member_impl->Send(std::move(packet));
 }
 
-RoomMember::Connection<RoomMember::State> RoomMember::ConnectOnStateChanged(
+RoomMember::CallbackHandle<RoomMember::State> RoomMember::BindOnStateChanged(
     std::function<void(const RoomMember::State&)> callback) {
-    return room_member_impl->Connect(callback);
+    return room_member_impl->Bind(callback);
 }
 
-RoomMember::Connection<WifiPacket> RoomMember::ConnectOnWifiPacketReceived(
+RoomMember::CallbackHandle<WifiPacket> RoomMember::BindOnWifiPacketReceived(
     std::function<void(const WifiPacket&)> callback) {
-    return room_member_impl->Connect(callback);
+    return room_member_impl->Bind(callback);
 }
 
-RoomMember::Connection<RoomInformation> RoomMember::ConnectOnRoomInformationChanged(
+RoomMember::CallbackHandle<RoomInformation> RoomMember::BindOnRoomInformationChanged(
     std::function<void(const RoomInformation&)> callback) {
-    return room_member_impl->Connect(callback);
+    return room_member_impl->Bind(callback);
 }
 
-RoomMember::Connection<ChatEntry> RoomMember::ConnectOnChatMessageRecieved(
+RoomMember::CallbackHandle<ChatEntry> RoomMember::BindOnChatMessageRecieved(
     std::function<void(const ChatEntry&)> callback) {
-    return room_member_impl->Connect(callback);
+    return room_member_impl->Bind(callback);
 }
 
 template <typename T>
-void RoomMember::Disconnect(Connection<T> connection) {
+void RoomMember::Unbind(CallbackHandle<T> handle) {
     std::lock_guard<std::mutex> lock(room_member_impl->callback_mutex);
-    room_member_impl->callbacks.Get<T>().erase(connection);
+    room_member_impl->callbacks.Get<T>().erase(handle);
 }
 
 void RoomMember::Leave() {
@@ -487,9 +482,9 @@ void RoomMember::Leave() {
     room_member_impl->loop_thread.reset();
 }
 
-template void RoomMember::Disconnect(Connection<WifiPacket>);
-template void RoomMember::Disconnect(Connection<RoomMember::State>);
-template void RoomMember::Disconnect(Connection<RoomInformation>);
-template void RoomMember::Disconnect(Connection<ChatEntry>);
+template void RoomMember::Unbind(CallbackHandle<WifiPacket>);
+template void RoomMember::Unbind(CallbackHandle<RoomMember::State>);
+template void RoomMember::Unbind(CallbackHandle<RoomInformation>);
+template void RoomMember::Unbind(CallbackHandle<ChatEntry>);
 
 } // namespace Network

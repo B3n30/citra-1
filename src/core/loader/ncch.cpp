@@ -358,9 +358,10 @@ ResultStatus AppLoader_NCCH::Load() {
         SMDH smdh;
         std::memcpy(&smdh, smdh_data.data(), sizeof(SMDH));
         auto title = smdh.GetShortTitle(SMDH::TitleLanguage::English);
-        game_info.name.assign(Common::UTF16ToUTF8(std::u16string{title.begin(), title.end()}));
+        auto result = std::find_if(title.begin(), title.end(),
+                                   [](const auto& text) -> bool { return text == '\u0000'; });
+        game_info.name = Common::UTF16ToUTF8(std::u16string{title.begin(), result});
         game_info.id = ncch_header.program_id;
-        game_info.version = ncch_header.version;
         room_member->SendGameInfo(game_info);
     }
 
