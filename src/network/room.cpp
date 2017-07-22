@@ -4,9 +4,9 @@
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <iomanip>
 #include <mutex>
-#include <chrono>
 #include <random>
 #include <sstream>
 #include <thread>
@@ -15,10 +15,6 @@
 #include "network/room.h"
 
 #include "common/logging/log.h"
-
-#ifdef ENABLE_WEB_SERVICE
-#include "web_service/room_json.h"
-#endif
 
 namespace Network {
 
@@ -482,7 +478,8 @@ Room::Room() : room_impl{std::make_unique<RoomImpl>()} {}
 
 Room::~Room() = default;
 
-void Room::Create(const std::string& name, const std::string& server_address, u16 server_port, bool announce) {
+void Room::Create(const std::string& name, const std::string& server_address, u16 server_port,
+                  bool announce) {
     ENetAddress address;
     address.host = ENET_HOST_ANY;
     if (!server_address.empty()) {
@@ -531,7 +528,7 @@ void Room::Destroy() {
     if (room_impl->server) {
         enet_host_destroy(room_impl->server);
     }
-    
+
     room_impl->room_information = {};
     room_impl->server = nullptr;
     {

@@ -10,7 +10,7 @@
 #include "citra_qt/multiplayer/room_view_window.h"
 #include "core/announce_netplay_session.h"
 
-RoomListWindow::RoomListWindow(Mode mode, QWidget *parent) : QMainWindow(parent) {
+RoomListWindow::RoomListWindow(Mode mode, QWidget* parent) : QMainWindow(parent) {
     room = Network::GetRoom().lock();
     room_member = Network::GetRoomMember().lock();
 
@@ -21,9 +21,7 @@ RoomListWindow::RoomListWindow(Mode mode, QWidget *parent) : QMainWindow(parent)
     show();
 }
 
-RoomListWindow::~RoomListWindow() {
-
-}
+RoomListWindow::~RoomListWindow() {}
 
 void RoomListWindow::InitializeWidgets(Mode mode) {
     QGridLayout* central_widget_layout = new QGridLayout();
@@ -53,7 +51,7 @@ void RoomListWindow::InitializeWidgets(Mode mode) {
 
         join_button = new QPushButton(tr("Join room"));
         direct_connection_widget_layout->addWidget(join_button);
-        //TODO (B3N30): Disable if IP is empty
+        // TODO (B3N30): Disable if IP is empty
 
         if (mode == Create) {
             server_label->setText(tr("Room name"));
@@ -80,7 +78,7 @@ void RoomListWindow::OnJoin() {
         return;
     const std::string room_ip(server->text().toStdString());
     const std::string str_nickname(nickname->text().toStdString());
-    room_member->Join(str_nickname,room_ip.c_str(),port->value());
+    room_member->Join(str_nickname, room_ip.c_str(), port->value());
     RoomViewWindow* room_view_window = new RoomViewWindow();
     room_view_window->show();
     // TODO(B3N30): Close this window
@@ -90,9 +88,9 @@ void RoomListWindow::OnCreate() {
     if (!CloseOnConfirm())
         return;
     const std::string room_name(server->text().toStdString());
-    room->Create(room_name,"",port->value());
+    room->Create(room_name, "", port->value());
     const std::string str_nickname(nickname->text().toStdString());
-    room_member->Join(str_nickname,"127.0.0.1",port->value());
+    room_member->Join(str_nickname, "127.0.0.1", port->value());
     announce_netplay_session = std::make_unique<Core::NetplayAnnounceSession>();
     announce_netplay_session->Start();
     RoomViewWindow* room_view_window = new RoomViewWindow();
@@ -120,16 +118,16 @@ bool RoomListWindow::CloseOnConfirm() {
 
 bool RoomListWindow::ConfirmLeaveRoom() {
     auto answer = QMessageBox::question(
-        this, tr("Citra"),
-        tr("Are you sure you want to leave this room? Your simulated WiFi connection to all other members will be lost."),
+        this, tr("Citra"), tr("Are you sure you want to leave this room? Your simulated WiFi "
+                              "connection to all other members will be lost."),
         QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
     return answer != QMessageBox::No;
 }
 
 bool RoomListWindow::ConfirmCloseRoom() {
     auto answer = QMessageBox::question(
-        this, tr("Citra"),
-        tr("Are you sure you want to close this room? The simulated WiFi connections of all members will be lost."),
+        this, tr("Citra"), tr("Are you sure you want to close this room? The simulated WiFi "
+                              "connections of all members will be lost."),
         QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
     return answer != QMessageBox::No;
 }

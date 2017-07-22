@@ -25,13 +25,13 @@ static void AppendHtml(QTextEdit* text_edit, QString html) {
 
     // Scroll to the very bottom
     if (scroll_down) {
-      scrollbar->setValue(scrollbar->maximum());
+        scrollbar->setValue(scrollbar->maximum());
     } else {
-      scrollbar->setValue(scrollbar_value);
+        scrollbar->setValue(scrollbar_value);
     }
 }
 
-RoomViewWindow::RoomViewWindow(QWidget *parent) : QMainWindow(parent) {
+RoomViewWindow::RoomViewWindow(QWidget* parent) : QMainWindow(parent) {
     InitializeWidgets();
     ConnectWidgetEvents();
 
@@ -124,21 +124,20 @@ void RoomViewWindow::InitializeWidgets() {
     vertical_layout->addWidget(splitter);
 
     setCentralWidget(central_widget);
-
 }
 
 bool RoomViewWindow::ConfirmLeaveRoom() {
     auto answer = QMessageBox::question(
-        this, tr("Citra"),
-        tr("Are you sure you want to leave this room? Your simulated WiFi connection to all other members will be lost."),
+        this, tr("Citra"), tr("Are you sure you want to leave this room? Your simulated WiFi "
+                              "connection to all other members will be lost."),
         QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
     return answer != QMessageBox::No;
 }
 
 bool RoomViewWindow::ConfirmCloseRoom() {
     auto answer = QMessageBox::question(
-        this, tr("Citra"),
-        tr("Are you sure you want to close this room? The simulated WiFi connections of all members will be lost."),
+        this, tr("Citra"), tr("Are you sure you want to close this room? The simulated WiFi "
+                              "connections of all members will be lost."),
         QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
     return answer != QMessageBox::No;
 }
@@ -173,9 +172,12 @@ void RoomViewWindow::AddConnectionMessage(QString message) {
 }
 
 void RoomViewWindow::ConnectRoomEvents() {
-    room_member->ConnectOnStateChanged(std::bind(&RoomViewWindow::InvokeOnStateChanged,this,std::placeholders::_1));
-    room_member->ConnectOnRoomInformationChanged(std::bind(&RoomViewWindow::InvokeOnRoomChanged,this, std::placeholders::_1));
-    room_member->ConnectOnChatMessageRecieved(std::bind(&::RoomViewWindow::InvokeOnMessagesReceived,this, std::placeholders::_1));
+    room_member->ConnectOnStateChanged(
+        std::bind(&RoomViewWindow::InvokeOnStateChanged, this, std::placeholders::_1));
+    room_member->ConnectOnRoomInformationChanged(
+        std::bind(&RoomViewWindow::InvokeOnRoomChanged, this, std::placeholders::_1));
+    room_member->ConnectOnChatMessageRecieved(
+        std::bind(&::RoomViewWindow::InvokeOnMessagesReceived, this, std::placeholders::_1));
 }
 
 void RoomViewWindow::InvokeOnStateChanged(const Network::RoomMember::State& state) {
@@ -194,7 +196,7 @@ void RoomViewWindow::InvokeOnMessagesReceived(const Network::ChatEntry& message)
 }
 
 void RoomViewWindow::UpdateMemberList() {
-    //TODO(B3N30): Remember which row is selected
+    // TODO(B3N30): Remember which row is selected
 
     auto member_list = room_member->GetMemberInformation();
 
@@ -213,27 +215,24 @@ void RoomViewWindow::UpdateMemberList() {
     for (const auto& member : member_list) {
         QList<QStandardItem*> l;
 
-        std::vector<std::string> elements = {
-            member.nickname,
-            member.game_info.name,
-            MacAddressString(member.mac_address).toStdString(),
-            "- %",
-            "- ms"
-        };
+        std::vector<std::string> elements = {member.nickname, member.game_info.name,
+                                             MacAddressString(member.mac_address).toStdString(),
+                                             "- %", "- ms"};
         for (auto& item : elements) {
-                QStandardItem *child = new QStandardItem(QString::fromStdString(item));
-                child->setEditable( false );
+            QStandardItem* child = new QStandardItem(QString::fromStdString(item));
+            child->setEditable(false);
             l.append(child);
         }
         item_model->invisibleRootItem()->appendRow(l);
     }
 
-    //TODO(B3N30): Restore row selection
+    // TODO(B3N30): Restore row selection
 }
 
 void RoomViewWindow::SetUiState(bool connected) {
     if (connected) {
-        status_bar_label->setText(tr("Connected to: %1").arg(room_member->GetRoomInformation().name.c_str()));
+        status_bar_label->setText(
+            tr("Connected to: %1").arg(room_member->GetRoomInformation().name.c_str()));
         say_line_edit->setEnabled(true);
     } else {
         status_bar_label->setText(tr("Not connected"));
@@ -246,7 +245,8 @@ void RoomViewWindow::OnSay() {
     QString message = say_line_edit->text();
     room_member->SendChatMessage(message.toStdString());
     QString html;
-    html += "<font color=\"Red\"><b>" + QString::fromStdString(room_member->GetNickname()).toHtmlEscaped() + ":</b></font> ";
+    html += "<font color=\"Red\"><b>" +
+            QString::fromStdString(room_member->GetNickname()).toHtmlEscaped() + ":</b></font> ";
     html += message;
     AppendHtml(chat_log, html);
     say_line_edit->setText("");
@@ -255,20 +255,23 @@ void RoomViewWindow::OnSay() {
 
 void RoomViewWindow::OnMessagesReceived() {
     QString html;
-    html += "<font color=\"RoyalBlue\"><b>" + QString::fromStdString(current_message.nickname).toHtmlEscaped() + ":</b></font> ";
+    html += "<font color=\"RoyalBlue\"><b>" +
+            QString::fromStdString(current_message.nickname).toHtmlEscaped() + ":</b></font> ";
     html += QString::fromStdString(current_message.message).toHtmlEscaped();
     AppendHtml(chat_log, html);
 }
 
 void RoomViewWindow::OnStateChange() {
-    switch(room_member->GetState()) {
+    switch (room_member->GetState()) {
     case Network::RoomMember::State::Idle:
         break;
     case Network::RoomMember::State::Error:
-        AddConnectionMessage(tr("The network could not be used. Make sure your system is connected to the network and you have the necessary permissions"));
+        AddConnectionMessage(tr("The network could not be used. Make sure your system is connected "
+                                "to the network and you have the necessary permissions"));
         break;
     case Network::RoomMember::State::Joining:
-        chat_log->setHtml(""); //FIXME: Only do this when the server has changed, not in case of reconnect attempts!
+        chat_log->setHtml(""); // FIXME: Only do this when the server has changed, not in case of
+                               // reconnect attempts!
         AddConnectionMessage(tr("Attempting to join room (Connecting)..."));
         break;
     case Network::RoomMember::State::Joined:
@@ -279,7 +282,7 @@ void RoomViewWindow::OnStateChange() {
         AddConnectionMessage(tr("Disconnected (Lost connection to room)"));
         OnDisconnected();
         break;
-    case Network::RoomMember::State::CouldNotConnect :
+    case Network::RoomMember::State::CouldNotConnect:
         AddConnectionMessage(tr("Unable to join (The room could not be found)"));
         break;
     case Network::RoomMember::State::NameCollision:

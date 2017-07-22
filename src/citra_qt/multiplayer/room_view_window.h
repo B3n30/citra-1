@@ -24,7 +24,7 @@ public:
     Network::RoomMember::State state;
     Network::ChatEntry current_message;
     Network::RoomInformation room_information;
-    explicit RoomViewWindow(QWidget *parent = 0);
+    explicit RoomViewWindow(QWidget* parent = 0);
     ~RoomViewWindow();
 
 private:

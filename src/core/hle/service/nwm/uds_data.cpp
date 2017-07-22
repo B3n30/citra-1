@@ -274,5 +274,110 @@ std::vector<u8> GenerateDataPayload(const std::vector<u8>& data, u8 channel, u16
     return buffer;
 }
 
+SecureDataHeader ParseSecureDataHeader(const std::vector<u8>& data) {
+    SecureDataHeader header;
+
+    // Skip the LLC header
+    memcpy(&header, data.data() + sizeof(LLCHeader), sizeof(header));
+
+    return header;
+}
+
+std::vector<u8> GenerateEAPoLStartFrame(u16 association_id, const NodeInfo& node_info) {
+    EAPoLStartPacket eapol_start{};
+    eapol_start.association_id = association_id;
+    eapol_start.node.friend_code_seed = node_info.friend_code_seed;
+
+    for (int i = 0; i < node_info.username.size(); ++i)
+        eapol_start.node.username[i] = node_info.username[i];
+
+    // Note: The network_node_id and unknown bytes seem to be uninitialized in the NWM module.
+    // TODO(Subv): The last 8 bytes seem to have a fixed value of 07 88 15 00 04 e9 13 00 in
+    // EAPoL-Start packets from different 3DSs to the same host during a Super Smash Bros. 4 game.
+    // Find out what that means.
+
+    std::vector<u8> eapol_buffer(sizeof(EAPoLStartPacket));
+    memcpy(eapol_buffer.data(), &eapol_start, sizeof(eapol_start));
+
+    std::vector<u8> buffer = GenerateLLCHeader(EtherType::EAPoL);
+    buffer.insert(buffer.end(), eapol_buffer.begin(), eapol_buffer.end());
+    return buffer;
+}
+
+EtherType GetFrameEtherType(const std::vector<u8>& frame) {
+    LLCHeader header;
+    memcpy(&header, frame.data(), sizeof(header));
+
+    u16 ethertype = header.protocol;
+    return static_cast<EtherType>(ethertype);
+}
+
+u16 GetEAPoLFrameType(const std::vector<u8>& frame) {
+    // Ignore the LLC header
+    u16_be eapol_type;
+    memcpy(&eapol_type, frame.data() + sizeof(LLCHeader), sizeof(eapol_type));
+    return eapol_type;
+}
+
+NodeInfo DeserializeNodeInfoFromFrame(const std::vector<u8>& frame) {
+    EAPoLStartPacket eapol_start;
+
+    // Skip the LLC header
+    memcpy(&eapol_start, frame.data() + sizeof(LLCHeader), sizeof(eapol_start));
+
+    NodeInfo node{};
+    node.friend_code_seed = eapol_start.node.friend_code_seed;
+
+    for (int i = 0; i < node.username.size(); ++i)
+        node.username[i] = eapol_start.node.username[i];
+
+    return node;
+}
+
+NodeInfo DeserializeNodeInfo(const EAPoLNodeInfo& node) {
+    NodeInfo node_info{};
+    node_info.friend_code_seed = node.friend_code_seed;
+    node_info.network_node_id = node.network_node_id;
+
+    for (int i = 0; i < node.username.size(); ++i)
+        node_info.username[i] = node.username[i];
+
+    return node_info;
+}
+
+std::vector<u8> GenerateEAPoLLogoffFrame(const MacAddress& mac_address, u16 network_node_id,
+                                         const NodeList& nodes, u8 max_nodes, u8 total_nodes) {
+    EAPoLLogoffPacket eapol_logoff{};
+    eapol_logoff.assigned_node_id = network_node_id;
+    eapol_logoff.connected_nodes = total_nodes;
+    eapol_logoff.max_nodes = max_nodes;
+
+    for (size_t index = 0; index < total_nodes; ++index) {
+        const auto& node_info = nodes[index];
+        auto& node = eapol_logoff.nodes[index];
+
+        node.friend_code_seed = node_info.friend_code_seed;
+        node.network_node_id = node_info.network_node_id;
+
+        for (int i = 0; i < node.username.size(); ++i)
+            node.username[i] = node_info.username[i];
+    }
+
+    std::vector<u8> eapol_buffer(sizeof(EAPoLLogoffPacket));
+    memcpy(eapol_buffer.data(), &eapol_logoff, sizeof(eapol_logoff));
+
+    std::vector<u8> buffer = GenerateLLCHeader(EtherType::EAPoL);
+    buffer.insert(buffer.end(), eapol_buffer.begin(), eapol_buffer.end());
+    return buffer;
+}
+
+EAPoLLogoffPacket ParseEAPoLLogoffFrame(const std::vector<u8>& frame) {
+    EAPoLLogoffPacket eapol_logoff;
+
+    // Skip the LLC header
+    memcpy(&eapol_logoff, frame.data() + sizeof(LLCHeader), sizeof(eapol_logoff));
+    return eapol_logoff;
+}
+
 } // namespace NWM
 } // namespace Service

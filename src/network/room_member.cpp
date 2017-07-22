@@ -269,9 +269,6 @@ void RoomMember::RoomMemberImpl::HandleWifiPackets(const ENetEvent* event) {
     packet >> wifi_packet.transmitter_address;
     packet >> wifi_packet.destination_address;
 
-    u32 data_length;
-    packet >> data_length;
-
     packet >> wifi_packet.data;
     Invoke<WifiPacket>(wifi_packet);
 }
@@ -289,22 +286,24 @@ void RoomMember::RoomMemberImpl::HandleChatPacket(const ENetEvent* event) {
     Invoke<ChatEntry>(chat_entry);
 }
 
-template<>
+template <>
 RoomMember::RoomMemberImpl::CallbackSet<WifiPacket>& RoomMember::RoomMemberImpl::Callbacks::Get() {
     return callback_set_wifi_packet;
 }
 
-template<>
-RoomMember::RoomMemberImpl::CallbackSet<RoomMember::State>& RoomMember::RoomMemberImpl::Callbacks::Get() {
+template <>
+RoomMember::RoomMemberImpl::CallbackSet<RoomMember::State>&
+RoomMember::RoomMemberImpl::Callbacks::Get() {
     return callback_set_state;
 }
 
-template<>
-RoomMember::RoomMemberImpl::CallbackSet<RoomInformation>& RoomMember::RoomMemberImpl::Callbacks::Get() {
+template <>
+RoomMember::RoomMemberImpl::CallbackSet<RoomInformation>&
+RoomMember::RoomMemberImpl::Callbacks::Get() {
     return callback_set_room_information;
 }
 
-template<>
+template <>
 RoomMember::RoomMemberImpl::CallbackSet<ChatEntry>& RoomMember::RoomMemberImpl::Callbacks::Get() {
     return callback_set_chat_messages;
 }

@@ -32,7 +32,7 @@ struct NodeInfo {
     std::array<u16_le, 10> username;
     INSERT_PADDING_BYTES(4);
     u16_le network_node_id;
-    INSERT_PADDING_BYTES(6);
+    std::array<u8, 6> address;
 };
 
 static_assert(sizeof(NodeInfo) == 40, "NodeInfo has incorrect size.");
@@ -84,6 +84,17 @@ struct NetworkInfo {
 static_assert(offsetof(NetworkInfo, oui_value) == 0xC, "oui_value is at the wrong offset.");
 static_assert(offsetof(NetworkInfo, wlan_comm_id) == 0x10, "wlancommid is at the wrong offset.");
 static_assert(sizeof(NetworkInfo) == 0x108, "NetworkInfo has incorrect size.");
+
+/// Additional block tag ids in the Beacon and Association Response frames
+enum class TagId : u8 {
+    SSID = 0,
+    SupportedRates = 1,
+    DSParameterSet = 2,
+    TrafficIndicationMap = 5,
+    CountryInformation = 7,
+    ERPInformation = 42,
+    VendorSpecific = 221
+};
 
 class NWM_UDS final : public Interface {
 public:

@@ -21,7 +21,7 @@ public:
         Create,
         Join,
     };
-    explicit RoomListWindow(Mode mode=Join, QWidget *parent = 0);
+    explicit RoomListWindow(Mode mode = Join, QWidget* parent = 0);
     ~RoomListWindow();
 
 private:

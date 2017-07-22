@@ -137,8 +137,7 @@ public:
     template <typename T>
     Connection<T> Connect(std::function<void(const T&)> callback);
 
-    Connection<State> ConnectOnStateChanged(
-        std::function<void(const State&)> callback);
+    Connection<State> ConnectOnStateChanged(std::function<void(const State&)> callback);
     Connection<WifiPacket> ConnectOnWifiPacketReceived(
         std::function<void(const WifiPacket&)> callback);
     Connection<RoomInformation> ConnectOnRoomInformationChanged(
@@ -151,7 +150,6 @@ public:
      */
     template <typename T>
     void Disconnect(Connection<T> connection);
-
 
     /**
      * Leaves the current room.
