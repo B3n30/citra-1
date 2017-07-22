@@ -8,6 +8,7 @@
 #include <QPushButton>
 #include "citra_qt/multiplayer/room_list_window.h"
 #include "citra_qt/multiplayer/room_view_window.h"
+#include "core/announce_netplay_session.h"
 
 RoomListWindow::RoomListWindow(Mode mode, QWidget *parent) : QMainWindow(parent) {
     room = Network::GetRoom().lock();
@@ -92,6 +93,8 @@ void RoomListWindow::OnCreate() {
     room->Create(room_name,"",port->value());
     const std::string str_nickname(nickname->text().toStdString());
     room_member->Join(str_nickname,"127.0.0.1",port->value());
+    announce_netplay_session = std::make_unique<Core::NetplayAnnounceSession>();
+    announce_netplay_session->Start();
     RoomViewWindow* room_view_window = new RoomViewWindow();
     room_view_window->show();
     // TODO(B3N30): Close this window
@@ -102,6 +105,8 @@ bool RoomListWindow::CloseOnConfirm() {
         if (!ConfirmCloseRoom()) {
             return false;
         }
+        announce_netplay_session->Stop();
+        announce_netplay_session.reset();
         room_member->Leave();
         room->Destroy();
     } else if (room_member->IsConnected()) {

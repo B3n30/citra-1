@@ -10,6 +10,7 @@
 #include <QObject>
 #include <QPushButton>
 #include <QSpinBox>
+#include "core/announce_netplay_session.h"
 #include "network/network.h"
 
 class RoomListWindow : public QMainWindow {
@@ -41,4 +42,6 @@ private:
     QPushButton* join_button = nullptr;
     std::shared_ptr<Network::RoomMember> room_member;
     std::shared_ptr<Network::Room> room;
+
+    std::unique_ptr<Core::NetplayAnnounceSession> announce_netplay_session;
 };

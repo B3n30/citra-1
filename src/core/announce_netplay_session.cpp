@@ -16,7 +16,7 @@ namespace Core {
 // Time between room is announced to web_service
 static constexpr std::chrono::seconds announce_time_interval(15);
 
-NetplayAnnounceSession::NetplayAnnounceSession() {
+NetplayAnnounceSession::NetplayAnnounceSession() : announce(false) {
 #ifdef ENABLE_WEB_SERVICE
     backend = std::make_unique<WebService::NetplayJson>();
 #else
@@ -56,6 +56,7 @@ void NetplayAnnounceSession::AnnounceNetplayLoop() {
                                             room_information.port, room_information.member_slots,
                                             Network::network_version);
                 backend->ClearPlayers();
+                LOG_DEBUG(Network, "%lu", memberlist.size());
                 for (const auto& member : memberlist) {
                     backend->AddPlayer(member.nickname, member.mac_address, member.game_info.id,
                                        member.game_info.name, member.game_info.version);

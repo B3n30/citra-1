@@ -14,6 +14,8 @@
 #include "network/packet.h"
 #include "network/room.h"
 
+#include "common/logging/log.h"
+
 #ifdef ENABLE_WEB_SERVICE
 #include "web_service/room_json.h"
 #endif
@@ -153,11 +155,6 @@ public:
     void HandleClientDisconnection(ENetPeer* client);
 
     /**
-     * Sends the room information to the web service
-     */
-    void AnnounceToWebService();
-
-    /**
      * Creates a random ID in the form 12345678-1234-1234-1234-123456789012
      */
     void CreateGUID();
@@ -209,7 +206,6 @@ void Room::RoomImpl::ServerLoop() {
                 break;
             }
         }
-    AnnounceToWebService();
     }
     // Close the connection to all members:
     SendCloseMessage();
@@ -479,35 +475,6 @@ void Room::RoomImpl::HandleClientDisconnection(ENetPeer* client) {
     // Announce the change to all clients.
     enet_peer_disconnect(client, 0);
     BroadcastRoomInformation();
-}
-
-void Room::RoomImpl::AnnounceToWebService() {
-#ifdef ENABLE_WEB_SERVICE
-    if (!announce_to_web_service)
-        return;
-
-    if (std::chrono::duration_cast<std::chrono::seconds>(
-            std::chrono::steady_clock::now() - last_time_announced) < announce_time_interval)
-        return;
-
-    last_time_announced = std::chrono::steady_clock::now();
-    room_json.Announce();
-
-#endif
-}
-
-void Room::RoomImpl::CreateGUID() {
-    std::uniform_int_distribution<> dis(0,9999);
-    std::ostringstream stream;
-    stream << std::setfill('0') << std::setw(4) << dis(random_gen) <<
-    std::setfill('0') << std::setw(4) << dis(random_gen) << "-" <<
-    std::setfill('0') << std::setw(4) << dis(random_gen) << "-" <<
-    std::setfill('0') << std::setw(4) << dis(random_gen) << "-" <<
-    std::setfill('0') << std::setw(4) << dis(random_gen) << "-" <<
-    std::setfill('0') << std::setw(4) << dis(random_gen) <<
-    std::setfill('0') << std::setw(4) << dis(random_gen) <<
-    std::setfill('0') << std::setw(4) << dis(random_gen);
-    guid = stream.str();
 }
 
 // Room
