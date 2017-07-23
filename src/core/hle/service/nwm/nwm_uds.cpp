@@ -374,21 +374,14 @@ static void HandleDataFrame(const Network::WifiPacket& packet) {
 
 static void HandleDisconnectFrame(const Network::WifiPacket& packet) {
     LOG_ERROR(Service_NWM, "called, this will most likely fail");
+    return;
     if (connection_status.status == static_cast<u8>(NetworkStatus::ConnectedAsClient)) {
         std::lock_guard<std::mutex> lock(connection_status_mutex);
         connection_status = {};
         connection_status.status = static_cast<u8>(NetworkStatus::NotConnected);
         connection_status_event->Signal();
     } else if (connection_status.status == static_cast<u8>(NetworkStatus::ConnectedAsHost)) {
-        if (packet.data.size() > 0 ) {
-            u16 node_id = packet.data[0] -1 ;
-            u16 network_node_id = connection_status.nodes[node_id];;
-            std::remove_if(node_info.begin(), node_info.end(), [network_node_id](const auto& node) -> bool { return node.network_node_id == network_node_id;});
-            network_info.total_nodes++;
-        }
-        connection_status = {};
-        connection_status.status = static_cast<u8>(NetworkStatus::NotConnected);
-        connection_status_event->Signal();
+        // TODO(B3N30): Figure out what vars to set here
     }
 }
 
