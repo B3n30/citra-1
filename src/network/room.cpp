@@ -189,7 +189,7 @@ void Room::RoomImpl::ServerLoop() {
     last_time_pinged = std::chrono::high_resolution_clock::now() - ping_interval;
     while (state != State::Closed) {
         ENetEvent event;
-        if (enet_host_service(server, &event, 10) > 0) {
+        if (enet_host_service(server, &event, 50) > 0) {
             switch (event.type) {
             case ENET_EVENT_TYPE_RECEIVE:
                 switch (event.packet->data[0]) {

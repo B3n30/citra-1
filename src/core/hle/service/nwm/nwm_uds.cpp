@@ -378,19 +378,18 @@ static void HandleDisconnectFrame(const Network::WifiPacket& packet) {
         std::lock_guard<std::mutex> lock(connection_status_mutex);
         connection_status = {};
         connection_status.status = static_cast<u8>(NetworkStatus::NotConnected);
+        connection_status_event->Signal();
     } else if (connection_status.status == static_cast<u8>(NetworkStatus::ConnectedAsHost)) {
-        u16 node_id = packet.data[0] -1 ;
-
-        u16 network_node_id = connection_status.nodes[node_id];
-        connection_status.node_bitmask &= 0 << node_id;
-        connection_status.changed_nodes |= 1 << node_id;
-        connection_status.nodes[node_id] = 0;
-        connection_status.total_nodes--;
-
-        std::remove_if(node_info.begin(), node_info.end(), [network_node_id](const auto& node) -> bool { return node.network_node_id == network_node_id;});
-        network_info.total_nodes++;
+        if (packet.data.size() > 0 ) {
+            u16 node_id = packet.data[0] -1 ;
+            u16 network_node_id = connection_status.nodes[node_id];;
+            std::remove_if(node_info.begin(), node_info.end(), [network_node_id](const auto& node) -> bool { return node.network_node_id == network_node_id;});
+            network_info.total_nodes++;
+        }
+        connection_status = {};
+        connection_status.status = static_cast<u8>(NetworkStatus::NotConnected);
+        connection_status_event->Signal();
     }
-    connection_status_event->Signal();
 }
 
 /// Callback to parse and handle a received wifi packet.
@@ -877,6 +876,7 @@ static void DestroyNetwork(Interface* self) {
             disconnect_packet.channel = network_channel;
             disconnect_packet.destination_address = Network::BroadcastMac;
             disconnect_packet.type = WifiPacket::PacketType::Disconnect;
+            disconnect_packet.data.push_back(connection_status.network_node_id);
             SendPacket(disconnect_packet);
         }
         // TODO(Subv): Check if connection_status is indeed reset after this call.
