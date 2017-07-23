@@ -20,6 +20,7 @@ class RoomMember::RoomMemberImpl {
 public:
     ENetHost* client = nullptr; ///< ENet network interface.
     ENetPeer* server = nullptr; ///< The server peer the client is connected to
+    u32 channel;
 
     /// Information about the clients connected to the same room as us.
     MemberList member_information;
@@ -103,6 +104,8 @@ public:
      */
     void HandleChatPacket(const ENetEvent* event);
 
+    void HandlePingPacket(const ENetEvent* event);
+
     /**
      * Disconnects the RoomMember from the Room
      */
@@ -157,6 +160,9 @@ void RoomMember::RoomMemberImpl::MemberLoop() {
                     HandleJoinPacket(&event); // Get the MAC Address for the client
                     SetState(State::Joined);
                     break;
+                case IdPing:
+                    HandlePingPacket(&event);
+                    break;
                 case IdNameCollision:
                     SetState(State::NameCollision);
                     break;
@@ -179,10 +185,15 @@ void RoomMember::RoomMemberImpl::MemberLoop() {
         }
         {
             std::lock_guard<std::mutex> lock(send_list_mutex);
-            for (const auto& packet : send_list) {
+            for (auto& packet : send_list) {
+                u32 send_channel = 0;
+                u8 id;
+                packet >> id;
+                if (id == IdWifiPacket)
+                    send_channel = channel;
                 ENetPacket* enetPacket = enet_packet_create(packet.GetData(), packet.GetDataSize(),
                                                             ENET_PACKET_FLAG_RELIABLE);
-                enet_peer_send(server, 0, enetPacket);
+                enet_peer_send(server, send_channel, enetPacket);
             }
             enet_host_flush(client);
             send_list.clear();
@@ -235,6 +246,7 @@ void RoomMember::RoomMemberImpl::HandleRoomInformationPacket(const ENetEvent* ev
         packet >> member.game_info.name;
         packet >> member.game_info.id;
         packet >> member.game_info.version;
+        packet >> member.ping;
     }
     Invoke(room_information);
 }
@@ -248,6 +260,7 @@ void RoomMember::RoomMemberImpl::HandleJoinPacket(const ENetEvent* event) {
 
     // Parse the MAC Address from the packet
     packet >> mac_address;
+    packet >> channel;
     SetState(State::Joined);
 }
 
@@ -284,6 +297,12 @@ void RoomMember::RoomMemberImpl::HandleChatPacket(const ENetEvent* event) {
     packet >> chat_entry.nickname;
     packet >> chat_entry.message;
     Invoke<ChatEntry>(chat_entry);
+}
+
+void RoomMember::RoomMemberImpl::HandlePingPacket(const ENetEvent* event) {
+    Packet packet;
+    packet << static_cast<u8>(IdPing);
+    Send(std::move(packet));
 }
 
 template <>
@@ -403,7 +422,7 @@ void RoomMember::Join(const std::string& nick, const char* server_addr, u16 serv
     enet_address_set_host(&address, server_addr);
     address.port = server_port;
     room_member_impl->server =
-        enet_host_connect(room_member_impl->client, &address, NumChannels, 0);
+        enet_host_connect(room_member_impl->client, &address, NumChannels , 0);
 
     if (!room_member_impl->server) {
         room_member_impl->SetState(State::Error);
@@ -419,6 +438,7 @@ void RoomMember::Join(const std::string& nick, const char* server_addr, u16 serv
         room_member_impl->SendJoinRequest(nick, preferred_mac);
         SendGameInfo(room_member_impl->current_game_info);
     } else {
+        enet_peer_disconnect(room_member_impl->server, 0);
         room_member_impl->SetState(State::CouldNotConnect);
     }
 }

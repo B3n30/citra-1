@@ -213,11 +213,12 @@ void RoomViewWindow::UpdateMemberList() {
 
     item_model->removeRows(0, item_model->rowCount());
     for (const auto& member : member_list) {
+        QString ping;
+        ping.sprintf("%.3f ms", member.ping*1e3);
         QList<QStandardItem*> l;
-
         std::vector<std::string> elements = {member.nickname, member.game_info.name,
                                              MacAddressString(member.mac_address).toStdString(),
-                                             "- %", "- ms"};
+                                             "- %", ping.toStdString()};
         for (auto& item : elements) {
             QStandardItem* child = new QStandardItem(QString::fromStdString(item));
             child->setEditable(false);

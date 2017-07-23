@@ -18,18 +18,15 @@
 
 namespace Network {
 
-/// Maximum number of concurrent connections allowed to this room.
-static constexpr u32 MaxConcurrentConnections = 10;
-
 // Time between room is announced to web_service
-static constexpr std::chrono::seconds announce_time_interval(15);
+static constexpr std::chrono::seconds ping_interval(10);
 
 static constexpr size_t inet_addr_strlen = 16;
 
 class Room::RoomImpl {
 public:
     // This MAC address is used to generate a 'Nintendo' like Mac address.
-    const MacAddress NintendoOUI;
+    const MacAddress NintendoOUI = { {0x00, 0x1F, 0x32, 0x00, 0x00, 0x00} };
     std::mt19937 random_gen; ///< Random number generator. Used for GenerateMacAddress
 
     ENetHost* server = nullptr; ///< Network interface.
@@ -42,6 +39,8 @@ public:
         GameInfo game_info;     ///< The current game of the member
         MacAddress mac_address; ///< The assigned mac address of the member.
         ENetPeer* peer;         ///< The remote peer.
+        std::chrono::duration<float> ping; // The ping of that member
+        u32 channel;
     };
     using MemberList = std::vector<Member>;
     MemberList members;              ///< Information about the members of this room
@@ -49,6 +48,8 @@ public:
     /// This should be a std::shared_mutex as soon as C++17 is supported
 
     std::string guid; /// The GUID of the room
+
+    std::chrono::high_resolution_clock::time_point last_time_pinged;
 
     RoomImpl();
 
@@ -96,12 +97,17 @@ public:
      * Notifies the member that its connection attempt was successful,
      * and it is now part of the room.
      */
-    void SendJoinSuccess(ENetPeer* client, MacAddress mac_address);
+    void SendJoinSuccess(ENetPeer* client, MacAddress mac_address, u32 channel);
 
     /**
      * Notifies the members that the room is closed,
      */
     void SendCloseMessage();
+
+    /**
+     * Pings the members,
+     */
+     void SendPing();
 
     /**
      * Sends the information about the room, along with the list of members
@@ -144,6 +150,8 @@ public:
      */
     void HandleGameNamePacket(const ENetEvent* event);
 
+    void HandlePingMessage(const ENetEvent* event);
+
     /**
      * Removes the client from the members list if it was in it and announces the change
      * to all other clients.
@@ -157,7 +165,7 @@ public:
 };
 
 // RoomImpl
-Room::RoomImpl::RoomImpl() : random_gen(std::random_device()()), NintendoOUI{{0x00, 0x1F, 0x32, 0x00, 0x00, 0x00}} {
+Room::RoomImpl::RoomImpl() : random_gen(std::random_device()()) {
     CreateGUID();
 }
 
@@ -176,6 +184,7 @@ void Room::RoomImpl::CreateGUID() {
 }
 
 void Room::RoomImpl::ServerLoop() {
+    last_time_pinged = std::chrono::high_resolution_clock::now() - ping_interval;
     while (state != State::Closed) {
         ENetEvent event;
         if (enet_host_service(server, &event, 100) > 0) {
@@ -194,6 +203,9 @@ void Room::RoomImpl::ServerLoop() {
                 case IdChatMessage:
                     HandleChatPacket(&event);
                     break;
+                case IdPing:
+                    HandlePingMessage(&event);
+                    break;
                 }
                 enet_packet_destroy(event.packet);
                 break;
@@ -201,6 +213,11 @@ void Room::RoomImpl::ServerLoop() {
                 HandleClientDisconnection(event.peer);
                 break;
             }
+        }
+        if (ping_interval < std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now()-last_time_pinged)) {
+            BroadcastRoomInformation();
+            SendPing();
+            last_time_pinged = std::chrono::high_resolution_clock::now();
         }
     }
     // Close the connection to all members:
@@ -250,6 +267,7 @@ void Room::RoomImpl::HandleJoinRequest(const ENetEvent* event) {
     member.mac_address = preferred_mac;
     member.nickname = nickname;
     member.peer = event->peer;
+    member.channel = members.size() +1;
 
     {
         std::lock_guard<std::mutex> lock(member_mutex);
@@ -258,7 +276,7 @@ void Room::RoomImpl::HandleJoinRequest(const ENetEvent* event) {
 
     // Notify everyone that the room information has changed.
     BroadcastRoomInformation();
-    SendJoinSuccess(event->peer, preferred_mac);
+    SendJoinSuccess(event->peer, preferred_mac, member.channel);
 }
 
 bool Room::RoomImpl::IsValidNickname(const std::string& nickname) const {
@@ -307,13 +325,23 @@ void Room::RoomImpl::SendVersionMismatch(ENetPeer* client) {
     enet_host_flush(server);
 }
 
-void Room::RoomImpl::SendJoinSuccess(ENetPeer* client, MacAddress mac_address) {
+void Room::RoomImpl::SendJoinSuccess(ENetPeer* client, MacAddress mac_address, u32 channel) {
     Packet packet;
     packet << static_cast<u8>(IdJoinSuccess);
     packet << mac_address;
+    packet << channel;
     ENetPacket* enet_packet =
         enet_packet_create(packet.GetData(), packet.GetDataSize(), ENET_PACKET_FLAG_RELIABLE);
     enet_peer_send(client, 0, enet_packet);
+    enet_host_flush(server);
+}
+
+void Room::RoomImpl::SendPing() {
+    Packet packet;
+    packet << static_cast<u8>(IdPing);
+    ENetPacket* enet_packet =
+        enet_packet_create(packet.GetData(), packet.GetDataSize(), ENET_PACKET_FLAG_RELIABLE);
+    enet_host_broadcast(server, 0, enet_packet);
     enet_host_flush(server);
 }
 
@@ -349,6 +377,7 @@ void Room::RoomImpl::BroadcastRoomInformation() {
             packet << member.game_info.name;
             packet << member.game_info.id;
             packet << member.game_info.version;
+            packet << static_cast<float>(member.ping.count());
         }
     }
 
@@ -389,7 +418,7 @@ void Room::RoomImpl::HandleWifiPacket(const ENetEvent* event) {
         std::lock_guard<std::mutex> lock(member_mutex);
         for (const auto& member : members) {
             if (member.peer != event->peer)
-                enet_peer_send(member.peer, 0, enet_packet);
+                enet_peer_send(member.peer, member.channel, enet_packet);
         }
     } else { // Send the data only to the destination client
         std::lock_guard<std::mutex> lock(member_mutex);
@@ -398,7 +427,7 @@ void Room::RoomImpl::HandleWifiPacket(const ENetEvent* event) {
                                        return member.mac_address == destination_address;
                                    });
         if (member != members.end()) {
-            enet_peer_send(member->peer, 0, enet_packet);
+            enet_peer_send(member->peer, member->channel, enet_packet);
         }
     }
     enet_host_flush(server);
@@ -458,6 +487,17 @@ void Room::RoomImpl::HandleGameNamePacket(const ENetEvent* event) {
     BroadcastRoomInformation();
 }
 
+void Room::RoomImpl::HandlePingMessage(const ENetEvent* event) {
+    std::lock_guard<std::mutex> lock(member_mutex);
+    auto member =
+        std::find_if(members.begin(), members.end(), [event](const Member& member) -> bool {
+            return member.peer == event->peer;
+        });
+    if (member != members.end()) {
+        member->ping = std::chrono::high_resolution_clock::now() - last_time_pinged;
+    }
+}
+
 void Room::RoomImpl::HandleClientDisconnection(ENetPeer* client) {
     // Remove the client from the members list.
     {
@@ -478,8 +518,7 @@ Room::Room() : room_impl{std::make_unique<RoomImpl>()} {}
 
 Room::~Room() = default;
 
-bool Room::Create(const std::string& name, const std::string& server_address, u16 server_port,
-                  bool announce) {
+bool Room::Create(const std::string& name, const std::string& server_address, u16 server_port) {
     ENetAddress address;
     address.host = ENET_HOST_ANY;
     if (!server_address.empty()) {

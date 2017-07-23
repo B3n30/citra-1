@@ -16,7 +16,7 @@ namespace Network {
 /// Information about the received WiFi packets.
 /// Acts as our own 802.11 header.
 struct WifiPacket {
-    enum class PacketType : u8 { Beacon, Data, Authentication, AssociationResponse };
+    enum class PacketType : u8 { Beacon, Data, Authentication, AssociationResponse, Disconnect };
     PacketType type;      ///< The type of 802.11 frame.
     std::vector<u8> data; ///< Raw 802.11 frame data, starting at the management frame header
                           /// for management frames.
@@ -57,6 +57,7 @@ public:
         GameInfo game_info;     ///< Name of the game they're currently playing, or empty if they're
                                 /// not playing anything.
         MacAddress mac_address; ///< MAC address associated with this member.
+        float ping;
     };
     using MemberList = std::vector<MemberInformation>;
 

@@ -364,6 +364,27 @@ static void HandleDataFrame(const Network::WifiPacket& packet) {
     }
 }
 
+static void HandleDisconnectFrame(const Network::WifiPacket& packet) {
+    LOG_ERROR(Service_NWM, "called, this will most likely fail");
+    if (connection_status.status == static_cast<u8>(NetworkStatus::ConnectedAsClient)) {
+        std::lock_guard<std::mutex> lock(connection_status_mutex);
+        connection_status = {};
+        connection_status.status = static_cast<u8>(NetworkStatus::NotConnected);
+    } else if (connection_status.status == static_cast<u8>(NetworkStatus::ConnectedAsHost)) {
+        u16 node_id = packet.data[0] -1 ;
+
+        u16 network_node_id = connection_status.nodes[node_id];
+        connection_status.node_bitmask &= 0 << node_id;
+        connection_status.changed_nodes |= 1 << node_id;
+        connection_status.nodes[node_id] = 0;
+        connection_status.total_nodes--;
+
+        std::remove_if(node_info.begin(), node_info.end(), [network_node_id](const auto& node) -> bool { return node.network_node_id == network_node_id;});
+        network_info.total_nodes++;
+    }
+    connection_status_event->Signal();
+}
+
 /// Callback to parse and handle a received wifi packet.
 void OnWifiPacketReceived(const Network::WifiPacket& packet) {
     switch (packet.type) {
@@ -378,6 +399,9 @@ void OnWifiPacketReceived(const Network::WifiPacket& packet) {
         break;
     case Network::WifiPacket::PacketType::Data:
         HandleDataFrame(packet);
+        break;
+    case Network::WifiPacket::PacketType::Disconnect:
+        HandleDisconnectFrame(packet);
         break;
     }
 }
@@ -534,6 +558,25 @@ static void InitializeWithVersion(Interface* self) {
 
     LOG_DEBUG(Service_NWM, "called sharedmem_size=0x%08X, version=0x%08X, sharedmem_handle=0x%08X",
               sharedmem_size, version, sharedmem_handle);
+}
+
+static void DisconnectNetwork(Interface* self) {
+    LOG_ERROR(Service_NWM, "called, this will most likely fail");
+    IPC::RequestParser rp(Kernel::GetCommandBuffer(), 0xA, 0, 0);
+    IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
+
+    rb.Push(RESULT_SUCCESS);
+    using Network::WifiPacket;
+    WifiPacket disconnect_packet;
+    disconnect_packet.channel = network_channel;
+    disconnect_packet.destination_address = Network::BroadcastMac;
+    disconnect_packet.type = WifiPacket::PacketType::Disconnect;
+    disconnect_packet.data.push_back(connection_status.network_node_id);
+    SendPacket(disconnect_packet);
+
+    connection_status = {};
+    connection_status.status = static_cast<u32>(NetworkStatus::NotConnected);
+    connection_status_event->Signal();
 }
 
 /**
@@ -788,7 +831,15 @@ static void DestroyNetwork(Interface* self) {
 
     {
         std::lock_guard<std::mutex> lock(connection_status_mutex);
-
+        if (connection_status.status == static_cast<u8>(NetworkStatus::ConnectedAsHost)) {
+            LOG_ERROR(Service_NWM, "called while hosting, this will most likely fail");
+            using Network::WifiPacket;
+            WifiPacket disconnect_packet;
+            disconnect_packet.channel = network_channel;
+            disconnect_packet.destination_address = Network::BroadcastMac;
+            disconnect_packet.type = WifiPacket::PacketType::Disconnect;
+            SendPacket(disconnect_packet);
+        }
         // TODO(Subv): Check if connection_status is indeed reset after this call.
         connection_status = {};
         connection_status.status = static_cast<u8>(NetworkStatus::NotConnected);
@@ -1211,7 +1262,7 @@ const Interface::FunctionInfo FunctionTable[] = {
     {0x00070080, nullptr, "UpdateNetworkAttribute"},
     {0x00080000, DestroyNetwork, "DestroyNetwork"},
     {0x00090442, nullptr, "ConnectNetwork (deprecated)"},
-    {0x000A0000, nullptr, "DisconnectNetwork"},
+    {0x000A0000, DisconnectNetwork, "DisconnectNetwork"},
     {0x000B0000, GetConnectionStatus, "GetConnectionStatus"},
     {0x000D0040, GetNodeInformation, "GetNodeInformation"},
     {0x000E0006, nullptr, "DecryptBeaconData (deprecated)"},

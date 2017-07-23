@@ -12,10 +12,13 @@
 
 namespace Network {
 
-constexpr u32 network_version = 2; ///< The version of this Room and RoomMember
+constexpr u32 network_version = 3; ///< The version of this Room and RoomMember
 
 constexpr u16 DefaultRoomPort = 1234;
-constexpr size_t NumChannels = 1; // Number of channels used for the connection
+
+/// Maximum number of concurrent connections allowed to this room.
+static constexpr u32 MaxConcurrentConnections = 10;
+constexpr size_t NumChannels = MaxConcurrentConnections + 1; // Number of channels used for the connection
 
 struct RoomInformation {
     std::string name; ///< Name of the server
@@ -49,7 +52,8 @@ enum RoomMessageTypes : u8 {
     IdNameCollision,
     IdMacCollision,
     IdVersionMismatch,
-    IdCloseRoom
+    IdCloseRoom,
+    IdPing
 };
 
 /// This is what a server [person creating a server] would use.
@@ -89,7 +93,7 @@ public:
      * server is empty string.
      */
     bool Create(const std::string& name, const std::string& server = "",
-                u16 server_port = DefaultRoomPort, bool announce = true);
+                u16 server_port = DefaultRoomPort);
 
     /**
      * Destroys the socket
