@@ -518,8 +518,7 @@ Room::Room() : room_impl{std::make_unique<RoomImpl>()} {}
 
 Room::~Room() = default;
 
-bool Room::Create(const std::string& name, const std::string& server_address, u16 server_port,
-                  bool announce) {
+bool Room::Create(const std::string& name, const std::string& server_address, u16 server_port) {
     ENetAddress address;
     address.host = ENET_HOST_ANY;
     if (!server_address.empty()) {
