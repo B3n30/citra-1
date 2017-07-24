@@ -826,7 +826,7 @@ static void DestroyNetwork(Interface* self) {
     // Unschedule the beacon broadcast event.
     CoreTiming::UnscheduleEvent(beacon_broadcast_event, 0);
 
-    {
+    if (connection_status.status != static_cast<u8>(NetworkStatus::ConnectedAsClient)) {
         std::lock_guard<std::mutex> lock(connection_status_mutex);
         if (connection_status.status == static_cast<u8>(NetworkStatus::ConnectedAsHost)) {
             LOG_ERROR(Service_NWM, "called while hosting, this will most likely fail");
