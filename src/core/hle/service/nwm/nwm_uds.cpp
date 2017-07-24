@@ -777,8 +777,13 @@ static void BeginHostingNetwork(Interface* self) {
         // Notify the application that the first node was set.
         connection_status.changed_nodes |= 1;
 
-        if (auto room_member = Network::GetRoomMember().lock())
-            network_info.host_mac_address = room_member->GetMacAddress();
+        if (auto room_member = Network::GetRoomMember().lock()) {
+            if (room_member->IsConnected()) {
+                network_info.host_mac_address = room_member->GetMacAddress();
+            } else {
+                network_info.host_mac_address = {{0x0,0x0,0x0,0x0,0x0,0x0}};
+            }
+        }
 
         current_node.address = network_info.host_mac_address;
         node_info[0] = current_node;
