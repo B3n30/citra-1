@@ -378,7 +378,8 @@ static void HandleDisconnectFrame(const Network::WifiPacket& packet) {
     if (connection_status.status == static_cast<u8>(NetworkStatus::ConnectedAsClient)) {
         std::lock_guard<std::mutex> lock(connection_status_mutex);
         connection_status = {};
-        connection_status.status = static_cast<u8>(NetworkStatus::NotConnected);
+        connection_status.status = static_cast<u32>(NetworkStatus::NotConnected);
+        connection_status.state = static_cast<u32>(ConnectionState::LostConnection);
         connection_status_event->Signal();
     } else if (connection_status.status == static_cast<u8>(NetworkStatus::ConnectedAsHost)) {
         // TODO(B3N30): Figure out what vars to set here
@@ -563,15 +564,12 @@ static void InitializeWithVersion(Interface* self) {
         connection_status.state = static_cast<u32>(ConnectionState::NotConnected);
     }
 
-    if (auto room_member = Network::GetRoomMember().lock())
-        wifi_packet_received = room_member->ConnectOnWifiPacketReceived(OnWifiPacketReceived);
-
     LOG_DEBUG(Service_NWM, "called sharedmem_size=0x%08X, version=0x%08X, sharedmem_handle=0x%08X",
               sharedmem_size, version, sharedmem_handle);
 }
 
 static void DisconnectNetwork(Interface* self) {
-    LOG_ERROR(Service_NWM, "called, this will most likely fail");
+    LOG_ERROR(Service_NWM, "called");
     IPC::RequestParser rp(Kernel::GetCommandBuffer(), 0xA, 0, 0);
     IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
 
@@ -860,21 +858,13 @@ static void DestroyNetwork(Interface* self) {
     // Unschedule the beacon broadcast event.
     CoreTiming::UnscheduleEvent(beacon_broadcast_event, 0);
 
-    if (connection_status.status != static_cast<u8>(NetworkStatus::ConnectedAsClient)) {
-        std::lock_guard<std::mutex> lock(connection_status_mutex);
-        if (connection_status.status == static_cast<u8>(NetworkStatus::ConnectedAsHost)) {
-            LOG_ERROR(Service_NWM, "called while hosting, this will most likely fail");
-            using Network::WifiPacket;
-            WifiPacket disconnect_packet;
-            disconnect_packet.channel = network_channel;
-            disconnect_packet.destination_address = Network::BroadcastMac;
-            disconnect_packet.type = WifiPacket::PacketType::Disconnect;
-            disconnect_packet.data.push_back(connection_status.network_node_id);
-            SendPacket(disconnect_packet);
-        }
-        // TODO(Subv): Check if connection_status is indeed reset after this call.
-        connection_status = {};
-        connection_status.status = static_cast<u8>(NetworkStatus::NotConnected);
+    // Only a host can destroy
+    std::lock_guard<std::mutex> lock(connection_status_mutex);
+    if (connection_status.status != static_cast<u8>(NetworkStatus::ConnectedAsHost)) {
+        IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
+        rb.Push(RESULT_SUCCESS);
+        LOG_WARNING(Service_NWM, "called with status %u", connection_status.status);
+        return;
     }
 
     LOG_DEBUG(Service_NWM, "called");
