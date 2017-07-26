@@ -46,9 +46,16 @@ enum class NetworkStatus {
     ConnectedAsSpectator = 10,
 };
 
+enum class ConnectionState {
+    NotConnected = 0,
+    Connected = 1,
+    Ended = 2,
+    LostConnection = 4,
+};
+
 struct ConnectionStatus {
     u32_le status;
-    INSERT_PADDING_WORDS(1);
+    u32_le state;
     u16_le network_node_id;
     u16_le changed_nodes;
     u16_le nodes[UDSMaxNodes];
