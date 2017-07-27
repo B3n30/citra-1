@@ -25,9 +25,42 @@ template <unsigned M, unsigned E>
 struct Float {
 public:
     static Float<M, E> FromFloat32(float val) {
-        Float<M, E> ret;
-        ret.value = val;
-        return ret;
+        u32 hex;
+        std::memcpy(&hex, &val, sizeof(u32));
+
+        if (val == 0.f)
+            return Float<M, E>::Zero(); // Pica200 has no -0
+        const int bias = 127 - Float<M, E>::EXPONENT_BIAS;
+        u32 sign = hex >> 31;
+        u32 exponent = ((hex >> 23) & ((1 << 8) - 1)) - bias;
+        u32 mantissa = (hex & ((1 << 23) - 1)) >> (23 - M - 1);
+
+        // calculate with a M+1-bit mantissa and round down to M bit
+        if (mantissa << 31)
+            mantissa = ((mantissa >> 1) + 1);
+        else
+            mantissa = (mantissa >> 1);
+
+        if (std::isnan(val)) {
+            Float<M, E> res;
+            res.value = val;
+            return res;
+        } else if (exponent & (1 << E)) {
+            if (sign) {
+                Float<M, E> res;
+                res.value = -std::numeric_limits<float>::infinity();
+                return res;
+            } else {
+                Float<M, E> res;
+                res.value = std::numeric_limits<float>::infinity();
+                return res;
+            }
+        }
+
+        u32 res = (sign << 31) | ((exponent + bias) << 23) | (mantissa << (23 - M));
+        Float<M, E> result;
+        std::memcpy(&result.value, &res, sizeof(float));
+        return result;
     }
 
     static Float<M, E> FromRaw(u32 hex) {
@@ -49,17 +82,18 @@ public:
     }
 
     static Float<M, E> Zero() {
-        return FromFloat32(0.f);
+        Float<M, E> res;
+        res.value = 0.f;
+        return res;
     }
 
-    // Not recommended for anything but logging
     float ToFloat32() const {
         return value;
     }
 
     Float<M, E> operator*(const Float<M, E>& flt) const {
-        if ((this->value == 0.f && !std::isnan(flt.value)) ||
-            (flt.value == 0.f && !std::isnan(this->value)))
+        if ((ToFloat32() == 0.f && !std::isnan(flt.ToFloat32())) ||
+            (flt.ToFloat32() == 0.f && !std::isnan(ToFloat32())))
             // PICA gives 0 instead of NaN when multiplying by inf
             return Zero();
         return Float<M, E>::FromFloat32(ToFloat32() * flt.ToFloat32());
@@ -78,27 +112,22 @@ public:
     }
 
     Float<M, E>& operator*=(const Float<M, E>& flt) {
-        if ((this->value == 0.f && !std::isnan(flt.value)) ||
-            (flt.value == 0.f && !std::isnan(this->value)))
-            // PICA gives 0 instead of NaN when multiplying by inf
-            *this = Zero();
-        else
-            value *= flt.ToFloat32();
+        *this = *this * flt;
         return *this;
     }
 
     Float<M, E>& operator/=(const Float<M, E>& flt) {
-        value /= flt.ToFloat32();
+        *this = *this / flt;
         return *this;
     }
 
     Float<M, E>& operator+=(const Float<M, E>& flt) {
-        value += flt.ToFloat32();
+        *this = *this + flt;
         return *this;
     }
 
     Float<M, E>& operator-=(const Float<M, E>& flt) {
-        value -= flt.ToFloat32();
+        *this = *this - flt;
         return *this;
     }
 
@@ -131,9 +160,11 @@ public:
     }
 
 private:
+    static_assert(M + E + 1 <= 32, "Maximum bitsize is 32");
     static const unsigned MASK = (1 << (M + E + 1)) - 1;
     static const unsigned MANTISSA_MASK = (1 << M) - 1;
     static const unsigned EXPONENT_MASK = (1 << E) - 1;
+    static const u32 EXPONENT_BIAS = (1 << (E - 1)) - 1;
 
     // Stored as a regular float, merely for convenience
     // TODO: Perform proper arithmetic on this!
