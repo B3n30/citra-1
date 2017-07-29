@@ -1,0 +1,73 @@
+// Copyright 2017 Citra Emulator Project
+// Licensed under GPLv2 or any later version
+// Refer to the license.txt file included.
+
+#include <chrono>
+#include "announce_netplay_session.h"
+#include "common/assert.h"
+#include "network/network.h"
+
+#ifdef ENABLE_WEB_SERVICE
+#include "web_service/netplay_json.h"
+#endif
+
+namespace Core {
+
+// Time between room is announced to web_service
+static constexpr std::chrono::seconds announce_time_interval(15);
+
+NetplayAnnounceSession::NetplayAnnounceSession() {
+#ifdef ENABLE_WEB_SERVICE
+    backend = std::make_unique<WebService::NetplayJson>();
+#else
+    backend = std::make_unique<NetplayAnnounce::NullBackend>();
+#endif
+}
+
+void NetplayAnnounceSession::Start() {
+    ASSERT_MSG(announce != false, "");
+    announce = true;
+    netplay_announce_thread =
+        std::make_unique<std::thread>(&NetplayAnnounceSession::AnnounceNetplayLoop, this);
+}
+
+void NetplayAnnounceSession::Stop() {
+    ASSERT_MSG(announce, "");
+    announce = false;
+    netplay_announce_thread->join();
+    netplay_announce_thread.reset();
+    backend->Delete();
+}
+
+NetplayAnnounceSession::~NetplayAnnounceSession() {
+    if (announce) {
+        Stop();
+    }
+}
+
+void NetplayAnnounceSession::AnnounceNetplayLoop() {
+    while (announce) {
+        if (std::shared_ptr<Network::Room> room = Network::GetRoom().lock()) {
+            if (room->GetState() == Network::Room::State::Open) {
+                Network::RoomInformation room_information = room->GetRoomInformation();
+                std::vector<Network::Room::Member> memberlist = room->GetRoomMemberList();
+                backend->SetRoomInformation(room_information.guid, room_information.name,
+                                            room_information.port, room_information.member_slots,
+                                            Network::network_version);
+                backend->ClearPlayers();
+                for (const auto& member : memberlist) {
+                    backend->AddPlayer(member.nickname, member.mac_address, member.game_info.id,
+                                       member.game_info.name, member.game_info.version);
+                }
+                backend->Announce();
+            }
+        }
+        std::this_thread::sleep_for(announce_time_interval);
+    }
+}
+
+std::future<NetplayAnnounce::RoomList> NetplayAnnounceSession::GetRoomList() {
+    return backend->GetRoomList();
+}
+
+} // namespace Core

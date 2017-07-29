@@ -172,5 +172,7 @@ gdbstub_port=24689
 [WebService]
 # Endpoint URL for submitting telemetry data
 telemetry_endpoint_url =
+# Endpoint URL for submitting and receiving netplay data
+netplay_endpoint_url =
 )";
 }

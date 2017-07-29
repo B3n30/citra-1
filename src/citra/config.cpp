@@ -155,6 +155,8 @@ void Config::ReadValues() {
     // Web Service
     Settings::values.telemetry_endpoint_url = sdl2_config->Get(
         "WebService", "telemetry_endpoint_url", "https://services.citra-emu.org/api/telemetry");
+    Settings::values.announce_netplay_endpoint_url = sdl2_config->Get(
+        "WebService", "netplay_endpoint_url", "https://services.citra-emu.org/api/netplay");
 }
 
 void Config::Reload() {

@@ -4,8 +4,10 @@
 
 #include <algorithm>
 #include <atomic>
+#include <iomanip>
 #include <mutex>
 #include <random>
+#include <sstream>
 #include <thread>
 #include "enet/enet.h"
 #include "network/packet.h"
@@ -38,7 +40,14 @@ public:
     mutable std::mutex member_mutex; ///< Mutex for locking the members list
     /// This should be a std::shared_mutex as soon as C++17 is supported
 
-    RoomImpl() : random_gen(std::random_device()()) {}
+    std::string guid; /// The GUID of the room
+
+    RoomImpl();
+
+    /**
+     * Creates a random ID in the form 12345678-1234-1234-1234-123456789012
+     */
+    void CreateGUID();
 
     /// Thread that receives and dispatches network packets
     std::unique_ptr<std::thread> room_thread;
@@ -98,6 +107,8 @@ public:
      * <MessageID>ID_ROOM_INFORMATION
      * <String> room_name
      * <u32> member_slots: The max number of clients allowed in this room
+     * <String> guid
+     * <u16> port
      * <u32> num_members: the number of currently joined clients
      * This is followed by the following three values for each member:
      * <String> nickname of that member
@@ -138,6 +149,24 @@ public:
 };
 
 // RoomImpl
+Room::RoomImpl::RoomImpl() : random_gen(std::random_device()()) {
+    CreateGUID();
+}
+
+void Room::RoomImpl::CreateGUID() {
+    std::uniform_int_distribution<> dis(0, 9999);
+    std::ostringstream stream;
+    stream << std::setfill('0') << std::setw(4) << dis(random_gen);
+    stream << std::setfill('0') << std::setw(4) << dis(random_gen) << "-";
+    stream << std::setfill('0') << std::setw(4) << dis(random_gen) << "-";
+    stream << std::setfill('0') << std::setw(4) << dis(random_gen) << "-";
+    stream << std::setfill('0') << std::setw(4) << dis(random_gen) << "-";
+    stream << std::setfill('0') << std::setw(4) << dis(random_gen);
+    stream << std::setfill('0') << std::setw(4) << dis(random_gen);
+    stream << std::setfill('0') << std::setw(4) << dis(random_gen);
+    guid = stream.str();
+}
+
 void Room::RoomImpl::ServerLoop() {
     while (state != State::Closed) {
         ENetEvent event;
@@ -300,6 +329,8 @@ void Room::RoomImpl::BroadcastRoomInformation() {
     packet << static_cast<u8>(IdRoomInformation);
     packet << room_information.name;
     packet << room_information.member_slots;
+    packet << room_information.guid;
+    packet << room_information.port;
 
     packet << static_cast<u32>(members.size());
     {
@@ -451,6 +482,9 @@ void Room::Create(const std::string& name, const std::string& server_address, u1
 
     room_impl->room_information.name = name;
     room_impl->room_information.member_slots = MaxConcurrentConnections;
+    room_impl->room_information.guid = room_impl->guid;
+    room_impl->room_information.port = server_port;
+
     room_impl->StartLoop();
 }
 

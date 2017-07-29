@@ -215,6 +215,8 @@ void RoomMember::RoomMemberImpl::HandleRoomInformationPacket(const ENetEvent* ev
     RoomInformation info{};
     packet >> info.name;
     packet >> info.member_slots;
+    packet >> info.guid;
+    packet >> info.port;
     room_information.name = info.name;
     room_information.member_slots = info.member_slots;
 
