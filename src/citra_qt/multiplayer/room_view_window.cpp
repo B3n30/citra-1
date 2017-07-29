@@ -172,11 +172,11 @@ void RoomViewWindow::AddConnectionMessage(QString message) {
 }
 
 void RoomViewWindow::ConnectRoomEvents() {
-    room_member->ConnectOnStateChanged(
+    room_member->BindOnStateChanged(
         std::bind(&RoomViewWindow::InvokeOnStateChanged, this, std::placeholders::_1));
-    room_member->ConnectOnRoomInformationChanged(
+    room_member->BindOnRoomInformationChanged(
         std::bind(&RoomViewWindow::InvokeOnRoomChanged, this, std::placeholders::_1));
-    room_member->ConnectOnChatMessageRecieved(
+    room_member->BindOnChatMessageRecieved(
         std::bind(&::RoomViewWindow::InvokeOnMessagesReceived, this, std::placeholders::_1));
 }
 

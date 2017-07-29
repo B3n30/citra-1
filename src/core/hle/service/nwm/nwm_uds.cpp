@@ -72,7 +72,7 @@ static NetworkInfo network_info;
 static int beacon_broadcast_event;
 
 // Callback identifier for the OnWifiPacketReceived event.
-static Network::RoomMember::Connection<Network::WifiPacket> wifi_packet_received;
+static Network::RoomMember::CallbackHandle<Network::WifiPacket> wifi_packet_received;
 
 // Mutex to synchronize access to the connection status between the emulation thread and the
 // network thread.
@@ -419,7 +419,7 @@ static void Shutdown(Interface* self) {
     u32* cmd_buff = Kernel::GetCommandBuffer();
 
     if (auto room_member = Network::GetRoomMember().lock())
-        room_member->Disconnect(wifi_packet_received);
+        room_member->Unbind(wifi_packet_received);
 
     // TODO(purpasmart): Verify return header on HW
     cmd_buff[1] = RESULT_SUCCESS.raw;
@@ -542,7 +542,7 @@ static void InitializeWithVersion(Interface* self) {
     ASSERT_MSG(recv_buffer_memory->size == sharedmem_size, "Invalid shared memory size.");
 
     if (auto room_member = Network::GetRoomMember().lock()) {
-        wifi_packet_received = room_member->ConnectOnWifiPacketReceived(OnWifiPacketReceived);
+        wifi_packet_received = room_member->BindOnWifiPacketReceived(OnWifiPacketReceived);
     } else {
         LOG_ERROR(Service_NWM, "Network isn't initalized");
         IPC::RequestBuilder rb = rp.MakeBuilder(1, 2);
