@@ -79,7 +79,7 @@ public:
     /**
      * Gets a list of the mbmers connected to the room.
      */
-    const std::vector<Member> GetRoomMemberList() const;
+    std::vector<Member> GetRoomMemberList() const;
 
     /**
      * Creates the socket for this room. Will bind to default address if

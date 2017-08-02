@@ -463,7 +463,7 @@ const RoomInformation& Room::GetRoomInformation() const {
     return room_impl->room_information;
 }
 
-const std::vector<Room::Member> Room::GetRoomMemberList() const {
+std::vector<Room::Member> Room::GetRoomMemberList() const {
     std::vector<Room::Member> member_list;
     std::lock_guard<std::mutex> lock(room_impl->member_mutex);
     for (const auto& member_impl : room_impl->members) {

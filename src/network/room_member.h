@@ -131,23 +131,41 @@ public:
     void SendGameInfo(const GameInfo& game_info);
 
     /**
-     * Binds a function to an event. The function wil be called everytime the event occurs.
-     * Depending on the type of the parameter the function is only called for the coresponding
-     * event.
-     * The callback function must not bind or unbind a function. Doing so will cause a deadlock
-     * The events could be:
-     * - Change of the room member state
-     * - A WifiPacket was received
-     * - The room information was changed
-     * - A chat message was received
+     * Binds a function to an event that will be triggered every time the State of the member
+     * changed. The function wil be called every time the event is triggered. The callback function
+     * must not bind or unbind a function. Doing so will cause a deadlock
      * @param callback The function to call
      * @return A handle used for removing the function from the registered list
      */
     CallbackHandle<State> BindOnStateChanged(std::function<void(const State&)> callback);
+
+    /**
+     * Binds a function to an event that will be triggered every time a WifiPacket is received.
+     * The function wil be called everytime the event is triggered.
+     * The callback function must not bind or unbind a function. Doing so will cause a deadlock
+     * @param callback The function to call
+     * @return A handle used for removing the function from the registered list
+     */
     CallbackHandle<WifiPacket> BindOnWifiPacketReceived(
         std::function<void(const WifiPacket&)> callback);
+
+    /**
+     * Binds a function to an event that will be triggered every time the RoomInformation changes.
+     * The function wil be called every time the event is triggered.
+     * The callback function must not bind or unbind a function. Doing so will cause a deadlock
+     * @param callback The function to call
+     * @return A handle used for removing the function from the registered list
+     */
     CallbackHandle<RoomInformation> BindOnRoomInformationChanged(
         std::function<void(const RoomInformation&)> callback);
+
+    /**
+     * Binds a function to an event that will be triggered every time a ChatMessage is received.
+     * The function wil be called every time the event is triggered.
+     * The callback function must not bind or unbind a function. Doing so will cause a deadlock
+     * @param callback The function to call
+     * @return A handle used for removing the function from the registered list
+     */
     CallbackHandle<ChatEntry> BindOnChatMessageRecieved(
         std::function<void(const ChatEntry&)> callback);
 
