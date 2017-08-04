@@ -353,13 +353,7 @@ ResultStatus AppLoader_NCCH::Load() {
 
     if (auto room_member = Network::GetRoomMember().lock()) {
         Network::GameInfo game_info;
-        std::vector<u8> smdh_data;
-        ReadIcon(smdh_data);
-        SMDH smdh;
-        std::memcpy(&smdh, smdh_data.data(), sizeof(SMDH));
-        auto title = smdh.GetShortTitle(SMDH::TitleLanguage::English);
-        auto title_end = std::find(title.begin(), title.end(), u'\0');
-        game_info.name = Common::UTF16ToUTF8(std::u16string{title.begin(), title_end});
+        ReadTitle(game_info.name);
         game_info.id = ncch_header.program_id;
         room_member->SendGameInfo(game_info);
     }
