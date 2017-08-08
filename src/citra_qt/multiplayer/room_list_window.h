@@ -5,11 +5,15 @@
 #pragma once
 
 #include <memory>
+#include <QFuture>
 #include <QLineEdit>
+#include <QListWidgetItem>
 #include <QMainWindow>
 #include <QObject>
 #include <QPushButton>
 #include <QSpinBox>
+#include <QStandardItemModel>
+#include <QTreeView>
 #include "core/announce_netplay_session.h"
 #include "network/network.h"
 
@@ -34,14 +38,19 @@ private:
 private slots:
     void OnJoin();
     void OnCreate();
+    void OnRefresh();
 
 private:
     QSpinBox* port = nullptr;
     QLineEdit* server = nullptr;
     QLineEdit* nickname = nullptr;
     QPushButton* join_button = nullptr;
+    QPushButton* refresh_button = nullptr;
+    QTreeView* room_list = nullptr;
+    QStandardItemModel* item_model = nullptr;
     std::shared_ptr<Network::RoomMember> room_member;
     std::shared_ptr<Network::Room> room;
 
     std::unique_ptr<Core::NetplayAnnounceSession> announce_netplay_session;
+    QFuture<NetplayAnnounce::RoomList> GetRoomList();
 };

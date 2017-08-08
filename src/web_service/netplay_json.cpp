@@ -30,6 +30,7 @@ void to_json(nlohmann::json& json, const Room& room) {
     json["name"] = room.name;
     json["maxPlayers"] = room.max_player;
     json["netVersion"] = room.net_version;
+    json["hasPassword"] = room.has_password;
     if (room.members.size() > 0) {
         nlohmann::json member_json = room.members;
         json["players"] = member_json;
@@ -37,15 +38,15 @@ void to_json(nlohmann::json& json, const Room& room) {
 }
 
 void from_json(const nlohmann::json& json, Room& room) {
-    room.ip = json.at("ip").get<std::string>();
+    room.ip = json.at("address").get<std::string>();
     room.name = json.at("name").get<std::string>();
     room.port = json.at("port").get<u16>();
     room.max_player = json.at("maxPlayers").get<u32>();
     room.net_version = json.at("netVersion").get<u32>();
+    room.has_password = json.at("hasPassword").get<bool>();
     try {
         room.members = json.at("players").get<std::vector<Room::Member>>();
-    } catch (const std::out_of_range&) {
-        LOG_DEBUG(WebService, "no member in room");
+    } catch (const nlohmann::detail::out_of_range&) {
     }
 }
 
@@ -54,12 +55,14 @@ void from_json(const nlohmann::json& json, Room& room) {
 namespace WebService {
 
 void NetplayJson::SetRoomInformation(const std::string& guid, const std::string& name,
-                                     const u16 port, const u32 max_player, const u32 net_version) {
+                                     const u16 port, const u32 max_player, const u32 net_version,
+                                     const bool has_password) {
     room.name = name;
     room.GUID = guid;
     room.port = port;
     room.max_player = max_player;
     room.net_version = net_version;
+    room.has_password = has_password;
 }
 void NetplayJson::AddPlayer(const std::string& nickname,
                             const NetplayAnnounce::MacAddress& mac_address, const u64 game_id,
@@ -84,13 +87,12 @@ void NetplayJson::ClearPlayers() {
 
 std::future<NetplayAnnounce::RoomList> NetplayJson::GetRoomList() {
     std::future<std::string> reply = GetJson(Settings::values.announce_netplay_endpoint_url);
-    auto DeSerialize = [&]() -> NetplayAnnounce::RoomList {
-        ;
-        nlohmann::json json = reply.get();
-        NetplayAnnounce::RoomList room_list = json;
+    auto DeSerialize = [](std::future<std::string>&& reply) -> NetplayAnnounce::RoomList {
+        nlohmann::json json = nlohmann::json::parse(reply.get());
+        NetplayAnnounce::RoomList room_list = json.at("rooms").get<NetplayAnnounce::RoomList>();
         return room_list;
     };
-    return std::async(DeSerialize);
+    return std::async(DeSerialize, std::move(reply));
 }
 
 void NetplayJson::Delete() {

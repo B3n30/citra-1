@@ -54,7 +54,7 @@ void NetplayAnnounceSession::AnnounceNetplayLoop() {
                 std::vector<Network::Room::Member> memberlist = room->GetRoomMemberList();
                 backend->SetRoomInformation(room_information.guid, room_information.name,
                                             room_information.port, room_information.member_slots,
-                                            Network::network_version);
+                                            Network::network_version, room->HasPassword());
                 backend->ClearPlayers();
                 LOG_DEBUG(Network, "%lu", memberlist.size());
                 for (const auto& member : memberlist) {

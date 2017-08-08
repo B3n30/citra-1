@@ -28,7 +28,7 @@ static constexpr std::chrono::seconds announce_time_interval(15);
 class Room::RoomImpl {
 public:
     // This MAC address is used to generate a 'Nintendo' like Mac address.
-    const MacAddress NintendoOUI = { {0x00, 0x1F, 0x32, 0x00, 0x00, 0x00} };
+    const MacAddress NintendoOUI = {{0x00, 0x1F, 0x32, 0x00, 0x00, 0x00}};
     std::mt19937 random_gen; ///< Random number generator. Used for GenerateMacAddress
 
     ENetHost* server = nullptr; ///< Network interface.
@@ -36,11 +36,13 @@ public:
     std::atomic<State> state{State::Closed}; ///< Current state of the room.
     RoomInformation room_information;        ///< Information about this room.
 
+    std::string password;
+
     struct Member {
-        std::string nickname;   ///< The nickname of the member.
-        GameInfo game_info;     ///< The current game of the member
-        MacAddress mac_address; ///< The assigned mac address of the member.
-        ENetPeer* peer;         ///< The remote peer.
+        std::string nickname;              ///< The nickname of the member.
+        GameInfo game_info;                ///< The current game of the member
+        MacAddress mac_address;            ///< The assigned mac address of the member.
+        ENetPeer* peer;                    ///< The remote peer.
         std::chrono::duration<float> ping; // The ping of that member
         u32 channel;
     };
@@ -95,6 +97,8 @@ public:
      */
     void SendVersionMismatch(ENetPeer* client);
 
+    void SendWrongPassword(ENetPeer* client);
+
     /**
      * Notifies the member that its connection attempt was successful,
      * and it is now part of the room.
@@ -109,7 +113,7 @@ public:
     /**
      * Pings the members,
      */
-     void SendPing();
+    void SendPing();
 
     /**
      * Sends the information about the room, along with the list of members
@@ -216,7 +220,8 @@ void Room::RoomImpl::ServerLoop() {
                 break;
             }
         }
-        if (ping_interval < std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now()-last_time_pinged)) {
+        if (ping_interval < std::chrono::duration_cast<std::chrono::seconds>(
+                                std::chrono::high_resolution_clock::now() - last_time_pinged)) {
             BroadcastRoomInformation();
             SendPing();
             last_time_pinged = std::chrono::high_resolution_clock::now();
@@ -242,6 +247,14 @@ void Room::RoomImpl::HandleJoinRequest(const ENetEvent* event) {
 
     u32 client_version;
     packet >> client_version;
+
+    std::string pass;
+    packet >> pass;
+
+    if (!(pass == password)) {
+        SendWrongPassword(event->peer);
+        return;
+    }
 
     if (!IsValidNickname(nickname)) {
         SendNameCollision(event->peer);
@@ -269,7 +282,7 @@ void Room::RoomImpl::HandleJoinRequest(const ENetEvent* event) {
     member.mac_address = preferred_mac;
     member.nickname = nickname;
     member.peer = event->peer;
-    member.channel = members.size() +1;
+    member.channel = members.size() + 1;
 
     {
         std::lock_guard<std::mutex> lock(member_mutex);
@@ -309,6 +322,16 @@ void Room::RoomImpl::SendNameCollision(ENetPeer* client) {
 void Room::RoomImpl::SendMacCollision(ENetPeer* client) {
     Packet packet;
     packet << static_cast<u8>(IdMacCollision);
+
+    ENetPacket* enet_packet =
+        enet_packet_create(packet.GetData(), packet.GetDataSize(), ENET_PACKET_FLAG_RELIABLE);
+    enet_peer_send(client, 0, enet_packet);
+    enet_host_flush(server);
+}
+
+void Room::RoomImpl::SendWrongPassword(ENetPeer* client) {
+    Packet packet;
+    packet << static_cast<u8>(IdWrongPassword);
 
     ENetPacket* enet_packet =
         enet_packet_create(packet.GetData(), packet.GetDataSize(), ENET_PACKET_FLAG_RELIABLE);
@@ -490,9 +513,8 @@ void Room::RoomImpl::HandleGameNamePacket(const ENetEvent* event) {
 void Room::RoomImpl::HandlePingMessage(const ENetEvent* event) {
     std::lock_guard<std::mutex> lock(member_mutex);
     auto member =
-        std::find_if(members.begin(), members.end(), [event](const Member& member) -> bool {
-            return member.peer == event->peer;
-        });
+        std::find_if(members.begin(), members.end(),
+                     [event](const Member& member) -> bool { return member.peer == event->peer; });
     if (member != members.end()) {
         member->ping = std::chrono::high_resolution_clock::now() - last_time_pinged;
     }
@@ -518,7 +540,8 @@ Room::Room() : room_impl{std::make_unique<RoomImpl>()} {}
 
 Room::~Room() = default;
 
-bool Room::Create(const std::string& name, const std::string& server_address, u16 server_port) {
+bool Room::Create(const std::string& name, const std::string& server_address, u16 server_port,
+                  const std::string& password) {
     ENetAddress address;
     address.host = ENET_HOST_ANY;
     if (!server_address.empty()) {
@@ -539,6 +562,7 @@ bool Room::Create(const std::string& name, const std::string& server_address, u1
     room_impl->room_information.member_slots = MaxConcurrentConnections;
     room_impl->room_information.guid = room_impl->guid;
     room_impl->room_information.port = server_port;
+    room_impl->password = password;
 
     room_impl->StartLoop();
     return true;
@@ -564,6 +588,10 @@ const std::vector<Room::Member> Room::GetRoomMemberList() const {
     }
     return member_list;
 };
+
+const bool Room::HasPassword() const {
+    return !room_impl->password.empty();
+}
 
 void Room::Destroy() {
     room_impl->state = State::Closed;

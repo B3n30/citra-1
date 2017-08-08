@@ -28,6 +28,7 @@ struct Room {
     u16 port;
     u32 max_player;
     u32 net_version;
+    bool has_password;
 
     std::vector<Member> members;
 };
@@ -41,8 +42,8 @@ class Backend : NonCopyable {
 public:
     virtual ~Backend() = default;
     virtual void SetRoomInformation(const std::string& guid, const std::string& name,
-                                    const u16 port, const u32 max_player,
-                                    const u32 net_version) = 0;
+                                    const u16 port, const u32 max_player, const u32 net_version,
+                                    const bool has_password) = 0;
     virtual void AddPlayer(const std::string& nickname, const MacAddress& mac_address,
                            const u64 game_id, const std::string& game_name,
                            const u32 game_version) = 0;
@@ -60,8 +61,8 @@ class NullBackend : public Backend {
 public:
     ~NullBackend() = default;
     void SetRoomInformation(const std::string& /*guid*/, const std::string& /*name*/,
-                            const u16 /*port*/, const u32 /*max_player*/,
-                            const u32 /*net_version*/) override {}
+                            const u16 /*port*/, const u32 /*max_player*/, const u32 /*net_version*/,
+                            const bool /*has_password*/) override {}
     void AddPlayer(const std::string& /*nickname*/, const MacAddress& /*mac_address*/,
                    const u64 /*game_id*/, const std::string& /*game_name*/,
                    const u32 /*game_version*/) override {}

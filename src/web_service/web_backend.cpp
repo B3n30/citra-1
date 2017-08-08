@@ -43,10 +43,11 @@ void PostJson(const std::string& url, const std::string& data) {
         return;
     }
 
-    cpr::PostAsync(cpr::Url{url}, cpr::Body{data}, cpr::Header{{"Content-Type", "application/json"},
-                                                               {"x-username", GetUsername()},
-                                                               {"x-token", GetToken()},
-                                                               {"api-version", API_VERSION}});
+    cpr::PostAsync(cpr::Url{url}, cpr::Body{data},
+                   cpr::Header{{"Content-Type", "application/json"},
+                               {"x-username", GetUsername()},
+                               {"x-token", GetToken()},
+                               {"api-version", API_VERSION}});
 }
 
 std::future<std::string> GetJson(const std::string& url) {
@@ -55,7 +56,6 @@ std::future<std::string> GetJson(const std::string& url) {
         auto EmptyString = []() -> std::string { return std::string{}; };
         return std::async(EmptyString);
     }
-
     return cpr::GetCallback([](cpr::Response r) { return r.text; }, cpr::Url{url});
 }
 

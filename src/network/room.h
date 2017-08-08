@@ -18,7 +18,8 @@ constexpr u16 DefaultRoomPort = 1234;
 
 /// Maximum number of concurrent connections allowed to this room.
 static constexpr u32 MaxConcurrentConnections = 10;
-constexpr size_t NumChannels = MaxConcurrentConnections + 1; // Number of channels used for the connection
+constexpr size_t NumChannels =
+    MaxConcurrentConnections + 1; // Number of channels used for the connection
 
 struct RoomInformation {
     std::string name; ///< Name of the server
@@ -51,6 +52,7 @@ enum RoomMessageTypes : u8 {
     IdNameCollision,
     IdMacCollision,
     IdVersionMismatch,
+    IdWrongPassword,
     IdCloseRoom,
     IdPing
 };
@@ -88,12 +90,16 @@ public:
     const std::vector<Member> GetRoomMemberList() const;
 
     /**
+     * Checks if the room is password protected
+     */
+    const bool HasPassword() const;
+
+    /**
      * Creates the socket for this room. Will bind to default address if
      * server is empty string.
      */
     bool Create(const std::string& name, const std::string& server = "",
-                u16 server_port = DefaultRoomPort);
-
+                u16 server_port = DefaultRoomPort, const std::string& password = "");
     /**
      * Destroys the socket
      */
