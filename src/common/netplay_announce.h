@@ -6,6 +6,7 @@
 
 #include <array>
 #include <functional>
+#include <future>
 #include <string>
 #include <vector>
 #include "common/common_types.h"
@@ -47,7 +48,7 @@ public:
                            const u64 game_id, const std::string& game_name) = 0;
     virtual void Announce() = 0;
     virtual void ClearPlayers() = 0;
-    virtual void GetRoomList(std::function<void(const RoomList&)> func) = 0;
+    virtual std::future<RoomList> GetRoomList(std::function<void()> func) = 0;
     virtual void Delete() = 0;
 };
 
@@ -65,8 +66,8 @@ public:
                    const u64 /*game_id*/, const std::string& /*game_name*/) override {}
     void Announce() override {}
     void ClearPlayers() override {}
-    void GetRoomList(std::function<void(const RoomList&)> func) override {
-        return func(RoomList{});
+    std::future<RoomList> GetRoomList(std::function<void()> func) override {
+        return std::async(std::launch::async,[func](){ func(); return RoomList{};});
     }
 
     void Delete() override {}

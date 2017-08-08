@@ -111,11 +111,7 @@ void RoomListWindow::ConnectWidgetEvents(Mode mode) {
         break;
     }
     connect(refresh_button, SIGNAL(clicked()), this, SLOT(OnRefresh()));
-}
-
-void RoomListWindow::InvokeOnNewRoomList(const NetplayAnnounce::RoomList& new_room_list) {
-    roomlist = new_room_list;
-    QMetaObject::invokeMethod(this, "RefreshRoomList", Qt::QueuedConnection);
+    connect(this, SIGNAL(RefreshRoomList()), this, SLOT(OnRefreshRoomList()));
 }
 
 void RoomListWindow::OnJoin() {
@@ -144,16 +140,16 @@ void RoomListWindow::OnCreate() {
     announce_netplay_session->Start();
     RoomViewWindow* room_view_window = new RoomViewWindow();
     room_view_window->show();
-    // TODO(B3N30): Close this window
 }
 
 void RoomListWindow::OnRefresh() {
-    announce_netplay_session->GetRoomList(std::bind(&RoomListWindow::InvokeOnNewRoomList, this, std::placeholders::_1));
+    room_list_future = announce_netplay_session->GetRoomList([&](){emit RefreshRoomList();});
 }
 
-void RoomListWindow::RefreshRoomList() {
+void RoomListWindow::OnRefreshRoomList() {
     item_model->removeRows(0, item_model->rowCount());
-    for (const auto& room : roomlist) {
+    NetplayAnnounce::RoomList new_room_list = room_list_future.get();
+    for (const auto& room : new_room_list) {
         QList<QStandardItem*> l;
         QString port;
         port.sprintf("%u", room.port);

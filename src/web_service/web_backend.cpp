@@ -5,7 +5,11 @@
 #include <cpr/cpr.h>
 #include <stdlib.h>
 #include "common/logging/log.h"
+#include "common/netplay_announce.h"
 #include "web_service/web_backend.h"
+
+#include <chrono>
+#include <thread>
 
 namespace WebService {
 
@@ -50,13 +54,16 @@ void PostJson(const std::string& url, const std::string& data) {
                                {"api-version", API_VERSION}});
 }
 
-void GetJson(const std::string& url, std::function<void(const std::string&)> func) {
+template <typename T>
+std::future<T> GetJson(const std::string& url, std::function<T(const std::string&)> func) {
     if (url.empty()) {
         LOG_ERROR(WebService, "URL is invalid");
-        func("");
-        return;
+        return std::async(std::launch::async,[func{std::move(func)}](){ return func("");});
     }
-    cpr::GetCallback([func](cpr::Response r) { func(r.text); }, cpr::Url{url});
+
+    return cpr::GetCallback([func{std::move(func)}](cpr::Response r) {
+        return func(r.text);
+    }, cpr::Url{url});
 }
 
 void DeleteJson(const std::string& url, const std::string& data) {
@@ -78,4 +85,5 @@ void DeleteJson(const std::string& url, const std::string& data) {
                                  {"api-version", API_VERSION}});
 }
 
+template std::future<NetplayAnnounce::RoomList> GetJson(const std::string& url, std::function<NetplayAnnounce::RoomList(const std::string&)> func);
 } // namespace WebService

@@ -68,8 +68,8 @@ void NetplayAnnounceSession::AnnounceNetplayLoop() {
     }
 }
 
-void NetplayAnnounceSession::GetRoomList(std::function<void(const NetplayAnnounce::RoomList&)> func) {
-    backend->GetRoomList(func);
+std::future<NetplayAnnounce::RoomList> NetplayAnnounceSession::GetRoomList(std::function<void()> func) {
+    return backend->GetRoomList(func);
 }
 
 } // namespace Core

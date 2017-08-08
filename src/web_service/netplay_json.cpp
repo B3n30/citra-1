@@ -82,13 +82,14 @@ void NetplayJson::ClearPlayers() {
     room.members.clear();
 }
 
-void NetplayJson::GetRoomList(std::function<void(const NetplayAnnounce::RoomList&)> func) {
-    auto DeSerialize = [func](const std::string& reply) {
+std::future<NetplayAnnounce::RoomList> NetplayJson::GetRoomList(std::function<void()> func) {
+    auto DeSerialize = [func](const std::string& reply)->NetplayAnnounce::RoomList {
         nlohmann::json json = nlohmann::json::parse(reply);
         NetplayAnnounce::RoomList room_list = json.at("rooms").get<NetplayAnnounce::RoomList>();
-        func(room_list);
+        func();
+        return room_list;
     };
-    GetJson(Settings::values.announce_netplay_endpoint_url, DeSerialize);
+    return GetJson<NetplayAnnounce::RoomList>(Settings::values.announce_netplay_endpoint_url, DeSerialize);
 }
 
 void NetplayJson::Delete() {

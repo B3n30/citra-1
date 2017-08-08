@@ -29,7 +29,7 @@ public:
     /*
      *  Returns a list of all room information the backend got
      */
-    void GetRoomList(std::function<void(const NetplayAnnounce::RoomList&)> func);
+    std::future<NetplayAnnounce::RoomList> GetRoomList(std::function<void()> func);
 
 private:
     std::atomic<bool> announce{false};

@@ -5,6 +5,7 @@
 #pragma once
 
 #include <functional>
+#include <future>
 #include <string>
 #include "common/netplay_announce.h"
 
@@ -24,7 +25,7 @@ public:
                    const u64 game_id, const std::string& game_name) override;
     void Announce() override;
     void ClearPlayers() override;
-    void GetRoomList(std::function<void(const NetplayAnnounce::RoomList&)> func) override;
+    std::future<NetplayAnnounce::RoomList> GetRoomList(std::function<void()> func) override;
     void Delete() override;
 
 private:

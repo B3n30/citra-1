@@ -39,9 +39,10 @@ private slots:
     void OnJoin();
     void OnCreate();
     void OnRefresh();
-    void RefreshRoomList();
+    void OnRefreshRoomList();
 
-    void InvokeOnNewRoomList(const NetplayAnnounce::RoomList& room_list);
+signals:
+    void RefreshRoomList();
 
 private:
     QSpinBox* port = nullptr;
@@ -53,8 +54,7 @@ private:
     QStandardItemModel* item_model = nullptr;
     std::shared_ptr<Network::RoomMember> room_member;
     std::shared_ptr<Network::Room> room;
-    NetplayAnnounce::RoomList roomlist;
+    std::future<NetplayAnnounce::RoomList> room_list_future;
 
     std::unique_ptr<Core::NetplayAnnounceSession> announce_netplay_session;
-    QFuture<NetplayAnnounce::RoomList> GetRoomList();
 };

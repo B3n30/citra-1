@@ -5,6 +5,7 @@
 #pragma once
 
 #include <functional>
+#include <future>
 #include <string>
 #include "common/common_types.h"
 
@@ -33,7 +34,8 @@ void PostJson(const std::string& url, const std::string& data);
  * Get JSON from services.citra-emu.org.
  * @param url URL of the services.citra-emu.org endpoint to get data from.
  */
-void GetJson(const std::string& url, std::function<void(const std::string&)> func);
+template <typename T>
+std::future<T> GetJson(const std::string& url, std::function<T(const std::string&)> func);
 
 /**
  * Delete JSON to services.citra-emu.org.
