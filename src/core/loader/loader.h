@@ -193,4 +193,5 @@ extern const std::initializer_list<Kernel::AddressMapping> default_address_mappi
  */
 std::unique_ptr<AppLoader> GetLoader(const std::string& filename);
 
+
 } // namespace
