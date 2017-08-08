@@ -5,7 +5,7 @@
 #pragma once
 
 #include <array>
-#include <future>
+#include <functional>
 #include <string>
 #include <vector>
 #include "common/common_types.h"
@@ -47,7 +47,7 @@ public:
                            const u64 game_id, const std::string& game_name) = 0;
     virtual void Announce() = 0;
     virtual void ClearPlayers() = 0;
-    virtual std::future<RoomList> GetRoomList() = 0;
+    virtual void GetRoomList(std::function<void(const RoomList&)> func) = 0;
     virtual void Delete() = 0;
 };
 
@@ -65,9 +65,8 @@ public:
                    const u64 /*game_id*/, const std::string& /*game_name*/) override {}
     void Announce() override {}
     void ClearPlayers() override {}
-    std::future<RoomList> GetRoomList() override {
-        auto EmptyRoomList = []() -> RoomList { return RoomList{}; };
-        return std::async(EmptyRoomList);
+    void GetRoomList(std::function<void(const RoomList&)> func) override {
+        return func(RoomList{});
     }
 
     void Delete() override {}

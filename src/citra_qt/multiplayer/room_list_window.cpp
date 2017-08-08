@@ -113,6 +113,11 @@ void RoomListWindow::ConnectWidgetEvents(Mode mode) {
     connect(refresh_button, SIGNAL(clicked()), this, SLOT(OnRefresh()));
 }
 
+void RoomListWindow::InvokeOnNewRoomList(const NetplayAnnounce::RoomList& new_room_list) {
+    roomlist = new_room_list;
+    QMetaObject::invokeMethod(this, "RefreshRoomList", Qt::QueuedConnection);
+}
+
 void RoomListWindow::OnJoin() {
     if (!CloseOnConfirm())
         return;
@@ -142,39 +147,29 @@ void RoomListWindow::OnCreate() {
     // TODO(B3N30): Close this window
 }
 
-QFuture<NetplayAnnounce::RoomList> RoomListWindow::GetRoomList() {
-    return QtConcurrent::run([&]() { return announce_netplay_session->GetRoomList().get(); });
+void RoomListWindow::OnRefresh() {
+    announce_netplay_session->GetRoomList(std::bind(&RoomListWindow::InvokeOnNewRoomList, this, std::placeholders::_1));
 }
 
-void RoomListWindow::OnRefresh() {
-    QFuture<NetplayAnnounce::RoomList> future = GetRoomList();
-    QFutureWatcher<NetplayAnnounce::RoomList>* watcher =
-        new QFutureWatcher<NetplayAnnounce::RoomList>();
-
-    connect(watcher, &QFutureWatcher<NetplayAnnounce::RoomList>::finished, [=]() {
-        NetplayAnnounce::RoomList room_list = future.result();
-
-        item_model->removeRows(0, item_model->rowCount());
-        for (const auto& room : room_list) {
-            QList<QStandardItem*> l;
-            QString port;
-            port.sprintf("%u", room.port);
-            QString players;
-            players.sprintf("%lu/%u", room.members.size(), room.max_player);
-            std::vector<std::string> elements = {room.name, room.ip, port.toStdString(),
-                                                 players.toStdString()};
-            for (auto& item : elements) {
-                QStandardItem* child = new QStandardItem(QString::fromStdString(item));
-                child->setEditable(false);
-                l.append(child);
-            }
-            item_model->invisibleRootItem()->appendRow(l);
+void RoomListWindow::RefreshRoomList() {
+    item_model->removeRows(0, item_model->rowCount());
+    for (const auto& room : roomlist) {
+        QList<QStandardItem*> l;
+        QString port;
+        port.sprintf("%u", room.port);
+        QString players;
+        players.sprintf("%lu/%u", room.members.size(), room.max_player);
+        std::vector<std::string> elements = {room.name, room.ip, port.toStdString(),
+                                                players.toStdString()};
+        for (auto& item : elements) {
+            QStandardItem* child = new QStandardItem(QString::fromStdString(item));
+            child->setEditable(false);
+            l.append(child);
         }
+        item_model->invisibleRootItem()->appendRow(l);
+    }
 
-        // TODO(B3N30): Restore row selection
-    });
-
-    watcher->setFuture(future);
+    // TODO(B3N30): Restore row selection
 }
 
 bool RoomListWindow::CloseOnConfirm() {

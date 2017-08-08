@@ -50,13 +50,13 @@ void PostJson(const std::string& url, const std::string& data) {
                                {"api-version", API_VERSION}});
 }
 
-std::future<std::string> GetJson(const std::string& url) {
+void GetJson(const std::string& url, std::function<void(const std::string&)> func) {
     if (url.empty()) {
         LOG_ERROR(WebService, "URL is invalid");
-        auto EmptyString = []() -> std::string { return std::string{}; };
-        return std::async(EmptyString);
+        func("");
+        return;
     }
-    return cpr::GetCallback([](cpr::Response r) { return r.text; }, cpr::Url{url});
+    cpr::GetCallback([func](cpr::Response r) { func(r.text); }, cpr::Url{url});
 }
 
 void DeleteJson(const std::string& url, const std::string& data) {

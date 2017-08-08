@@ -5,7 +5,7 @@
 #pragma once
 
 #include <atomic>
-#include <future>
+#include <functional>
 #include <memory>
 #include <thread>
 #include "common/common_types.h"
@@ -29,7 +29,7 @@ public:
     /*
      *  Returns a list of all room information the backend got
      */
-    std::future<NetplayAnnounce::RoomList> GetRoomList();
+    void GetRoomList(std::function<void(const NetplayAnnounce::RoomList&)> func);
 
 private:
     std::atomic<bool> announce{false};
