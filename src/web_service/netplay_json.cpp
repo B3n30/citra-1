@@ -13,7 +13,6 @@ namespace NetplayAnnounce {
 void to_json(nlohmann::json& json, const Room::Member& member) {
     json["name"] = member.name;
     json["gameName"] = member.game_name;
-    json["gameVersion"] = member.game_version;
     json["gameId"] = member.game_id;
 }
 
@@ -21,7 +20,6 @@ void from_json(const nlohmann::json& json, Room::Member& member) {
     member.name = json.at("name").get<std::string>();
     member.game_name = json.at("gameName").get<std::string>();
     member.game_id = json.at("gameId").get<u64>();
-    member.game_version = json.at("gameVersion").get<u16>();
 }
 
 void to_json(nlohmann::json& json, const Room& room) {
@@ -66,13 +64,12 @@ void NetplayJson::SetRoomInformation(const std::string& guid, const std::string&
 }
 void NetplayJson::AddPlayer(const std::string& nickname,
                             const NetplayAnnounce::MacAddress& mac_address, const u64 game_id,
-                            const std::string& game_name, const u32 game_version) {
+                            const std::string& game_name) {
     NetplayAnnounce::Room::Member member;
     member.name = nickname;
     member.mac_address = mac_address;
     member.game_id = game_id;
     member.game_name = game_name;
-    member.game_version = game_version;
     room.members.push_back(member);
 }
 

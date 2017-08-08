@@ -20,7 +20,6 @@ struct Room {
         MacAddress mac_address;
         std::string game_name;
         u64 game_id;
-        u32 game_version;
     };
     std::string name;
     std::string GUID;
@@ -45,8 +44,7 @@ public:
                                     const u16 port, const u32 max_player, const u32 net_version,
                                     const bool has_password) = 0;
     virtual void AddPlayer(const std::string& nickname, const MacAddress& mac_address,
-                           const u64 game_id, const std::string& game_name,
-                           const u32 game_version) = 0;
+                           const u64 game_id, const std::string& game_name) = 0;
     virtual void Announce() = 0;
     virtual void ClearPlayers() = 0;
     virtual std::future<RoomList> GetRoomList() = 0;
@@ -64,8 +62,7 @@ public:
                             const u16 /*port*/, const u32 /*max_player*/, const u32 /*net_version*/,
                             const bool /*has_password*/) override {}
     void AddPlayer(const std::string& /*nickname*/, const MacAddress& /*mac_address*/,
-                   const u64 /*game_id*/, const std::string& /*game_name*/,
-                   const u32 /*game_version*/) override {}
+                   const u64 /*game_id*/, const std::string& /*game_name*/) override {}
     void Announce() override {}
     void ClearPlayers() override {}
     std::future<RoomList> GetRoomList() override {

@@ -20,8 +20,7 @@ public:
                             const u32 max_player, const u32 net_version,
                             const bool has_password) override;
     void AddPlayer(const std::string& nickname, const NetplayAnnounce::MacAddress& mac_address,
-                   const u64 game_id, const std::string& game_name,
-                   const u32 game_version) override;
+                   const u64 game_id, const std::string& game_name) override;
     void Announce() override;
     void ClearPlayers() override;
     std::future<NetplayAnnounce::RoomList> GetRoomList() override;

@@ -59,7 +59,7 @@ void NetplayAnnounceSession::AnnounceNetplayLoop() {
                 LOG_DEBUG(Network, "%lu", memberlist.size());
                 for (const auto& member : memberlist) {
                     backend->AddPlayer(member.nickname, member.mac_address, member.game_info.id,
-                                       member.game_info.name, 0);
+                                       member.game_info.name);
                 }
                 backend->Announce();
             }
