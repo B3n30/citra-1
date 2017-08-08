@@ -177,6 +177,9 @@ void RoomMember::RoomMemberImpl::MemberLoop() {
                 case IdVersionMismatch:
                     SetState(State::WrongVersion);
                     break;
+                case IdWrongPassword:
+                    SetState(State::WrongPassword);
+                    break;
                 case IdCloseRoom:
                     SetState(State::LostConnection);
                     break;
