@@ -541,7 +541,7 @@ Room::Room() : room_impl{std::make_unique<RoomImpl>()} {}
 Room::~Room() = default;
 
 bool Room::Create(const std::string& name, const std::string& server_address, u16 server_port,
-                  const std::string& password) {
+                  const std::string& password, const u32 max_connections) {
     ENetAddress address;
     address.host = ENET_HOST_ANY;
     if (!server_address.empty()) {
@@ -549,17 +549,15 @@ bool Room::Create(const std::string& name, const std::string& server_address, u1
     }
     address.port = server_port;
 
-    room_impl->server = enet_host_create(&address, MaxConcurrentConnections, NumChannels, 0, 0);
+    room_impl->server = enet_host_create(&address, max_connections, NumChannels, 0, 0);
     if (!room_impl->server) {
         LOG_ERROR(Network, "Failed to create room");
         return false;
     }
-
-    // TODO(B3N30): Allow specifying the maximum number of concurrent connections.
     room_impl->state = State::Open;
 
     room_impl->room_information.name = name;
-    room_impl->room_information.member_slots = MaxConcurrentConnections;
+    room_impl->room_information.member_slots = max_connections;
     room_impl->room_information.guid = room_impl->guid;
     room_impl->room_information.port = server_port;
     room_impl->password = password;

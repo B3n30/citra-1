@@ -99,7 +99,8 @@ public:
      * server is empty string.
      */
     bool Create(const std::string& name, const std::string& server = "",
-                u16 server_port = DefaultRoomPort, const std::string& password = "");
+                u16 server_port = DefaultRoomPort, const std::string& password = "",
+                const u32 max_connections = MaxConcurrentConnections);
     /**
      * Destroys the socket
      */
