@@ -56,6 +56,7 @@ void PostJson(const std::string& url, const std::string& data) {
 
 template <typename T>
 std::future<T> GetJson(const std::string& url, std::function<T(const std::string&)> func) {
+    LOG_DEBUG(Network, "GetJson called");
     if (url.empty()) {
         LOG_ERROR(WebService, "URL is invalid");
         return std::async(std::launch::async,[func{std::move(func)}](){ return func("");});

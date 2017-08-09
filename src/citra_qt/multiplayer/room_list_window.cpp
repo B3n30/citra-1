@@ -14,6 +14,8 @@
 #include "citra_qt/multiplayer/room_view_window.h"
 #include "core/announce_netplay_session.h"
 
+#include "common/logging/log.h"
+
 RoomListWindow::RoomListWindow(Mode mode, QWidget* parent) : QMainWindow(parent) {
     room = Network::GetRoom().lock();
     room_member = Network::GetRoomMember().lock();
@@ -143,6 +145,7 @@ void RoomListWindow::OnCreate() {
 }
 
 void RoomListWindow::OnRefresh() {
+    LOG_DEBUG(Network, "Refresh clicked");
     room_list_future = announce_netplay_session->GetRoomList([&](){emit RefreshRoomList();});
 }
 

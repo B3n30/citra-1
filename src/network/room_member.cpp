@@ -314,12 +314,6 @@ void RoomMember::RoomMemberImpl::HandlePingPacket(const ENetEvent* event) {
     Send(std::move(packet));
 }
 
-void RoomMember::RoomMemberImpl::HandlePingPacket(const ENetEvent* event) {
-    Packet packet;
-    packet << static_cast<u8>(IdPing);
-    Send(std::move(packet));
-}
-
 template <>
 RoomMember::RoomMemberImpl::CallbackSet<WifiPacket>& RoomMember::RoomMemberImpl::Callbacks::Get() {
     return callback_set_wifi_packet;

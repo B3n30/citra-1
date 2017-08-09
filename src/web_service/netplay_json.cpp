@@ -86,6 +86,7 @@ std::future<NetplayAnnounce::RoomList> NetplayJson::GetRoomList(std::function<vo
     auto DeSerialize = [func](const std::string& reply)->NetplayAnnounce::RoomList {
         nlohmann::json json = nlohmann::json::parse(reply);
         NetplayAnnounce::RoomList room_list = json.at("rooms").get<NetplayAnnounce::RoomList>();
+        LOG_DEBUG(Network, "%s", json.dump(4).c_str());
         func();
         return room_list;
     };
