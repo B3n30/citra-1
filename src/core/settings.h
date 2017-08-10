@@ -95,6 +95,7 @@ struct Values {
     float resolution_factor;
     bool use_vsync;
     bool toggle_framelimit;
+    bool use_batch_fix;
 
     LayoutOption layout_option;
     bool swap_screen;

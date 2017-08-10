@@ -23,6 +23,7 @@ void Apply() {
     VideoCore::g_hw_renderer_enabled = values.use_hw_renderer;
     VideoCore::g_shader_jit_enabled = values.use_shader_jit;
     VideoCore::g_toggle_framelimit_enabled = values.toggle_framelimit;
+    VideoCore::g_batch_fix_enabled = values.use_batch_fix;
 
     if (VideoCore::g_emu_window) {
         auto layout = VideoCore::g_emu_window->GetFramebufferLayout();

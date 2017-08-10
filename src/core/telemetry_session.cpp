@@ -94,6 +94,8 @@ TelemetrySession::TelemetrySession() {
              Settings::values.resolution_factor);
     AddField(Telemetry::FieldType::UserConfig, "Renderer_ToggleFramelimit",
              Settings::values.toggle_framelimit);
+    AddField(Telemetry::FieldType::UserConfig, "Renderer_UseBatchFix",
+             Settings::values.use_batch_fix);
     AddField(Telemetry::FieldType::UserConfig, "Renderer_UseHwRenderer",
              Settings::values.use_hw_renderer);
     AddField(Telemetry::FieldType::UserConfig, "Renderer_UseShaderJit",

@@ -69,6 +69,7 @@ void Config::ReadValues() {
     Settings::values.resolution_factor = qt_config->value("resolution_factor", 1.0).toFloat();
     Settings::values.use_vsync = qt_config->value("use_vsync", false).toBool();
     Settings::values.toggle_framelimit = qt_config->value("toggle_framelimit", true).toBool();
+    Settings::values.use_batch_fix = qt_config->value("use_batch_fix", true).toBool();
 
     Settings::values.bg_red = qt_config->value("bg_red", 0.0).toFloat();
     Settings::values.bg_green = qt_config->value("bg_green", 0.0).toFloat();
@@ -215,6 +216,7 @@ void Config::SaveValues() {
     qt_config->setValue("resolution_factor", (double)Settings::values.resolution_factor);
     qt_config->setValue("use_vsync", Settings::values.use_vsync);
     qt_config->setValue("toggle_framelimit", Settings::values.toggle_framelimit);
+    qt_config->setValue("use_batch_fix", Settings::values.use_batch_fix);
 
     // Cast to double because Qt's written float values are not human-readable
     qt_config->setValue("bg_red", (double)Settings::values.bg_red);

@@ -109,6 +109,10 @@ custom_bottom_bottom =
 # 0: Off , 1  (default): On
 toggle_framelimit =
 
+#Enable batch fix.
+# 0: Off , 1  (default): On
+use_batch_fix =
+
 # Swaps the prominent screen with the other screen.
 # For example, if Single Screen is chosen, setting this to 1 will display the bottom screen instead of the top screen.
 # 0 (default): Top Screen is prominent, 1: Bottom Screen is prominent

@@ -97,6 +97,7 @@ void ConfigureGraphics::setConfiguration() {
         static_cast<int>(FromResolutionFactor(Settings::values.resolution_factor)));
     ui->toggle_vsync->setChecked(Settings::values.use_vsync);
     ui->toggle_framelimit->setChecked(Settings::values.toggle_framelimit);
+    ui->use_batch_fix->setChecked(Settings::values.use_batch_fix);
     ui->layout_combobox->setCurrentIndex(static_cast<int>(Settings::values.layout_option));
     ui->swap_screen->setChecked(Settings::values.swap_screen);
 }
@@ -108,6 +109,7 @@ void ConfigureGraphics::applyConfiguration() {
         ToResolutionFactor(static_cast<Resolution>(ui->resolution_factor_combobox->currentIndex()));
     Settings::values.use_vsync = ui->toggle_vsync->isChecked();
     Settings::values.toggle_framelimit = ui->toggle_framelimit->isChecked();
+    Settings::values.use_batch_fix = ui->use_batch_fix->isChecked();
     Settings::values.layout_option =
         static_cast<Settings::LayoutOption>(ui->layout_combobox->currentIndex());
     Settings::values.swap_screen = ui->swap_screen->isChecked();
