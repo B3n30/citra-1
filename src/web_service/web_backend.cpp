@@ -63,6 +63,14 @@ std::future<T> GetJson(const std::string& url, std::function<T(const std::string
     }
 
     return cpr::GetCallback([func{std::move(func)}](cpr::Response r) {
+        if (r.status_code >= 400) {
+            LOG_ERROR(WebService, "GET returned error code: %u", r.status_code);
+            return func("");
+        }
+        if (r.header["content-type"].find("application/json") == std::string::npos) {
+            LOG_ERROR(WebService, "GET returned wrong content: %s", r.header["content-type"].c_str());
+            return func("");
+        }
         return func(r.text);
     }, cpr::Url{url});
 }
