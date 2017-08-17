@@ -421,6 +421,12 @@ static void Shutdown(Interface* self) {
     if (auto room_member = Network::GetRoomMember().lock())
         room_member->Unbind(wifi_packet_received);
 
+    for (auto data : channel_data) {
+        data.second.event->Signal();
+    }
+    channel_data.clear();
+
+    recv_buffer_memory.reset();
     // TODO(purpasmart): Verify return header on HW
     cmd_buff[1] = RESULT_SUCCESS.raw;
 
@@ -886,6 +892,11 @@ static void DestroyNetwork(Interface* self) {
 
     IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
 
+    for (auto data : channel_data) {
+        data.second.event->Signal();
+    }
+    channel_data.clear();
+
     rb.Push(RESULT_SUCCESS);
 
     LOG_WARNING(Service_NWM, "called");
@@ -1292,7 +1303,7 @@ static void BeaconBroadcastCallback(u64 userdata, int cycles_late) {
 }
 
 const Interface::FunctionInfo FunctionTable[] = {
-    {0x00010442, nullptr, "Initialize (deprecated)"},
+    {0x000102C2, nullptr, "Initialize (deprecated)"},
     {0x00020000, nullptr, "Scrap"},
     {0x00030000, Shutdown, "Shutdown"},
     {0x00040402, nullptr, "CreateNetwork (deprecated)"},
