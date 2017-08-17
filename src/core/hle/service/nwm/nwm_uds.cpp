@@ -381,6 +381,12 @@ static void HandleDisconnectFrame(const Network::WifiPacket& packet) {
         connection_status.status = static_cast<u32>(NetworkStatus::NotConnected);
         connection_status.state = static_cast<u32>(ConnectionState::LostConnection);
         connection_status_event->Signal();
+
+        for (auto data : channel_data) {
+            data.second.event->Signal();
+        }
+        channel_data.clear();
+
     } else if (connection_status.status == static_cast<u8>(NetworkStatus::ConnectedAsHost)) {
         // TODO(B3N30): Figure out what vars to set here
     }
@@ -610,6 +616,12 @@ static void DisconnectNetwork(Interface* self) {
         connection_status_event->Signal();
     }
     SendPacket(disconnect_packet);
+
+    for (auto data : channel_data) {
+        data.second.event->Signal();
+    }
+    channel_data.clear();
+
 }
 
 /**
