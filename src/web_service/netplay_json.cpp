@@ -26,6 +26,8 @@ void to_json(nlohmann::json& json, const Room& room) {
     json["id"] = room.GUID;
     json["port"] = room.port;
     json["name"] = room.name;
+    json["preferredGameName"] = "Please fix me"; // room.preferred_game_name
+    json["preferredGameId"] = 0;                 // room.preferred_game_id
     json["maxPlayers"] = room.max_player;
     json["netVersion"] = room.net_version;
     json["hasPassword"] = room.has_password;
@@ -39,6 +41,8 @@ void from_json(const nlohmann::json& json, Room& room) {
     room.ip = json.at("address").get<std::string>();
     room.name = json.at("name").get<std::string>();
     room.port = json.at("port").get<u16>();
+//    room.preferred_game_name = json.at("preferredGameName").get<std::string>();
+//    room.preferred_game_id = json.at("preferredGameId").get<u64>();
     room.max_player = json.at("maxPlayers").get<u32>();
     room.net_version = json.at("netVersion").get<u32>();
     room.has_password = json.at("hasPassword").get<bool>();
@@ -95,7 +99,7 @@ std::future<NetplayAnnounce::RoomList> NetplayJson::GetRoomList(std::function<vo
 
 void NetplayJson::Delete() {
     nlohmann::json json;
-    json["GUID"] = room.GUID;
+    json["id"] = room.GUID;
     DeleteJson(Settings::values.announce_netplay_endpoint_url, json.dump());
 }
 
