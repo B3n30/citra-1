@@ -206,8 +206,7 @@ std::vector<u8> GeneratedEncryptedData(const NetworkInfo& network_info, const No
     // Calculate the MD5 hash of the data in the buffer, not including the hash field.
     std::array<u8, CryptoPP::MD5::DIGESTSIZE> hash;
     CryptoPP::MD5().CalculateDigest(hash.data(), buffer.data() + offsetof(BeaconData, bitmask),
-                                    sizeof(BeaconNodeInfo) * network_info.max_nodes +
-                                        sizeof(data.bitmask));
+                                    buffer.size() - sizeof(data.md5_hash));
 
     // Copy the hash into the buffer.
     std::memcpy(buffer.data(), hash.data(), hash.size());

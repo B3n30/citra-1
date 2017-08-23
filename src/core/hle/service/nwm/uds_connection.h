@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <tuple>
 #include <vector>
 #include "common/common_types.h"
 #include "common/swap.h"
@@ -14,7 +13,7 @@ namespace Service {
 namespace NWM {
 
 /// Sequence number of the 802.11 authentication frames.
-enum class AuthenticationSeq : u8 { SEQ1 = 1, SEQ2 = 2 };
+enum class AuthenticationSeq : u16 { SEQ1 = 1, SEQ2 = 2 };
 
 enum class AuthAlgorithm : u16 { OpenSystem = 0 };
 

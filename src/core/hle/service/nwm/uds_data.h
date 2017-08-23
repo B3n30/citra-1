@@ -119,7 +119,6 @@ static_assert(sizeof(EAPoLLogoffPacket) == 0x298, "EAPoLLogoffPacket has the wro
  */
 std::vector<u8> GenerateDataPayload(const std::vector<u8>& data, u8 channel, u16 dest_node,
                                     u16 src_node, u16 sequence_number);
-
 /*
  * Returns the SecureDataHeader stored in an 802.11 data frame.
  */

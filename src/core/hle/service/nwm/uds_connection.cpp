@@ -22,7 +22,7 @@ std::vector<u8> GenerateAuthenticationFrame(AuthenticationSeq seq) {
     return data;
 }
 
-Service::NWM::AuthenticationSeq GetAuthenticationSeqNumber(const std::vector<u8>& body) {
+AuthenticationSeq GetAuthenticationSeqNumber(const std::vector<u8>& body) {
     AuthenticationFrame frame;
     memcpy(&frame, body.data(), sizeof(frame));
 
@@ -83,6 +83,7 @@ std::tuple<AssocStatus, u16> GetAssociationResult(const std::vector<u8>& body) {
     return std::make_tuple(static_cast<AssocStatus>(frame.status_code),
                            frame.assoc_id & AssociationIdMask);
 }
+
 
 } // namespace NWM
 } // namespace Service

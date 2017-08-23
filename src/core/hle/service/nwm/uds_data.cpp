@@ -278,7 +278,7 @@ SecureDataHeader ParseSecureDataHeader(const std::vector<u8>& data) {
     SecureDataHeader header;
 
     // Skip the LLC header
-    memcpy(&header, data.data() + sizeof(LLCHeader), sizeof(header));
+    std::memcpy(&header, data.data() + sizeof(LLCHeader), sizeof(header));
 
     return header;
 }
@@ -297,7 +297,7 @@ std::vector<u8> GenerateEAPoLStartFrame(u16 association_id, const NodeInfo& node
     // Find out what that means.
 
     std::vector<u8> eapol_buffer(sizeof(EAPoLStartPacket));
-    memcpy(eapol_buffer.data(), &eapol_start, sizeof(eapol_start));
+    std::memcpy(eapol_buffer.data(), &eapol_start, sizeof(eapol_start));
 
     std::vector<u8> buffer = GenerateLLCHeader(EtherType::EAPoL);
     buffer.insert(buffer.end(), eapol_buffer.begin(), eapol_buffer.end());
@@ -306,7 +306,7 @@ std::vector<u8> GenerateEAPoLStartFrame(u16 association_id, const NodeInfo& node
 
 EtherType GetFrameEtherType(const std::vector<u8>& frame) {
     LLCHeader header;
-    memcpy(&header, frame.data(), sizeof(header));
+    std::memcpy(&header, frame.data(), sizeof(header));
 
     u16 ethertype = header.protocol;
     return static_cast<EtherType>(ethertype);
@@ -315,7 +315,7 @@ EtherType GetFrameEtherType(const std::vector<u8>& frame) {
 u16 GetEAPoLFrameType(const std::vector<u8>& frame) {
     // Ignore the LLC header
     u16_be eapol_type;
-    memcpy(&eapol_type, frame.data() + sizeof(LLCHeader), sizeof(eapol_type));
+    std::memcpy(&eapol_type, frame.data() + sizeof(LLCHeader), sizeof(eapol_type));
     return eapol_type;
 }
 
@@ -323,7 +323,7 @@ NodeInfo DeserializeNodeInfoFromFrame(const std::vector<u8>& frame) {
     EAPoLStartPacket eapol_start;
 
     // Skip the LLC header
-    memcpy(&eapol_start, frame.data() + sizeof(LLCHeader), sizeof(eapol_start));
+    std::memcpy(&eapol_start, frame.data() + sizeof(LLCHeader), sizeof(eapol_start));
 
     NodeInfo node{};
     node.friend_code_seed = eapol_start.node.friend_code_seed;
@@ -364,7 +364,7 @@ std::vector<u8> GenerateEAPoLLogoffFrame(const MacAddress& mac_address, u16 netw
     }
 
     std::vector<u8> eapol_buffer(sizeof(EAPoLLogoffPacket));
-    memcpy(eapol_buffer.data(), &eapol_logoff, sizeof(eapol_logoff));
+    std::memcpy(eapol_buffer.data(), &eapol_logoff, sizeof(eapol_logoff));
 
     std::vector<u8> buffer = GenerateLLCHeader(EtherType::EAPoL);
     buffer.insert(buffer.end(), eapol_buffer.begin(), eapol_buffer.end());
@@ -375,7 +375,7 @@ EAPoLLogoffPacket ParseEAPoLLogoffFrame(const std::vector<u8>& frame) {
     EAPoLLogoffPacket eapol_logoff;
 
     // Skip the LLC header
-    memcpy(&eapol_logoff, frame.data() + sizeof(LLCHeader), sizeof(eapol_logoff));
+    std::memcpy(&eapol_logoff, frame.data() + sizeof(LLCHeader), sizeof(eapol_logoff));
     return eapol_logoff;
 }
 

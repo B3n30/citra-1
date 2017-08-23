@@ -2,13 +2,12 @@
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
-#pragma optimize("", off)
 #include <array>
+#include <cryptopp/md5.h>
 #include <cstring>
 #include <mutex>
 #include <unordered_map>
 #include <vector>
-#include <cryptopp/md5.h>
 #include "common/common_types.h"
 #include "common/logging/log.h"
 #include "core/core_timing.h"
@@ -120,6 +119,18 @@ void SendPacket(Network::WifiPacket& packet) {
     }
 }
 
+// Inserts the received beacon frame in the beacon queue and removes any older beacons if the size
+// limit is exceeded.
+void HandleBeaconFrame(const Network::WifiPacket& packet) {
+    std::lock_guard<std::mutex> lock(beacon_mutex);
+
+    received_beacons.emplace_back(packet);
+
+    // Discard old beacons if the buffer is full.
+    if (received_beacons.size() > MaxBeaconFrames)
+        received_beacons.pop_front();
+}
+
 /*
  * Returns an available index in the nodes array for the
  * currently-hosted UDS network.
@@ -144,11 +155,9 @@ static u16 GetNextAvailableNodeId() {
 void StartConnectionSequence(const MacAddress& server) {
     {
         std::lock_guard<std::mutex> lock(connection_status_mutex);
-
         ASSERT(connection_status.status == static_cast<u32>(NetworkStatus::NotConnected));
-
-        // TODO(Subv): Handle timeout.
     }
+    // TODO(Subv): Handle timeout.
 
     // Send an authentication frame with SEQ1
     using Network::WifiPacket;
@@ -171,15 +180,23 @@ void SendAssociationResponseFrame(const MacAddress& address) {
     using Network::WifiPacket;
     WifiPacket assoc_response;
     assoc_response.channel = network_channel;
-    // TODO(Subv): This might cause multiple clients to end up with the same association id.
-    assoc_response.data =
-        GenerateAssocResponseFrame(AssocStatus::Successful, 1, network_info.network_id);
+    // TODO(Subv): This will cause multiple clients to end up with the same association id, but
+    // we're not using that for anything.
+    u16 association_id = 1;
+    assoc_response.data = GenerateAssocResponseFrame(AssocStatus::Successful, association_id,
+                                                     network_info.network_id);
     assoc_response.destination_address = address;
     assoc_response.type = WifiPacket::PacketType::AssociationResponse;
 
     SendPacket(assoc_response);
 }
 
+/*
+ * Handles the authentication request frame and sends the authentication response and association
+ * response frames. Once an Authentication frame with SEQ1 is received by the server, it responds
+ * with an Authentication frame containing SEQ2, and immediately sends an Association response frame
+ * containing the details of the access point and the assigned association id for the new client.
+ */
 void HandleAuthenticationFrame(const Network::WifiPacket& packet) {
     // Only the SEQ1 auth frame is handled here, the SEQ2 frame doesn't need any special behavior
     if (GetAuthenticationSeqNumber(packet.data) == AuthenticationSeq::SEQ1) {
@@ -190,7 +207,6 @@ void HandleAuthenticationFrame(const Network::WifiPacket& packet) {
         }
 
         // Respond with an authentication response frame with SEQ2
-        // TODO(B3N30): Find out why Subv sends SEQ2 when he doesn't handle it
         using Network::WifiPacket;
         WifiPacket auth_request;
         auth_request.channel = network_channel;
@@ -202,17 +218,6 @@ void HandleAuthenticationFrame(const Network::WifiPacket& packet) {
 
         SendAssociationResponseFrame(packet.transmitter_address);
     }
-}
-
-/// Stores the received beacon in the buffer of beacon frames.
-void HandleBeaconFrame(const Network::WifiPacket& packet) {
-    std::lock_guard<std::mutex> lock(beacon_mutex);
-
-    received_beacons.emplace_back(packet);
-
-    // Discard old beacons if the buffer is full.
-    if (received_beacons.size() > MaxBeaconFrames)
-        received_beacons.pop_front();
 }
 
 void HandleAssociationResponseFrame(const Network::WifiPacket& packet) {
@@ -356,7 +361,6 @@ static void HandleSecureDataPacket(const Network::WifiPacket& packet) {
 
     // Signal the data event. We can't do this directly because this function is called from the
     // network thread.
-    // LOG_CRITICAL(Network, "Scheduling bind node event signal");
     CoreTiming::ScheduleEvent_Threadsafe_Immediate(channel_info->second.signal_event_helper,
                                                    secure_data.data_channel);
 }
@@ -369,25 +373,6 @@ static void HandleDataFrame(const Network::WifiPacket& packet) {
     case EtherType::SecureData:
         HandleSecureDataPacket(packet);
         break;
-    }
-}
-
-static void HandleDisconnectFrame(const Network::WifiPacket& packet) {
-    LOG_ERROR(Service_NWM, "called, this will most likely fail");
-    if (connection_status.status == static_cast<u8>(NetworkStatus::ConnectedAsClient)) {
-        std::lock_guard<std::mutex> lock(connection_status_mutex);
-        connection_status = {};
-        connection_status.status = static_cast<u32>(NetworkStatus::NotConnected);
-        connection_status.state = static_cast<u32>(ConnectionState::LostConnection);
-        connection_status_event->Signal();
-
-        for (auto data : channel_data) {
-            data.second.event->Signal();
-        }
-        channel_data.clear();
-
-    } else if (connection_status.status == static_cast<u8>(NetworkStatus::ConnectedAsHost)) {
-        // TODO(B3N30): Figure out what vars to set here
     }
 }
 
@@ -406,9 +391,6 @@ void OnWifiPacketReceived(const Network::WifiPacket& packet) {
     case Network::WifiPacket::PacketType::Data:
         HandleDataFrame(packet);
         break;
-    case Network::WifiPacket::PacketType::Disconnect:
-        HandleDisconnectFrame(packet);
-        break;
     }
 }
 
@@ -421,21 +403,22 @@ void OnWifiPacketReceived(const Network::WifiPacket& packet) {
  *      1 : Result of function, 0 on success, otherwise error code
  */
 static void Shutdown(Interface* self) {
-    u32* cmd_buff = Kernel::GetCommandBuffer();
+    IPC::RequestParser rp(Kernel::GetCommandBuffer(), 0x03, 0, 0);
 
     if (auto room_member = Network::GetRoomMember().lock())
         room_member->Unbind(wifi_packet_received);
 
+    // TODO(B3N30): Check on HW if Shutdown signals those events
     for (auto data : channel_data) {
         data.second.event->Signal();
     }
     channel_data.clear();
 
     recv_buffer_memory.reset();
-    // TODO(purpasmart): Verify return header on HW
-    cmd_buff[1] = RESULT_SUCCESS.raw;
 
-    LOG_WARNING(Service_NWM, "(STUBBED) called");
+    IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
+    rb.Push(RESULT_SUCCESS);
+    LOG_DEBUG(Service_NWM, "called");
 }
 
 /**
@@ -556,18 +539,14 @@ static void InitializeWithVersion(Interface* self) {
         wifi_packet_received = room_member->BindOnWifiPacketReceived(OnWifiPacketReceived);
     } else {
         LOG_ERROR(Service_NWM, "Network isn't initalized");
-        IPC::RequestBuilder rb = rp.MakeBuilder(1, 2);
+        IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
         // TODO(B3N30): Find the correct error code and return it;
-        rb.Push(RESULT_SUCCESS);
+        rb.Push<u32>(-1);
         return;
     }
 
-    IPC::RequestBuilder rb = rp.MakeBuilder(1, 2);
-    rb.Push(RESULT_SUCCESS);
-    rb.PushCopyHandles(Kernel::g_handle_table.Create(connection_status_event).Unwrap());
     {
         std::lock_guard<std::mutex> lock(connection_status_mutex);
-
         // Reset the connection status, it contains all zeros after initialization,
         // except for the actual status value.
         connection_status = {};
@@ -575,36 +554,32 @@ static void InitializeWithVersion(Interface* self) {
         connection_status.state = static_cast<u32>(ConnectionState::NotConnected);
     }
 
+    IPC::RequestBuilder rb = rp.MakeBuilder(1, 2);
+    rb.Push(RESULT_SUCCESS);
+    rb.PushCopyHandles(Kernel::g_handle_table.Create(connection_status_event).Unwrap());
+
     LOG_DEBUG(Service_NWM, "called sharedmem_size=0x%08X, version=0x%08X, sharedmem_handle=0x%08X",
               sharedmem_size, version, sharedmem_handle);
 }
 
+
+// Comments
 static void DisconnectNetwork(Interface* self) {
-    LOG_ERROR(Service_NWM, "called");
     IPC::RequestParser rp(Kernel::GetCommandBuffer(), 0xA, 0, 0);
     IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
-
     rb.Push(RESULT_SUCCESS);
-    using Network::WifiPacket;
 
-    // TODO(B3N30): Find out what the correct packet for this is
-    WifiPacket disconnect_packet;
-    disconnect_packet.channel = network_channel;
-    disconnect_packet.destination_address = Network::BroadcastMac;
-    disconnect_packet.type = WifiPacket::PacketType::Disconnect;
-
+    // TODO(B3N30): Send a Deauth packet
     {
         std::lock_guard<std::mutex> lock(connection_status_mutex);
-        disconnect_packet.data.push_back(connection_status.network_node_id);
-
         if (connection_status.status == static_cast<u32>(NetworkStatus::ConnectedAsHost)) {
-            // A real 3ds makes starnge things here. We do the same
+            // A real 3ds makes strange things here. We do the same
             u16_le tmp_node_id = connection_status.network_node_id;
             connection_status = {};
             connection_status.status = static_cast<u32>(NetworkStatus::ConnectedAsHost);
             connection_status.state = static_cast<u32>(ConnectionState::Connected);
             connection_status.network_node_id = tmp_node_id;
-            LOG_ERROR(Service_NWM, "called as a host");
+            LOG_DEBUG(Service_NWM, "called as a host");
             return;
         }
         u16_le tmp_node_id = connection_status.network_node_id;
@@ -614,13 +589,14 @@ static void DisconnectNetwork(Interface* self) {
         connection_status.network_node_id = tmp_node_id;
         connection_status_event->Signal();
     }
-    SendPacket(disconnect_packet);
 
+    // TODO(B3N30): Check on HW if Shutdown signals those events
     for (auto data : channel_data) {
         data.second.event->Signal();
     }
     channel_data.clear();
 
+    LOG_DEBUG(Service_NWM, "called");
 }
 
 /**
@@ -640,7 +616,6 @@ static void GetConnectionStatus(Interface* self) {
     IPC::RequestBuilder rb = rp.MakeBuilder(13, 0);
 
     rb.Push(RESULT_SUCCESS);
-
     {
         std::lock_guard<std::mutex> lock(connection_status_mutex);
         rb.PushRaw(connection_status);
@@ -648,7 +623,6 @@ static void GetConnectionStatus(Interface* self) {
         // Reset the bitmask of changed nodes after each call to this
         // function to prevent falsely informing games of outstanding
         // changes in subsequent calls.
-        // TODO(Subv): Find exactly where the NWM module resets this value.
         connection_status.changed_nodes = 0;
     }
 
@@ -676,7 +650,6 @@ static void GetNodeInformation(Interface* self) {
 
         rb.PushRaw<NodeInfo>(*itr);
     }
-
     LOG_DEBUG(Service_NWM, "called");
 }
 
@@ -716,7 +689,6 @@ static void Bind(Interface* self) {
     // Create a new event for this bind node.
     auto event = Kernel::Event::Create(Kernel::ResetType::OneShot,
                                        "NWM::BindNodeEvent" + std::to_string(bind_node_id));
-
     std::lock_guard<std::mutex> lock(connection_status_mutex);
 
     ASSERT(channel_data.find(data_channel) == channel_data.end());
@@ -731,7 +703,6 @@ static void Bind(Interface* self) {
         if (itr == channel_data.end())
             return;
 
-        // LOG_CRITICAL(Network, "Signaling bind node event");
         channel_data[channel].event->Signal();
     });
 
@@ -821,6 +792,7 @@ static void BeginHostingNetwork(Interface* self) {
         // There's currently only one node in the network (the host).
         connection_status.total_nodes = 1;
         network_info.total_nodes = 1;
+
         // The host is always the first node
         connection_status.network_node_id = 1;
         current_node.network_node_id = 1;
@@ -884,15 +856,7 @@ static void DestroyNetwork(Interface* self) {
         return;
     }
 
-    LOG_DEBUG(Service_NWM, "called");
-
-    using Network::WifiPacket;
-    WifiPacket disconnect_packet;
-    disconnect_packet.channel = network_channel;
-    disconnect_packet.destination_address = Network::BroadcastMac;
-    disconnect_packet.type = WifiPacket::PacketType::Disconnect;
-    disconnect_packet.data.push_back(connection_status.network_node_id);
-    SendPacket(disconnect_packet);
+    // TODO(B3N30): Send 3 Deauth packets
 
     u16_le tmp_node_id = connection_status.network_node_id;
     connection_status = {};
@@ -903,6 +867,7 @@ static void DestroyNetwork(Interface* self) {
 
     IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
 
+    // TODO(B3N30): HW test if events get signaled here.
     for (auto data : channel_data) {
         data.second.event->Signal();
     }
@@ -946,11 +911,7 @@ static void SendTo(Interface* self) {
 
     IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
 
-    /*LOG_WARNING(Service_NWM, "(STUB) called dest_node_id=%u size=%u flags=%u channel=%u",
-                static_cast<u32>(dest_node_id), data_size, flags, static_cast<u32>(data_channel));*/
-
     std::lock_guard<std::mutex> lock(connection_status_mutex);
-
     if (connection_status.status != static_cast<u32>(NetworkStatus::ConnectedAsClient) &&
         connection_status.status != static_cast<u32>(NetworkStatus::ConnectedAsHost)) {
         rb.Push(ResultCode(ErrorDescription::NotAuthorized, ErrorModule::UDS,
@@ -963,8 +924,6 @@ static void SendTo(Interface* self) {
                            ErrorSummary::WrongArgument, ErrorLevel::Status));
         return;
     }
-
-    u16 network_node_id = connection_status.network_node_id;
 
     // TODO(Subv): Do something with the flags.
 
@@ -980,8 +939,8 @@ static void SendTo(Interface* self) {
 
     // TODO(Subv): Increment the sequence number after each sent packet.
     u16 sequence_number = 0;
-    std::vector<u8> data_payload =
-        GenerateDataPayload(data, data_channel, dest_node_id, network_node_id, sequence_number);
+    std::vector<u8> data_payload = GenerateDataPayload(
+        data, data_channel, dest_node_id, connection_status.network_node_id, sequence_number);
 
     // TODO(Subv): Retrieve the MAC address of the dest_node_id and our own to encrypt
     // and encapsulate the payload.
@@ -1031,8 +990,6 @@ static void PullPacket(Interface* self) {
     const VAddr output_address = rp.PeekStaticBuffer(0, &desc_size);
     ASSERT(desc_size == max_out_buff_size);
 
-    // LOG_WARNING(Service_NWM, "(STUB) called");
-
     std::lock_guard<std::mutex> lock(connection_status_mutex);
 
     auto channel =
@@ -1064,7 +1021,6 @@ static void PullPacket(Interface* self) {
 
     if (channel->second.received_packets.size() > 1) {
         auto& ev = channel->second.event;
-        // LOG_CRITICAL(Network, "More packets, is event signaled %s", ev->signaled ? "yes" : "no");
     }
 
     if (data_size > max_out_buff_size) {
@@ -1114,6 +1070,40 @@ static void GetChannel(Interface* self) {
     LOG_DEBUG(Service_NWM, "called");
 }
 
+// Comments
+static void ConnectToNetwork(Interface* self) {
+    IPC::RequestParser rp(Kernel::GetCommandBuffer(), 0x1E, 2, 4);
+
+    u8 connection_type = rp.Pop<u8>();
+    u32 passphrase_size = rp.Pop<u32>();
+
+    size_t desc_size;
+    const VAddr network_struct_addr = rp.PopStaticBuffer(&desc_size);
+    ASSERT(desc_size == sizeof(NetworkInfo));
+
+    size_t passphrase_desc_size;
+    const VAddr passphrase_addr = rp.PopStaticBuffer(&passphrase_desc_size);
+
+    Memory::ReadBlock(network_struct_addr, &network_info, sizeof(network_info));
+
+    // Start the connection sequence
+    StartConnectionSequence(network_info.host_mac_address);
+
+    while (true) {
+        std::lock_guard<std::mutex> lock(connection_status_mutex);
+        // TODO(B3N30): Handle connection failure, e.g. Host is full
+        // Return error 0xc8611001 when host is full
+        if (connection_status.status == static_cast<u32>(NetworkStatus::ConnectedAsClient))
+            break;
+    }
+
+    connection_status_event->Signal();
+    IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
+    rb.Push(RESULT_SUCCESS);
+
+    LOG_WARNING(Service_NWM, "called");
+}
+
 /**
  * NWM_UDS::SetApplicationData service function.
  * Updates the application data that is being broadcast in the beacon frames
@@ -1149,40 +1139,6 @@ static void SetApplicationData(Interface* self) {
     Memory::ReadBlock(address, network_info.application_data.data(), size);
 
     rb.Push(RESULT_SUCCESS);
-}
-
-static void ConnectToNetwork(Interface* self) {
-    IPC::RequestParser rp(Kernel::GetCommandBuffer(), 0x1E, 2, 4);
-
-    u8 connection_type = rp.Pop<u8>();
-    u32 passphrase_size = rp.Pop<u32>();
-
-    size_t desc_size;
-    const VAddr network_struct_addr = rp.PopStaticBuffer(&desc_size);
-    ASSERT(desc_size == sizeof(NetworkInfo));
-
-    size_t passphrase_desc_size;
-    const VAddr passphrase_addr = rp.PopStaticBuffer(&passphrase_desc_size);
-
-    Memory::ReadBlock(network_struct_addr, &network_info, sizeof(network_info));
-
-    // Start the connection sequence
-    StartConnectionSequence(network_info.host_mac_address);
-
-    while (true) {
-        std::lock_guard<std::mutex> lock(connection_status_mutex);
-        // TODO(B3N30): Handle when connection failed, e.g. Host is full
-        // Return error 0xc8611001 when host is full
-        if (connection_status.status == static_cast<u32>(NetworkStatus::ConnectedAsClient))
-            break;
-    }
-
-    connection_status_event->Signal();
-
-    IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
-    rb.Push(RESULT_SUCCESS);
-
-    LOG_WARNING(Service_NWM, "called");
 }
 
 /**
@@ -1231,16 +1187,15 @@ static void DecryptBeaconData(Interface* self) {
     std::array<u8, 3> oui;
     Memory::ReadBlock(encrypted_data0_addr, oui.data(), oui.size());
     ASSERT_MSG(oui == NintendoOUI, "Unexpected OUI");
-    // TODO(Subv): The second tag data can be all zeros.
-    // Memory::ReadBlock(encrypted_data1_addr, oui.data(), oui.size());
-    // ASSERT_MSG(oui == NintendoOUI, "Unexpected OUI");
+    //Memory::ReadBlock(encrypted_data1_addr, oui.data(), oui.size());
+    //ASSERT_MSG(oui == NintendoOUI, "Unexpected OUI");
 
     ASSERT_MSG(Memory::Read8(encrypted_data0_addr + 3) ==
                    static_cast<u8>(NintendoTagId::EncryptedData0),
                "Unexpected tag id");
-    /*ASSERT_MSG(Memory::Read8(encrypted_data1_addr + 3) ==
-                   static_cast<u8>(NintendoTagId::EncryptedData1),
-               "Unexpected tag id");*/
+    //ASSERT_MSG(Memory::Read8(encrypted_data1_addr + 3) ==
+    //               static_cast<u8>(NintendoTagId::EncryptedData1),
+    //           "Unexpected tag id");
 
     std::vector<u8> beacon_data(data0_size + data1_size);
     Memory::ReadBlock(encrypted_data0_addr + 4, beacon_data.data(), data0_size);
@@ -1292,7 +1247,6 @@ static void DecryptBeaconData(Interface* self) {
 // Sends a 802.11 beacon frame with information about the current network.
 static void BeaconBroadcastCallback(u64 userdata, int cycles_late) {
     std::lock_guard<std::mutex> lock(connection_status_mutex);
-
     // Don't do anything if we're not actually hosting a network
     if (connection_status.status != static_cast<u32>(NetworkStatus::ConnectedAsHost))
         return;
@@ -1313,8 +1267,27 @@ static void BeaconBroadcastCallback(u64 userdata, int cycles_late) {
                               beacon_broadcast_event, 0);
 }
 
+/*
+ * Called when a client connects to an UDS network we're hosting,
+ * updates the connection status and signals the update event.
+ * @param network_node_id Network Node Id of the connecting client.
+ */
+void OnClientConnected(u16 network_node_id) {
+    ASSERT_MSG(connection_status.status == static_cast<u32>(NetworkStatus::ConnectedAsHost),
+               "Can not accept clients if we're not hosting a network");
+    ASSERT_MSG(connection_status.total_nodes < connection_status.max_nodes,
+               "Can not accept connections on a full network");
+
+    u32 node_id = GetNextAvailableNodeId();
+    connection_status.node_bitmask |= 1 << node_id;
+    connection_status.changed_nodes |= 1 << node_id;
+    connection_status.nodes[node_id] = network_node_id;
+    connection_status.total_nodes++;
+    connection_status_event->Signal();
+}
+
 const Interface::FunctionInfo FunctionTable[] = {
-    {0x000102C2, nullptr, "Initialize (deprecated)"},
+    {0x00010442, nullptr, "Initialize (deprecated)"},
     {0x00020000, nullptr, "Scrap"},
     {0x00030000, Shutdown, "Shutdown"},
     {0x00040402, nullptr, "CreateNetwork (deprecated)"},
