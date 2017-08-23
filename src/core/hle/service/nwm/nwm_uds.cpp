@@ -374,7 +374,6 @@ static void HandleDataFrame(const Network::WifiPacket& packet) {
 
 static void HandleDisconnectFrame(const Network::WifiPacket& packet) {
     LOG_ERROR(Service_NWM, "called, this will most likely fail");
-    return;
     if (connection_status.status == static_cast<u8>(NetworkStatus::ConnectedAsClient)) {
         std::lock_guard<std::mutex> lock(connection_status_mutex);
         connection_status = {};

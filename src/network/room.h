@@ -7,7 +7,6 @@
 #include <array>
 #include <memory>
 #include <string>
-#include <vector>
 #include "common/common_types.h"
 
 namespace Network {
@@ -87,7 +86,7 @@ public:
     /**
      * Gets a list of the mbmers connected to the room.
      */
-    const std::vector<Member> GetRoomMemberList() const;
+    const std::array<Member, MaxConcurrentConnections> GetRoomMemberList() const;
 
     /**
      * Checks if the room is password protected

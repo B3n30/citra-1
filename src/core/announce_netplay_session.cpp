@@ -2,6 +2,7 @@
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
+#include <array>
 #include <chrono>
 #include "announce_netplay_session.h"
 #include "common/assert.h"
@@ -51,15 +52,17 @@ void NetplayAnnounceSession::AnnounceNetplayLoop() {
         if (std::shared_ptr<Network::Room> room = Network::GetRoom().lock()) {
             if (room->GetState() == Network::Room::State::Open) {
                 Network::RoomInformation room_information = room->GetRoomInformation();
-                std::vector<Network::Room::Member> memberlist = room->GetRoomMemberList();
+                std::array<Network::Room::Member, Network::MaxConcurrentConnections> memberlist = room->GetRoomMemberList();
                 backend->SetRoomInformation(room_information.guid, room_information.name,
                                             room_information.port, room_information.member_slots,
                                             Network::network_version, room->HasPassword());
                 backend->ClearPlayers();
                 LOG_DEBUG(Network, "%lu", memberlist.size());
                 for (const auto& member : memberlist) {
-                    backend->AddPlayer(member.nickname, member.mac_address, member.game_info.id,
-                                       member.game_info.name);
+                    if (!member.nickname.empty()) {
+                        backend->AddPlayer(member.nickname, member.mac_address, member.game_info.id,
+                                           member.game_info.name);
+                    }
                 }
                 backend->Announce();
             }

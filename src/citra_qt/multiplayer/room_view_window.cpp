@@ -199,7 +199,6 @@ void RoomViewWindow::UpdateMemberList() {
     // TODO(B3N30): Remember which row is selected
 
     auto member_list = room_member->GetMemberInformation();
-
     auto MacAddressString = [&](const Network::MacAddress& mac_address) -> QString {
         QString str;
         for (unsigned int i = 0; i < mac_address.size(); i++) {
@@ -213,6 +212,8 @@ void RoomViewWindow::UpdateMemberList() {
 
     item_model->removeRows(0, item_model->rowCount());
     for (const auto& member : member_list) {
+        if (member.nickname == "")
+            continue;
         QString ping;
         ping.sprintf("%.3f ms", member.ping*1e3);
         QList<QStandardItem*> l;
@@ -255,8 +256,9 @@ void RoomViewWindow::OnSay() {
 
 void RoomViewWindow::OnMessagesReceived() {
     QString html;
+    QString nickname = QString::fromStdString(room_member->GetMemberInformation()[current_message.member_index].nickname);
     html += "<font color=\"RoyalBlue\"><b>" +
-            QString::fromStdString(current_message.nickname).toHtmlEscaped() + ":</b></font> ";
+            nickname.toHtmlEscaped() + ":</b></font> ";
     html += QString::fromStdString(current_message.message).toHtmlEscaped();
     AppendHtml(chat_log, html);
 }

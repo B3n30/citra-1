@@ -158,10 +158,6 @@ void RoomMember::RoomMemberImpl::MemberLoop() {
                     HandleRoomInformationPacket(&event);
                     break;
                 case IdJoinSuccess:
-                    // The join request was successful, we are now in the room.
-                    // If we joined successfully, there must be at least one client in the room: us.
-                    ASSERT_MSG(member_information.size() > 0,
-                               "We have not yet received member information.");
                     HandleJoinPacket(&event); // Get the MAC Address for the client
                     SetState(State::Joined);
                     break;
@@ -245,11 +241,6 @@ void RoomMember::RoomMemberImpl::HandleRoomInformationPacket(const ENetEvent* ev
     packet >> info.port;
     room_information.name = info.name;
     room_information.member_slots = info.member_slots;
-
-    u32 num_members;
-    packet >> num_members;
-    member_information.resize(num_members);
-
     for (auto& member : member_information) {
         packet >> member.nickname;
         packet >> member.mac_address;
@@ -303,7 +294,7 @@ void RoomMember::RoomMemberImpl::HandleChatPacket(const ENetEvent* event) {
     packet.IgnoreBytes(sizeof(u8));
 
     ChatEntry chat_entry{};
-    packet >> chat_entry.nickname;
+    packet >> chat_entry.member_index;
     packet >> chat_entry.message;
     Invoke<ChatEntry>(chat_entry);
 }
@@ -345,7 +336,7 @@ void RoomMember::RoomMemberImpl::Invoke(const T& data) {
 }
 
 void RoomMember::RoomMemberImpl::Disconnect() {
-    member_information.clear();
+    std::fill( std::begin(member_information), std::end(member_information), MemberInformation{} );
     room_information.member_slots = 0;
     room_information.name.clear();
 

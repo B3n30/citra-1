@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <array>
 #include <functional>
 #include <memory>
 #include <string>
@@ -27,7 +28,7 @@ struct WifiPacket {
 
 /// Represents a chat message.
 struct ChatEntry {
-    std::string nickname; ///< Nickname of the client who sent this message.
+    u32 member_index;     ///< Index in the member list.
     std::string message;  ///< Body of the message.
 };
 
@@ -60,7 +61,7 @@ public:
         MacAddress mac_address; ///< MAC address associated with this member.
         float ping;
     };
-    using MemberList = std::vector<MemberInformation>;
+    using MemberList = std::array<MemberInformation, MaxConcurrentConnections>;
 
     // The handle for the callback functions
     template <typename T>
