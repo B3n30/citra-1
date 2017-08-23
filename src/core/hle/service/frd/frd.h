@@ -117,6 +117,9 @@ void UnscrambleLocalFriendCode(Service::Interface* self);
  */
 void SetClientSdkVersion(Service::Interface* self);
 
+
+void AddFriendWithApproach(Service::Interface* self);
+
 /// Initialize FRD service(s)
 void Init();
 

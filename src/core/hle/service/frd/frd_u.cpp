@@ -60,7 +60,7 @@ const Interface::FunctionInfo FunctionTable[] = {
     {0x00310082, nullptr, "GetFriendComment"},
     {0x00320042, SetClientSdkVersion, "SetClientSdkVersion"},
     {0x00330000, nullptr, "GetMyApproachContext"},
-    {0x00340046, nullptr, "AddFriendWithApproach"},
+    {0x00340046, AddFriendWithApproach, "AddFriendWithApproach"},
     {0x00350082, nullptr, "DecryptApproachContext"},
 };
 

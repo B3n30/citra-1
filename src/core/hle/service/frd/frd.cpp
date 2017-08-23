@@ -7,6 +7,7 @@
 #include "common/string_util.h"
 #include "core/hle/ipc.h"
 #include "core/hle/ipc_helpers.h"
+#include "core/hle/kernel/event.h"
 #include "core/hle/result.h"
 #include "core/hle/service/frd/frd.h"
 #include "core/hle/service/frd/frd_a.h"
@@ -158,6 +159,23 @@ void SetClientSdkVersion(Service::Interface* self) {
     LOG_WARNING(Service_FRD, "(STUBBED) called, version: 0x%08X", version);
 
     cmd_buff[1] = RESULT_SUCCESS.raw; // No error
+}
+
+void AddFriendWithApproach(Service::Interface* self) {
+    IPC::RequestParser rp(Kernel::GetCommandBuffer(), 0x1C, 1, 6);
+    u32 unk1 = rp.Pop<u32>();
+    Kernel::Handle unk_handle = rp.PopHandle();
+    size_t unk_buffer1_size;
+    const VAddr unk_buffer1 = rp.PopStaticBuffer(&unk_buffer1_size, false);
+    size_t unk_buffer2_size;
+    const VAddr unk_buffer2 = rp.PopStaticBuffer(&unk_buffer2_size, false);
+
+    auto unk_event = Kernel::g_handle_table.Get<Kernel::Event>(unk_handle);
+    unk_event->Signal();
+
+    LOG_WARNING(Service_FRD, "(STUBBED) called, unk1= %u; unk_buffer1_size=%zu; unk_buffer2_size=%zu;", unk1, unk_buffer1_size, unk_buffer2_size);
+    IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
+    rb.Push(RESULT_SUCCESS);
 }
 
 void Init() {
