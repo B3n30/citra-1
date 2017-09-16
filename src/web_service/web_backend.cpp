@@ -56,8 +56,81 @@ void PostJson(const std::string& url, const std::string& data, bool allow_anonym
     }
 
     // Post JSON asynchronously
-    static cpr::AsyncResponse future;
-    future = cpr::PostAsync(cpr::Url{url.c_str()}, cpr::Body{data.c_str()}, header);
+    static std::future<void> future;
+    future = cpr::PostCallback(
+        [](cpr::Response r) {
+            if (r.status_code >= 400) {
+                LOG_ERROR(WebService, "POST returned error code: %u", r.status_code);
+                return;
+            }
+            if (r.header["content-type"].find("application/json") == std::string::npos) {
+                LOG_ERROR(WebService, "POST returned wrong content: %s",
+                          r.header["content-type"].c_str());
+                return;
+            }
+            return;
+        },
+        cpr::Url{url}, cpr::Body{data}, header);
 }
+
+template <typename T>
+std::future<T> GetJson(std::function<T(const std::string&)> func, const std::string& url,
+                       bool allow_anonymous, const std::string& username,
+                       const std::string& token) {
+    if (url.empty()) {
+        LOG_ERROR(WebService, "URL is invalid");
+        return std::async(std::launch::async, [func{std::move(func)}]() { return func(""); });
+    }
+
+    const bool are_credentials_provided{!token.empty() && !username.empty()};
+    if (!allow_anonymous && !are_credentials_provided) {
+        LOG_ERROR(WebService, "Credentials must be provided for authenticated requests");
+        return std::async(std::launch::async, [func{std::move(func)}]() { return func(""); });
+    }
+
+#ifdef _WIN32
+    // On Windows, CPR/libcurl does not properly initialize Winsock. The below code is used to
+    // initialize Winsock globally, which fixes this problem. Without this, only the first CPR
+    // session will properly be created, and subsequent ones will fail.
+    WSADATA wsa_data;
+    const int wsa_result{WSAStartup(MAKEWORD(2, 2), &wsa_data)};
+    if (wsa_result) {
+        LOG_CRITICAL(WebService, "WSAStartup failed: %d", wsa_result);
+    }
+#endif
+
+    // Built request header
+    cpr::Header header;
+    if (are_credentials_provided) {
+        // Authenticated request if credentials are provided
+        header = {{"Content-Type", "application/json"},
+                  {"x-username", username.c_str()},
+                  {"x-token", token.c_str()},
+                  {"api-version", API_VERSION}};
+    } else {
+        // Otherwise, anonymous request
+        header = cpr::Header{{"Content-Type", "application/json"}, {"api-version", API_VERSION}};
+    }
+
+    // Post JSON asynchronously
+    return cpr::GetCallback(
+        [func{std::move(func)}](cpr::Response r) {
+            if (r.status_code >= 400) {
+                LOG_ERROR(WebService, "GET returned error code: %u", r.status_code);
+                return func("");
+            }
+            if (r.header["content-type"].find("application/json") == std::string::npos) {
+                LOG_ERROR(WebService, "GET returned wrong content: %s",
+                          r.header["content-type"].c_str());
+                return func("");
+            }
+            return func(r.text);
+        },
+        cpr::Url{url}, header);
+}
+
+template std::future<bool> GetJson(std::function<bool(const std::string&)> func,
+                                   const std::string& url, bool allow_anonymous,
+                                   const std::string& username, const std::string& token);
 
 } // namespace WebService

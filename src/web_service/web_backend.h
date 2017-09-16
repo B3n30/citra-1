@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <future>
 #include <string>
 #include "common/common_types.h"
 
@@ -19,5 +20,10 @@ namespace WebService {
  */
 void PostJson(const std::string& url, const std::string& data, bool allow_anonymous,
               const std::string& username = {}, const std::string& token = {});
+
+template <typename T>
+std::future<T> GetJson(std::function<T(const std::string&)> func, const std::string& url,
+                       bool allow_anonymous, const std::string& username = {},
+                       const std::string& token = {});
 
 } // namespace WebService

@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <future>
 #include <memory>
 #include "common/telemetry.h"
 
@@ -46,5 +47,7 @@ u64 GetTelemetryId();
  * @returns The new TelemetryId that was generated.
  */
 u64 RegenerateTelemetryId();
+
+std::future<bool> VerifyLogin(std::string username, std::string token, std::function<void()> func);
 
 } // namespace Core
