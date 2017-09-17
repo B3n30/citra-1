@@ -12,7 +12,7 @@ std::future<bool> VerifyLogin(std::string& username, std::string& token,
                               const std::string& endpoint_url, std::function<void()> func) {
     auto get_func = [func, username](const std::string& reply) -> bool {
         func();
-        if (reply == "")
+        if (reply.empty())
             return false;
         nlohmann::json json = nlohmann::json::parse(reply);
         std::string result;
@@ -20,10 +20,7 @@ std::future<bool> VerifyLogin(std::string& username, std::string& token,
             result = json["username"];
         } catch (const nlohmann::detail::out_of_range&) {
         }
-        if (result == username) {
-            return true;
-        }
-        return false;
+        return result == username;
     };
     return GetJson<bool>(get_func, endpoint_url, false, username, token);
 }

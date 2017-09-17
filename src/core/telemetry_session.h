@@ -53,7 +53,7 @@ u64 RegenerateTelemetryId();
  * @param username Citra username to use for authentication.
  * @param token Citra token to use for authentication.
  * @param func A function that gets exectued when the verification is finished
- * @returns Future with bool about verification succeeded.
+ * @returns Future with bool indicating whether the verification succeeded
  */
 std::future<bool> VerifyLogin(std::string username, std::string token, std::function<void()> func);
 

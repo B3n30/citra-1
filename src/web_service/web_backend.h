@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <functional>
 #include <future>
 #include <string>
 #include "common/common_types.h"

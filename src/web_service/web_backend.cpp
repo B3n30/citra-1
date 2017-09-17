@@ -18,6 +18,19 @@ static constexpr char API_VERSION[]{"1"};
 
 static std::unique_ptr<cpr::Session> g_session;
 
+void Win32WSAStartup() {
+#ifdef _WIN32
+    // On Windows, CPR/libcurl does not properly initialize Winsock. The below code is used to
+    // initialize Winsock globally, which fixes this problem. Without this, only the first CPR
+    // session will properly be created, and subsequent ones will fail.
+    WSADATA wsa_data;
+    const int wsa_result{WSAStartup(MAKEWORD(2, 2), &wsa_data)};
+    if (wsa_result) {
+        LOG_CRITICAL(WebService, "WSAStartup failed: %d", wsa_result);
+    }
+#endif
+}
+
 void PostJson(const std::string& url, const std::string& data, bool allow_anonymous,
               const std::string& username, const std::string& token) {
     if (url.empty()) {
@@ -31,16 +44,7 @@ void PostJson(const std::string& url, const std::string& data, bool allow_anonym
         return;
     }
 
-#ifdef _WIN32
-    // On Windows, CPR/libcurl does not properly initialize Winsock. The below code is used to
-    // initialize Winsock globally, which fixes this problem. Without this, only the first CPR
-    // session will properly be created, and subsequent ones will fail.
-    WSADATA wsa_data;
-    const int wsa_result{WSAStartup(MAKEWORD(2, 2), &wsa_data)};
-    if (wsa_result) {
-        LOG_CRITICAL(WebService, "WSAStartup failed: %d", wsa_result);
-    }
-#endif
+    Win32WSAStartup();
 
     // Built request header
     cpr::Header header;
@@ -59,8 +63,13 @@ void PostJson(const std::string& url, const std::string& data, bool allow_anonym
     static std::future<void> future;
     future = cpr::PostCallback(
         [](cpr::Response r) {
+            if (r.error) {
+                LOG_ERROR(WebService, "POST returned cpr error: %u:%s", r.error.code,
+                          r.error.message.c_str());
+                return;
+            }
             if (r.status_code >= 400) {
-                LOG_ERROR(WebService, "POST returned error code: %u", r.status_code);
+                LOG_ERROR(WebService, "POST returned error status code: %u", r.status_code);
                 return;
             }
             if (r.header["content-type"].find("application/json") == std::string::npos) {
@@ -68,7 +77,6 @@ void PostJson(const std::string& url, const std::string& data, bool allow_anonym
                           r.header["content-type"].c_str());
                 return;
             }
-            return;
         },
         cpr::Url{url}, cpr::Body{data}, header);
 }
@@ -88,16 +96,7 @@ std::future<T> GetJson(std::function<T(const std::string&)> func, const std::str
         return std::async(std::launch::async, [func{std::move(func)}]() { return func(""); });
     }
 
-#ifdef _WIN32
-    // On Windows, CPR/libcurl does not properly initialize Winsock. The below code is used to
-    // initialize Winsock globally, which fixes this problem. Without this, only the first CPR
-    // session will properly be created, and subsequent ones will fail.
-    WSADATA wsa_data;
-    const int wsa_result{WSAStartup(MAKEWORD(2, 2), &wsa_data)};
-    if (wsa_result) {
-        LOG_CRITICAL(WebService, "WSAStartup failed: %d", wsa_result);
-    }
-#endif
+    Win32WSAStartup();
 
     // Built request header
     cpr::Header header;
@@ -112,9 +111,14 @@ std::future<T> GetJson(std::function<T(const std::string&)> func, const std::str
         header = cpr::Header{{"Content-Type", "application/json"}, {"api-version", API_VERSION}};
     }
 
-    // Post JSON asynchronously
+    // Get JSON asynchronously
     return cpr::GetCallback(
         [func{std::move(func)}](cpr::Response r) {
+            if (r.error) {
+                LOG_ERROR(WebService, "POST returned cpr error: %u:%s", r.error.code,
+                          r.error.message.c_str());
+                return func("");
+            }
             if (r.status_code >= 400) {
                 LOG_ERROR(WebService, "GET returned error code: %u", r.status_code);
                 return func("");

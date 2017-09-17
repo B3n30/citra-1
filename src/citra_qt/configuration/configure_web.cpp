@@ -12,11 +12,9 @@ ConfigureWeb::ConfigureWeb(QWidget* parent)
     : QWidget(parent), ui(std::make_unique<Ui::ConfigureWeb>()) {
     ui->setupUi(this);
     connect(ui->button_regenerate_telemetry_id, &QPushButton::clicked, this,
-            &ConfigureWeb::refreshTelemetryID);
-    connect(ui->edit_token, &QLineEdit::textChanged, this, &ConfigureWeb::loginChanged);
-    connect(ui->edit_username, &QLineEdit::textChanged, this, &ConfigureWeb::loginChanged);
-    connect(ui->button_verfiy_login, &QPushButton::clicked, this, &ConfigureWeb::verifyLogin);
-    connect(this, SIGNAL(loginVerified()), this, SLOT(onLoginVerified()));
+            &ConfigureWeb::RefreshTelemetryID);
+    connect(ui->button_verify_login, &QPushButton::clicked, this, &ConfigureWeb::VerifyLogin);
+    connect(this, &ConfigureWeb::LoginVerified, this, &ConfigureWeb::OnLoginVerified);
 
     this->setConfiguration();
 }
@@ -39,9 +37,11 @@ void ConfigureWeb::setConfiguration() {
     ui->toggle_telemetry->setChecked(Settings::values.enable_telemetry);
     ui->edit_username->setText(QString::fromStdString(Settings::values.citra_username));
     ui->edit_token->setText(QString::fromStdString(Settings::values.citra_token));
+    // Connect after setting the values, to avoid calling OnLoginChanged now
+    connect(ui->edit_token, &QLineEdit::textChanged, this, &ConfigureWeb::OnLoginChanged);
+    connect(ui->edit_username, &QLineEdit::textChanged, this, &ConfigureWeb::OnLoginChanged);
     ui->label_telemetry_id->setText("Telemetry ID: 0x" +
                                     QString::number(Core::GetTelemetryId(), 16).toUpper());
-    ui->button_verfiy_login->setDisabled(true);
     user_verified = true;
 }
 
@@ -58,37 +58,44 @@ void ConfigureWeb::applyConfiguration() {
     Settings::Apply();
 }
 
-void ConfigureWeb::refreshTelemetryID() {
+void ConfigureWeb::RefreshTelemetryID() {
     const u64 new_telemetry_id{Core::RegenerateTelemetryId()};
     ui->label_telemetry_id->setText("Telemetry ID: 0x" +
                                     QString::number(new_telemetry_id, 16).toUpper());
 }
 
-void ConfigureWeb::loginChanged() {
+void ConfigureWeb::OnLoginChanged() {
     if (ui->edit_username->text().isEmpty() && ui->edit_token->text().isEmpty()) {
-        ui->button_verfiy_login->setDisabled(true);
         user_verified = true;
+        ui->label_username_verified->setPixmap(QPixmap(":/icons/checked.png"));
+        ui->label_token_verified->setPixmap(QPixmap(":/icons/checked.png"));
     } else {
-        ui->button_verfiy_login->setEnabled(true);
         user_verified = false;
+        ui->label_username_verified->setPixmap(QPixmap(":/icons/failed.png"));
+        ui->label_token_verified->setPixmap(QPixmap(":/icons/failed.png"));
     }
 }
 
-void ConfigureWeb::verifyLogin() {
+void ConfigureWeb::VerifyLogin() {
     verified =
         Core::VerifyLogin(ui->edit_username->text().toStdString(),
-                          ui->edit_token->text().toStdString(), [&]() { emit loginVerified(); });
-    ui->button_verfiy_login->setDisabled(true);
+                          ui->edit_token->text().toStdString(), [&]() { emit LoginVerified(); });
+    ui->button_verify_login->setDisabled(true);
+    ui->button_verify_login->setText(tr("Verifying"));
 }
 
-void ConfigureWeb::onLoginVerified() {
+void ConfigureWeb::OnLoginVerified() {
+    ui->button_verify_login->setEnabled(true);
+    ui->button_verify_login->setText(tr("Verify"));
     if (verified.get()) {
         user_verified = true;
-        QMessageBox::information(this, tr("Verification succeeded."),
-                                 tr("Verification succeeded."));
+        ui->label_username_verified->setPixmap(QPixmap(":/icons/checked.png"));
+        ui->label_token_verified->setPixmap(QPixmap(":/icons/checked.png"));
     } else {
+        ui->label_username_verified->setPixmap(QPixmap(":/icons/failed.png"));
+        ui->label_token_verified->setPixmap(QPixmap(":/icons/failed.png"));
         QMessageBox::critical(
-            this, tr("Verification failed."),
+            this, tr("Verification failed"),
             tr("Verification failed. Check that you have entered your username and token "
                "correctly, and that your internet connection is working."));
     }

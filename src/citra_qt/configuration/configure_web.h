@@ -22,13 +22,13 @@ public:
     void applyConfiguration();
 
 public slots:
-    void refreshTelemetryID();
-    void loginChanged();
-    void verifyLogin();
-    void onLoginVerified();
+    void RefreshTelemetryID();
+    void OnLoginChanged();
+    void VerifyLogin();
+    void OnLoginVerified();
 
 signals:
-    void loginVerified();
+    void LoginVerified();
 
 private:
     void setConfiguration();
