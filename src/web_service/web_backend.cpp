@@ -64,8 +64,8 @@ void PostJson(const std::string& url, const std::string& data, bool allow_anonym
     future = cpr::PostCallback(
         [](cpr::Response r) {
             if (r.error) {
-                LOG_ERROR(WebService, "POST returned cpr error: %u:%s", r.error.code,
-                          r.error.message.c_str());
+                LOG_ERROR(WebService, "POST returned cpr error: %u:%s",
+                          static_cast<u32>(r.error.code), r.error.message.c_str());
                 return;
             }
             if (r.status_code >= 400) {
@@ -115,8 +115,8 @@ std::future<T> GetJson(std::function<T(const std::string&)> func, const std::str
     return cpr::GetCallback(
         [func{std::move(func)}](cpr::Response r) {
             if (r.error) {
-                LOG_ERROR(WebService, "POST returned cpr error: %u:%s", r.error.code,
-                          r.error.message.c_str());
+                LOG_ERROR(WebService, "GET returned cpr error: %u:%s",
+                          static_cast<u32>(r.error.code), r.error.message.c_str());
                 return func("");
             }
             if (r.status_code >= 400) {
