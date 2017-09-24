@@ -86,7 +86,7 @@ static std::mutex beacon_mutex;
 constexpr size_t MaxBeaconFrames = 1;
 
 // List of the last <MaxBeaconFrames> beacons received from the network.
-static std::deque<Network::WifiPacket> received_beacons;
+static std::list<Network::WifiPacket> received_beacons;
 
 // CoreTiming event to signal the connection_status_event from the emulation thread.
 static int connection_status_changed_event = -1;
@@ -98,7 +98,7 @@ constexpr u16 BroadcastNetworkNodeId = 0xFFFF;
  * Returns a list of received 802.11 frames from the specified sender
  * matching the type since the last call.
  */
-std::deque<Network::WifiPacket> GetReceivedPackets(Network::WifiPacket::PacketType type,
+std::list<Network::WifiPacket> GetReceivedPackets(Network::WifiPacket::PacketType type,
                                                    const MacAddress& sender) {
     if (type == Network::WifiPacket::PacketType::Beacon) {
         std::lock_guard<std::mutex> lock(beacon_mutex);
@@ -136,9 +136,6 @@ void HandleBeaconFrame(const Network::WifiPacket& packet) {
  * currently-hosted UDS network.
  */
 static u16 GetNextAvailableNodeId() {
-    ASSERT_MSG(connection_status.status == static_cast<u32>(NetworkStatus::ConnectedAsHost),
-               "Can not accept clients if we're not hosting a network");
-
     for (u16 index = 0; index < connection_status.max_nodes; ++index) {
         if ((connection_status.node_bitmask & (1 << index)) == 0)
             return index;
@@ -153,40 +150,45 @@ static u16 GetNextAvailableNodeId() {
  * authentication frame with SEQ1.
  */
 void StartConnectionSequence(const MacAddress& server) {
+    using Network::WifiPacket;
+    WifiPacket auth_request;
     {
         std::lock_guard<std::mutex> lock(connection_status_mutex);
         ASSERT(connection_status.status == static_cast<u32>(NetworkStatus::NotConnected));
-    }
-    // TODO(Subv): Handle timeout.
 
-    // Send an authentication frame with SEQ1
-    using Network::WifiPacket;
-    WifiPacket auth_request;
-    auth_request.channel = network_channel;
-    auth_request.data = GenerateAuthenticationFrame(AuthenticationSeq::SEQ1);
-    auth_request.destination_address = server;
-    auth_request.type = WifiPacket::PacketType::Authentication;
+        // TODO(Subv): Handle timeout.
+
+        // Send an authentication frame with SEQ1
+        auth_request.channel = network_channel;
+        auth_request.data = GenerateAuthenticationFrame(AuthenticationSeq::SEQ1);
+        auth_request.destination_address = server;
+        auth_request.type = WifiPacket::PacketType::Authentication;
+    }
 
     SendPacket(auth_request);
 }
 
 /// Sends an Association Response frame to the specified mac address
 void SendAssociationResponseFrame(const MacAddress& address) {
-    {
-        std::lock_guard<std::mutex> lock(connection_status_mutex);
-        ASSERT_MSG(connection_status.status == static_cast<u32>(NetworkStatus::ConnectedAsHost));
-    }
-
     using Network::WifiPacket;
     WifiPacket assoc_response;
-    assoc_response.channel = network_channel;
-    // TODO(Subv): This will cause multiple clients to end up with the same association id, but
-    // we're not using that for anything.
-    u16 association_id = 1;
-    assoc_response.data = GenerateAssocResponseFrame(AssocStatus::Successful, association_id,
+
+    {
+        std::lock_guard<std::mutex> lock(connection_status_mutex);
+        if (connection_status.status != static_cast<u32>(NetworkStatus::ConnectedAsHost)) {
+            LOG_DEBUG(Service_NWM, "Connection sequence aborted, because connection status is %u", connection_status.status);
+            return;
+        }
+
+        assoc_response.channel = network_channel;
+        // TODO(Subv): This will cause multiple clients to end up with the same association id, but
+        // we're not using that for anything.
+        u16 association_id = 1;
+        assoc_response.data = GenerateAssocResponseFrame(AssocStatus::Successful, association_id,
                                                      network_info.network_id);
-    assoc_response.destination_address = address;
-    assoc_response.type = WifiPacket::PacketType::AssociationResponse;
+        assoc_response.destination_address = address;
+        assoc_response.type = WifiPacket::PacketType::AssociationResponse;
+    }
 
     SendPacket(assoc_response);
 }
@@ -200,20 +202,23 @@ void SendAssociationResponseFrame(const MacAddress& address) {
 void HandleAuthenticationFrame(const Network::WifiPacket& packet) {
     // Only the SEQ1 auth frame is handled here, the SEQ2 frame doesn't need any special behavior
     if (GetAuthenticationSeqNumber(packet.data) == AuthenticationSeq::SEQ1) {
-        {
-            std::lock_guard<std::mutex> lock(connection_status_mutex);
-            ASSERT_MSG(connection_status.status ==
-                       static_cast<u32>(NetworkStatus::ConnectedAsHost));
-        }
-
-        // Respond with an authentication response frame with SEQ2
         using Network::WifiPacket;
         WifiPacket auth_request;
-        auth_request.channel = network_channel;
-        auth_request.data = GenerateAuthenticationFrame(AuthenticationSeq::SEQ2);
-        auth_request.destination_address = packet.transmitter_address;
-        auth_request.type = WifiPacket::PacketType::Authentication;
+        {
+            std::lock_guard<std::mutex> lock(connection_status_mutex);
+            if(connection_status.status !=
+                       static_cast<u32>(NetworkStatus::ConnectedAsHost)) {
+                LOG_DEBUG(Service_NWM, "Connection sequence aborted, because connection status is %u", connection_status.status);
+                return;
+            }
 
+
+            // Respond with an authentication response frame with SEQ2
+            auth_request.channel = network_channel;
+            auth_request.data = GenerateAuthenticationFrame(AuthenticationSeq::SEQ2);
+            auth_request.destination_address = packet.transmitter_address;
+            auth_request.type = WifiPacket::PacketType::Authentication;
+        }
         SendPacket(auth_request);
 
         SendAssociationResponseFrame(packet.transmitter_address);
@@ -225,19 +230,22 @@ void HandleAssociationResponseFrame(const Network::WifiPacket& packet) {
 
     ASSERT_MSG(std::get<AssocStatus>(assoc_result) == AssocStatus::Successful,
                "Could not join network");
-    {
-        std::lock_guard<std::mutex> lock(connection_status_mutex);
-        ASSERT(connection_status.status == static_cast<u32>(NetworkStatus::NotConnected));
-    }
-
-    // Send the EAPoL-Start packet to the server.
     using Network::WifiPacket;
     WifiPacket eapol_start;
-    eapol_start.channel = network_channel;
-    eapol_start.data = GenerateEAPoLStartFrame(std::get<u16>(assoc_result), current_node);
-    // TODO(Subv): Encrypt the packet.
-    eapol_start.destination_address = packet.transmitter_address;
-    eapol_start.type = WifiPacket::PacketType::Data;
+    {
+        std::lock_guard<std::mutex> lock(connection_status_mutex);
+        if (connection_status.status != static_cast<u32>(NetworkStatus::NotConnected)) {
+            LOG_DEBUG(Service_NWM, "Connection sequence aborted, because connection status is %u", connection_status.status);
+            return;
+        }
+
+        // Send the EAPoL-Start packet to the server.
+        eapol_start.channel = network_channel;
+        eapol_start.data = GenerateEAPoLStartFrame(std::get<u16>(assoc_result), current_node);
+        // TODO(Subv): Encrypt the packet.
+        eapol_start.destination_address = packet.transmitter_address;
+        eapol_start.type = WifiPacket::PacketType::Data;
+    }
 
     SendPacket(eapol_start);
 }
@@ -246,7 +254,10 @@ static void HandleEAPoLPacket(const Network::WifiPacket& packet) {
     std::lock_guard<std::mutex> lock(connection_status_mutex);
 
     if (GetEAPoLFrameType(packet.data) == EAPoLStartMagic) {
-        ASSERT(connection_status.status == static_cast<u32>(NetworkStatus::ConnectedAsHost));
+        if (connection_status.status != static_cast<u32>(NetworkStatus::ConnectedAsHost)) {
+            LOG_DEBUG(Service_NWM, "Connection sequence aborted, because connection status is %u", connection_status.status);
+            return;
+        }
 
         auto node = DeserializeNodeInfoFromFrame(packet.data);
 
@@ -285,7 +296,10 @@ static void HandleEAPoLPacket(const Network::WifiPacket& packet) {
 
         CoreTiming::ScheduleEvent_Threadsafe_Immediate(connection_status_changed_event);
     } else {
-        ASSERT(connection_status.status == static_cast<u32>(NetworkStatus::NotConnected));
+        if (connection_status.status != static_cast<u32>(NetworkStatus::NotConnected)) {
+            LOG_DEBUG(Service_NWM, "Connection sequence aborted, because connection status is %u", connection_status.status);
+            return;
+        }
         auto logoff = ParseEAPoLLogoffFrame(packet.data);
 
         network_info.total_nodes = logoff.connected_nodes;
@@ -1265,25 +1279,6 @@ static void BeaconBroadcastCallback(u64 userdata, int cycles_late) {
     // Start broadcasting the network, send a beacon frame every 102.4ms.
     CoreTiming::ScheduleEvent(msToCycles(DefaultBeaconInterval * MillisecondsPerTU) - cycles_late,
                               beacon_broadcast_event, 0);
-}
-
-/*
- * Called when a client connects to an UDS network we're hosting,
- * updates the connection status and signals the update event.
- * @param network_node_id Network Node Id of the connecting client.
- */
-void OnClientConnected(u16 network_node_id) {
-    ASSERT_MSG(connection_status.status == static_cast<u32>(NetworkStatus::ConnectedAsHost),
-               "Can not accept clients if we're not hosting a network");
-    ASSERT_MSG(connection_status.total_nodes < connection_status.max_nodes,
-               "Can not accept connections on a full network");
-
-    u32 node_id = GetNextAvailableNodeId();
-    connection_status.node_bitmask |= 1 << node_id;
-    connection_status.changed_nodes |= 1 << node_id;
-    connection_status.nodes[node_id] = network_node_id;
-    connection_status.total_nodes++;
-    connection_status_event->Signal();
 }
 
 const Interface::FunctionInfo FunctionTable[] = {

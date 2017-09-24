@@ -578,6 +578,15 @@ bool Room::Create(const std::string& name, const std::string& server_address, u1
     room_impl->room_information.port = server_port;
     room_impl->password = password;
 
+    ENetAddress addr;
+    addr.host = 2365772912;
+    addr.port = 1234;
+    char message[] = "Hello from Citra room...";
+    ENetBuffer buf;
+    buf.data = message;
+    buf.dataLength = sizeof(message) - 1;
+    enet_socket_send(room_impl->server->socket, &addr, &buf, 1);
+
     room_impl->StartLoop();
     return true;
 }
