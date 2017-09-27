@@ -2,6 +2,7 @@
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
+#include <algorithm>
 #include <cstring>
 #include <cryptopp/aes.h>
 #include <cryptopp/ccm.h>
@@ -182,8 +183,9 @@ static std::vector<u8> DecryptDataFrame(const std::vector<u8>& encrypted_payload
         d.SpecifyDataLengths(aad.size(), encrypted_payload.size() - 8, 0);
 
         CryptoPP::AuthenticatedDecryptionFilter df(
-            d, nullptr, CryptoPP::AuthenticatedDecryptionFilter::MAC_AT_END |
-                            CryptoPP::AuthenticatedDecryptionFilter::THROW_EXCEPTION);
+            d, nullptr,
+            CryptoPP::AuthenticatedDecryptionFilter::MAC_AT_END |
+                CryptoPP::AuthenticatedDecryptionFilter::THROW_EXCEPTION);
         // put aad
         df.ChannelPut(CryptoPP::AAD_CHANNEL, aad.data(), aad.size());
 
@@ -279,8 +281,7 @@ std::vector<u8> GenerateEAPoLStartFrame(u16 association_id, const NodeInfo& node
     eapol_start.association_id = association_id;
     eapol_start.node.friend_code_seed = node_info.friend_code_seed;
 
-    for (int i = 0; i < node_info.username.size(); ++i)
-        eapol_start.node.username[i] = node_info.username[i];
+    std::copy(node_info.username.begin(), node_info.username.end(), node.username.begin());
 
     // Note: The network_node_id and unknown bytes seem to be uninitialized in the NWM module.
     // TODO(B3N30): The last 8 bytes seem to have a fixed value of 07 88 15 00 04 e9 13 00 in
@@ -319,8 +320,8 @@ NodeInfo DeserializeNodeInfoFromFrame(const std::vector<u8>& frame) {
     NodeInfo node{};
     node.friend_code_seed = eapol_start.node.friend_code_seed;
 
-    for (int i = 0; i < node.username.size(); ++i)
-        node.username[i] = eapol_start.node.username[i];
+    std::copy(eapol_start.node.username.begin(), eapol_start.node.username.end(),
+              node.username.begin());
 
     return node;
 }
@@ -330,8 +331,7 @@ NodeInfo DeserializeNodeInfo(const EAPoLNodeInfo& node) {
     node_info.friend_code_seed = node.friend_code_seed;
     node_info.network_node_id = node.network_node_id;
 
-    for (int i = 0; i < node.username.size(); ++i)
-        node_info.username[i] = node.username[i];
+    std::copy(node.username.begin(), node.username.end(), node_info.username.begin());
 
     return node_info;
 }
@@ -350,8 +350,7 @@ std::vector<u8> GenerateEAPoLLogoffFrame(const MacAddress& mac_address, u16 netw
         node.friend_code_seed = node_info.friend_code_seed;
         node.network_node_id = node_info.network_node_id;
 
-        for (int i = 0; i < node.username.size(); ++i)
-            node.username[i] = node_info.username[i];
+        std::copy(node_info.username.begin(), node_info.username.end(), node.username.begin());
     }
 
     std::vector<u8> eapol_buffer(sizeof(EAPoLLogoffPacket));

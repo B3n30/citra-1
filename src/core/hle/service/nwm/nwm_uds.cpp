@@ -15,6 +15,7 @@
 #include "core/hle/ipc_helpers.h"
 #include "core/hle/kernel/event.h"
 #include "core/hle/kernel/shared_memory.h"
+#include "core/hle/lock.h"
 #include "core/hle/result.h"
 #include "core/hle/service/nwm/nwm_uds.h"
 #include "core/hle/service/nwm/uds_beacon.h"
@@ -73,9 +74,6 @@ constexpr size_t MaxBeaconFrames = 15;
 
 // List of the last <MaxBeaconFrames> beacons received from the network.
 static std::list<Network::WifiPacket> received_beacons;
-
-// CoreTiming event to signal the connection_status_event from the emulation thread.
-static int connection_status_changed_event = -1;
 
 /**
  * Returns a list of received 802.11 beacon frames from the specified sender since the last call.
@@ -174,6 +172,7 @@ static void HandleEAPoLPacket(const Network::WifiPacket& packet) {
 
         if (connection_status.max_nodes == connection_status.total_nodes) {
             // Reject connection attempt
+            LOG_ERROR(Service_NWM, "Reached maximum nodes, but reject packet wasn't sent.");
             // TODO(B3N30): Figure out what packet is sent here
             return;
         }
@@ -204,8 +203,10 @@ static void HandleEAPoLPacket(const Network::WifiPacket& packet) {
         eapol_logoff.type = WifiPacket::PacketType::Data;
 
         SendPacket(eapol_logoff);
-
-        CoreTiming::ScheduleEvent_Threadsafe_Immediate(connection_status_changed_event);
+        // TODO(B3N30): Broadcast updated node list
+        // The 3ds does this presumably to support spectators.
+        std::lock_guard<std::recursive_mutex> lock(HLE::g_hle_lock);
+        connection_status_event->Signal();
     } else {
         if (connection_status.status != static_cast<u32>(NetworkStatus::NotConnected)) {
             LOG_DEBUG(Service_NWM, "Connection sequence aborted, because connection status is %u",
@@ -232,6 +233,7 @@ static void HandleEAPoLPacket(const Network::WifiPacket& packet) {
         }
 
         // We're now connected, signal the application
+        // Signal happens sync in ConnectToNetwork
         connection_status.status = static_cast<u32>(NetworkStatus::ConnectedAsClient);
     }
 }
@@ -1008,12 +1010,6 @@ NWM_UDS::NWM_UDS() {
 
     beacon_broadcast_event =
         CoreTiming::RegisterEvent("UDS::BeaconBroadcastCallback", BeaconBroadcastCallback);
-
-    connection_status_changed_event = CoreTiming::RegisterEvent(
-        "UDS::ConnectionStatusChanged", [](u64 userdata, int cycles_late) {
-            connection_status_event->Signal();
-            LOG_CRITICAL(Network, "Event triggered");
-        });
 }
 
 NWM_UDS::~NWM_UDS() {
