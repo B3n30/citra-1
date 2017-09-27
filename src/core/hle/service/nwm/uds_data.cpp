@@ -281,7 +281,8 @@ std::vector<u8> GenerateEAPoLStartFrame(u16 association_id, const NodeInfo& node
     eapol_start.association_id = association_id;
     eapol_start.node.friend_code_seed = node_info.friend_code_seed;
 
-    std::copy(node_info.username.begin(), node_info.username.end(), node.username.begin());
+    std::copy(node_info.username.begin(), node_info.username.end(),
+              eapol_start.node.username.begin());
 
     // Note: The network_node_id and unknown bytes seem to be uninitialized in the NWM module.
     // TODO(B3N30): The last 8 bytes seem to have a fixed value of 07 88 15 00 04 e9 13 00 in
