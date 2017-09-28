@@ -233,8 +233,12 @@ static void HandleEAPoLPacket(const Network::WifiPacket& packet) {
         }
 
         // We're now connected, signal the application
-        // Signal happens sync in ConnectToNetwork
         connection_status.status = static_cast<u32>(NetworkStatus::ConnectedAsClient);
+        // Some games require ConnectToNetwork beeing blocking, for now it's not
+        // If blocking is implemented this lock needs to be changed,
+        // otherwise it might cause deadlocks
+        std::lock_guard<std::recursive_mutex> lock(HLE::g_hle_lock);
+        connection_status_event->Signal();
     }
 }
 
