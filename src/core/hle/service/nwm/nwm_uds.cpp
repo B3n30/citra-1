@@ -826,6 +826,8 @@ static void BeginHostingNetwork(Interface* self) {
                 network_info.host_mac_address = {{0x0, 0x0, 0x0, 0x0, 0x0, 0x0}};
             }
         }
+
+        current_node.address = network_info.host_mac_address;
         node_info[0] = current_node;
 
         // If the game has a preferred channel, use that instead.
