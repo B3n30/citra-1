@@ -164,7 +164,7 @@ void HandleAssociationResponseFrame(const Network::WifiPacket& packet) {
                "Could not join network");
     {
         std::lock_guard<std::mutex> lock(connection_status_mutex);
-        ASSERT(connection_status.status == static_cast<u32>(NetworkStatus::Connecting));
+        ASSERT(connection_status.status == static_cast<u32>(NetworkStatus::NotConnected));
     }
 
     // Send the EAPoL-Start packet to the server.
