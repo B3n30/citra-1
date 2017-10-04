@@ -632,6 +632,8 @@ static void GetNodeInformation(Interface* self) {
                            ErrorSummary::StatusChanged, ErrorLevel::Status));
         return;
     }
+    IPC::RequestBuilder rb = rp.MakeBuilder(11, 0);
+    rb.Push(RESULT_SUCCESS);
 
     {
         std::lock_guard<std::mutex> lock(connection_status_mutex);
