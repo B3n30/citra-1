@@ -164,7 +164,7 @@ void HandleAssociationResponseFrame(const Network::WifiPacket& packet) {
                "Could not join network");
     {
         std::lock_guard<std::mutex> lock(connection_status_mutex);
-        ASSERT(connection_status.status == static_cast<u32>(NetworkStatus::NotConnected));
+        ASSERT(connection_status.status == static_cast<u32>(NetworkStatus::Connecting));
     }
 
     // Send the EAPoL-Start packet to the server.
@@ -826,8 +826,6 @@ static void BeginHostingNetwork(Interface* self) {
                 network_info.host_mac_address = {{0x0, 0x0, 0x0, 0x0, 0x0, 0x0}};
             }
         }
-
-        current_node.address = network_info.host_mac_address;
         node_info[0] = current_node;
 
         // If the game has a preferred channel, use that instead.
