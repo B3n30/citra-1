@@ -585,8 +585,8 @@ static void RecvBeaconBroadcastData(Interface* self) {
     IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
     rb.Push(RESULT_SUCCESS);
 
-    LOG_DEBUG(Service_NWM, "called out_buffer_size=0x%08X, wlan_comm_id=0x%08X, id=0x%08X,"
-                           "input_handle=0x%08X, out_buffer_ptr=0x%08X, unk1=0x%08X, unk2=0x%08X",
+LOG_DEBUG(Service_NWM, "called out_buffer_size=0x%08X, wlan_comm_id=0x%08X, id=0x%08X,"
+                       "input_handle=0x%08X, out_buffer_ptr=0x%08X, unk1=0x%08X, unk2=0x%08X",
               out_buffer_size, wlan_comm_id, id, input_handle, out_buffer_ptr, unk1, unk2);
 }
 
@@ -703,8 +703,6 @@ static void GetNodeInformation(Interface* self) {
                            ErrorSummary::StatusChanged, ErrorLevel::Status));
         return;
     }
-    IPC::RequestBuilder rb = rp.MakeBuilder(11, 0);
-    rb.Push(RESULT_SUCCESS);
 
     {
         std::lock_guard<std::mutex> lock(connection_status_mutex);
@@ -777,6 +775,14 @@ static void Bind(Interface* self) {
     auto event = Kernel::Event::Create(Kernel::ResetType::OneShot,
                                        "NWM::BindNodeEvent" + std::to_string(bind_node_id));
     std::lock_guard<std::mutex> lock(connection_status_mutex);
+    if (connection_status.status != static_cast<u32>(NetworkStatus::ConnectedAsHost) &&
+        connection_status.status != static_cast<u32>(NetworkStatus::ConnectedAsClient) &&
+        connection_status.status != static_cast<u32>(NetworkStatus::ConnectedAsSpectator)) {
+        IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
+        rb.Push(ResultCode(ErrorDescription::NotAuthorized, ErrorModule::UDS,
+                           ErrorSummary::InvalidState, ErrorLevel::Status));
+        return;
+    }
 
     ASSERT(channel_data.find(data_channel) == channel_data.end());
     // TODO(B3N30): Support more than one bind node per channel.
