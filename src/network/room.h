@@ -16,14 +16,17 @@ constexpr u32 network_version = 1; ///< The version of this Room and RoomMember
 
 constexpr u16 DefaultRoomPort = 24872;
 
+constexpr u32 MaxMessageSize = 500;
+
 /// Maximum number of concurrent connections allowed to this room.
 static constexpr u32 MaxConcurrentConnections = 254;
+
 constexpr size_t NumChannels = 1; // Number of channels used for the connection
 
 struct RoomInformation {
     std::string name;           ///< Name of the server
     u32 member_slots;           ///< Maximum number of members in this room
-    std::string guid;           ///< The GUID of the room
+    std::string uid;            ///< The unique ID of the room
     u16 port;                   ///< The port of this room
     std::string preferred_game; ///< Game to advertise that you want to play
     u64 preferred_game_id;      ///< Title ID for the advertised game
