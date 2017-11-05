@@ -2,8 +2,7 @@
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
-#ifndef _CITRA_QT_MAIN_HXX_
-#define _CITRA_QT_MAIN_HXX_
+#pragma once
 
 #include <memory>
 #include <QMainWindow>
@@ -24,7 +23,9 @@ class GRenderWindow;
 class MicroProfileDialog;
 class ProfilerWidget;
 class RegistersWidget;
+class Updater;
 class WaitTreeWidget;
+class AboutDialog;
 
 class GMainWindow : public QMainWindow {
     Q_OBJECT
@@ -81,6 +82,10 @@ private:
     void ShutdownGame();
 
     void ShowCallouts();
+    void ShowUpdaterWidgets();
+    void ShowUpdatePrompt();
+    void ShowNoUpdatePrompt();
+    void CheckForUpdates();
 
     /**
      * Stores the filename in the recently loaded files list.
@@ -131,6 +136,11 @@ private slots:
     void ToggleWindowMode();
     void OnCreateGraphicsSurfaceViewer();
     void OnCoreError(Core::System::ResultStatus, std::string);
+    /// Called whenever a user selects Help->About Citra
+    void OnMenuAboutCitra();
+    void OnUpdateFound(bool found, bool error);
+    void OnCheckForUpdates();
+    void OnOpenUpdater();
 
 private:
     void UpdateStatusBar();
@@ -163,6 +173,10 @@ private:
     GraphicsVertexShaderWidget* graphicsVertexShaderWidget;
     GraphicsTracingWidget* graphicsTracingWidget;
     WaitTreeWidget* waitTreeWidget;
+    Updater* updater;
+
+    bool explicit_update_check = false;
+    bool defer_update_prompt = false;
 
     QAction* actions_recent_files[max_recent_files_item];
 
@@ -171,5 +185,3 @@ protected:
     void dragEnterEvent(QDragEnterEvent* event) override;
     void dragMoveEvent(QDragMoveEvent* event) override;
 };
-
-#endif // _CITRA_QT_MAIN_HXX_
