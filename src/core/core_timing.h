@@ -23,14 +23,17 @@
 // inside callback:
 //   ScheduleEvent(periodInCycles - cycles_late, callback, "whatever")
 
-// The actual timing is 268,111,855.956 Hz
+// The timing we get from the assembly is 268,111,855.956 Hz
+// It is possible that this number isn't jus a integer because the compiler could have
+// optimized the multiplication by a multiply-by-constant division.
+// Rounding to the nearest integer should be fine
 constexpr s64 BASE_CLOCK_RATE_ARM11 = 268111856;
 
 constexpr u64 MAX_VALUE_TO_MULTIPLY = std::numeric_limits<s64>::max() / 268111856;
 extern int g_clock_rate_arm11;
 
 inline s64 msToCycles(int ms) {
-    // since mx is int there is no way to overflow
+    // since ms is int there is no way to overflow
     return g_clock_rate_arm11 * static_cast<s64>(ms) / 1000;
 }
 
