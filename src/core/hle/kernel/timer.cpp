@@ -57,8 +57,7 @@ void Timer::Set(s64 initial, s64 interval) {
         // Immediately invoke the callback
         Signal(0);
     } else {
-        CoreTiming::ScheduleEvent(nsToCycles(initial), timer_callback_event_type,
-                                  callback_handle);
+        CoreTiming::ScheduleEvent(nsToCycles(initial), timer_callback_event_type, callback_handle);
     }
 }
 
