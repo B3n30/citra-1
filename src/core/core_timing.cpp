@@ -4,6 +4,7 @@
 
 #include <atomic>
 #include <cinttypes>
+#include <limits>
 #include <mutex>
 #include <vector>
 #include "common/chunk_file.h"
@@ -14,6 +15,7 @@
 #include "core/core_timing.h"
 
 int g_clock_rate_arm11 = BASE_CLOCK_RATE_ARM11;
+u64 max_value_to_multiply = std::numeric_limits<s64>::max() / g_clock_rate_arm11;
 
 // is this really necessary?
 #define INITIAL_SLICE_LENGTH 20000
@@ -79,6 +81,7 @@ void SetClockFrequencyMHz(int cpu_mhz) {
     last_global_time_ticks = GetTicks();
 
     g_clock_rate_arm11 = cpu_mhz * 1000000;
+    max_value_to_multiply = std::numeric_limits<s64>::max() / g_clock_rate_arm11;
     // TODO: Rescale times of scheduled events?
 
     FireMhzChange();

@@ -24,12 +24,12 @@
 //   ScheduleEvent(periodInCycles - cycles_late, callback, "whatever")
 
 // The timing we get from the assembly is 268,111,855.956 Hz
-// It is possible that this number isn't jus a integer because the compiler could have
+// It is possible that this number isn't just an integer because the compiler could have
 // optimized the multiplication by a multiply-by-constant division.
 // Rounding to the nearest integer should be fine
 constexpr s64 BASE_CLOCK_RATE_ARM11 = 268111856;
 
-constexpr u64 MAX_VALUE_TO_MULTIPLY = std::numeric_limits<s64>::max() / 268111856;
+extern u64 max_value_to_multiply;
 extern int g_clock_rate_arm11;
 
 inline s64 msToCycles(int ms) {
@@ -54,10 +54,10 @@ inline s64 usToCycles(int us) {
 }
 
 inline s64 usToCycles(s64 us) {
-    if ((us / 1000000) > MAX_VALUE_TO_MULTIPLY) {
+    if ((us / 1000000) > max_value_to_multiply) {
         LOG_ERROR(Core_Timing, "Integer overflow, use max value");
         return std::numeric_limits<s64>::max();
-    } else if (us > MAX_VALUE_TO_MULTIPLY) {
+    } else if (us > max_value_to_multiply) {
         LOG_DEBUG(Core_Timing, "Time very big, do rounding");
         return (g_clock_rate_arm11 * (us / 1000000));
     }
@@ -65,10 +65,10 @@ inline s64 usToCycles(s64 us) {
 }
 
 inline s64 usToCycles(u64 us) {
-    if ((us / 1000000) > MAX_VALUE_TO_MULTIPLY) {
+    if ((us / 1000000) > max_value_to_multiply) {
         LOG_ERROR(Core_Timing, "Integer overflow, use max value");
         return std::numeric_limits<s64>::max();
-    } else if (us > MAX_VALUE_TO_MULTIPLY) {
+    } else if (us > max_value_to_multiply) {
         LOG_DEBUG(Core_Timing, "Time very big, do rounding");
         return (g_clock_rate_arm11 * static_cast<s64>(us / 1000000));
     }
@@ -84,10 +84,10 @@ inline s64 nsToCycles(int ns) {
 }
 
 inline s64 nsToCycles(s64 ns) {
-    if ((ns / 1000000000) > MAX_VALUE_TO_MULTIPLY) {
+    if ((ns / 1000000000) > max_value_to_multiply) {
         LOG_ERROR(Core_Timing, "Integer overflow, use max value");
         return std::numeric_limits<s64>::max();
-    } else if (ns > MAX_VALUE_TO_MULTIPLY) {
+    } else if (ns > max_value_to_multiply) {
         LOG_DEBUG(Core_Timing, "Time very big, do rounding");
         return (g_clock_rate_arm11 * (ns / 1000000000));
     }
@@ -95,10 +95,10 @@ inline s64 nsToCycles(s64 ns) {
 }
 
 inline s64 nsToCycles(u64 ns) {
-    if ((ns / 1000000000) > MAX_VALUE_TO_MULTIPLY) {
+    if ((ns / 1000000000) > max_value_to_multiply) {
         LOG_ERROR(Core_Timing, "Integer overflow, use max value");
         return std::numeric_limits<s64>::max();
-    } else if (ns > MAX_VALUE_TO_MULTIPLY) {
+    } else if (ns > max_value_to_multiply) {
         LOG_DEBUG(Core_Timing, "Time very big, do rounding");
         return (g_clock_rate_arm11 * static_cast<s64>(ns / 1000000000));
     }
