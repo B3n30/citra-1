@@ -291,6 +291,7 @@ void Init() {
     NFC::Init();
     NIM::Init();
     NWM::Init();
+    NWM::InstallInterfaces(*SM::g_service_manager);
     PTM::Init();
     QTM::Init();
 
