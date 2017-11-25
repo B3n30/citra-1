@@ -225,6 +225,7 @@ void Init() {
 
     NS::InstallInterfaces(*SM::g_service_manager);
     AC::InstallInterfaces(*SM::g_service_manager);
+    NWM::InstallInterfaces(*SM::g_service_manager);
 
     AddNamedPort(new ERR::ERR_F);
 

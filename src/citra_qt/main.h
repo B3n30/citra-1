@@ -223,3 +223,5 @@ protected:
     void dragEnterEvent(QDragEnterEvent* event) override;
     void dragMoveEvent(QDragMoveEvent* event) override;
 };
+
+Q_DECLARE_METATYPE(Common::WebResult);
