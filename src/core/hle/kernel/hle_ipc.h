@@ -75,12 +75,18 @@ public:
     void Write(void* src_buffer, size_t offset, size_t size);
 
     // interface for ipc helper
-    u32 GenerateDescriptor() const;
-    const u32 id;
+    u32 GenerateDescriptor() const {
+        return IPC::MappedBufferDesc(size, perms);
+    }
+
+    u32 GetId() const {
+        return id;
+    }
 
 private:
     friend class HLERequestContext;
-    const VAddr address;
+    u32 id;
+    VAddr address;
     const Process& process;
     size_t size;
     IPC::MappedBufferPermissions perms;

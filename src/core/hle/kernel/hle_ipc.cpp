@@ -244,8 +244,4 @@ void MappedBuffer::Write(void* src_buffer, size_t offset, size_t size) {
     Memory::WriteBlock(process, address + offset, src_buffer, size);
 }
 
-u32 MappedBuffer::GenerateDescriptor() const {
-    return IPC::MappedBufferDesc(size, perms);
-}
-
 } // namespace Kernel

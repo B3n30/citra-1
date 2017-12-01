@@ -219,7 +219,7 @@ inline void RequestBuilder::PushMappedBuffer(VAddr buffer_vaddr, size_t size,
 
 inline void RequestBuilder::PushMappedBuffer(const Kernel::MappedBuffer& mapped_buffer) {
     Push(mapped_buffer.GenerateDescriptor());
-    Push(mapped_buffer.id);
+    Push(mapped_buffer.GetId());
 }
 
 class RequestParser : public RequestHelperBase {
