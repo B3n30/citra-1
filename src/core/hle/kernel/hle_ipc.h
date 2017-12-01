@@ -83,6 +83,10 @@ public:
         return id;
     }
 
+    size_t GetSize() const {
+        return size;
+    }
+
 private:
     friend class HLERequestContext;
     u32 id;

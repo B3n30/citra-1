@@ -520,10 +520,10 @@ void NWM_UDS::RecvBeaconBroadcastData(Kernel::HLERequestContext& ctx) {
     Kernel::Handle input_handle = rp.PopHandle();
 
     size_t desc_size;
-    const VAddr out_buffer_ptr = rp.PopMappedBuffer(&desc_size);
-    ASSERT(desc_size == out_buffer_size);
+    Kernel::MappedBuffer out_buffer = rp.PopMappedBuffer();
+    ASSERT(out_buffer.GetSize() == out_buffer_size);
 
-    VAddr current_buffer_pos = out_buffer_ptr;
+    size_t offset = sizeof(BeaconDataReplyHeader);
     u32 total_size = sizeof(BeaconDataReplyHeader);
 
     // Retrieve all beacon frames that were received from the desired mac address.
@@ -533,8 +533,6 @@ void NWM_UDS::RecvBeaconBroadcastData(Kernel::HLERequestContext& ctx) {
     data_reply_header.total_entries = static_cast<u32>(beacons.size());
     data_reply_header.max_output_size = out_buffer_size;
 
-    Memory::WriteBlock(current_buffer_pos, &data_reply_header, sizeof(BeaconDataReplyHeader));
-    current_buffer_pos += sizeof(BeaconDataReplyHeader);
     // Write each of the received beacons into the buffer
     for (const auto& beacon : beacons) {
         BeaconEntryHeader entry{};
@@ -545,27 +543,27 @@ void NWM_UDS::RecvBeaconBroadcastData(Kernel::HLERequestContext& ctx) {
         entry.header_size = sizeof(BeaconEntryHeader);
         entry.mac_address = beacon.transmitter_address;
 
-        ASSERT(current_buffer_pos < out_buffer_ptr + out_buffer_size);
+        ASSERT(offset < out_buffer_size);
 
-        Memory::WriteBlock(current_buffer_pos, &entry, sizeof(BeaconEntryHeader));
-        current_buffer_pos += sizeof(BeaconEntryHeader);
-
-        Memory::WriteBlock(current_buffer_pos, beacon.data.data(), beacon.data.size());
-        current_buffer_pos += static_cast<VAddr>(beacon.data.size());
+        out_buffer.Write(&entry, offset, sizeof(BeaconEntryHeader));
+        offset += sizeof(BeaconEntryHeader);
+        const unsigned char* beacon_data = beacon.data.data();
+        out_buffer.Write(const_cast<void*>(static_cast<const void*>(beacon_data)), offset, beacon.data.size());
+        offset += beacon.data.size();
 
         total_size += static_cast<u32>(sizeof(BeaconEntryHeader) + beacon.data.size());
     }
 
     // Update the total size in the structure and write it to the buffer again.
     data_reply_header.total_size = total_size;
-    Memory::WriteBlock(out_buffer_ptr, &data_reply_header, sizeof(BeaconDataReplyHeader));
+    out_buffer.Write(&data_reply_header, 0, sizeof(BeaconDataReplyHeader));
 
     IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
     rb.Push(RESULT_SUCCESS);
 
 LOG_DEBUG(Service_NWM, "called out_buffer_size=0x%08X, wlan_comm_id=0x%08X, id=0x%08X,"
-                       "input_handle=0x%08X, out_buffer_ptr=0x%08X, unk1=0x%08X, unk2=0x%08X",
-              out_buffer_size, wlan_comm_id, id, input_handle, out_buffer_ptr, unk1, unk2);
+                       "input_handle=0x%08X, unk1=0x%08X, unk2=0x%08X, offset=%d",
+              out_buffer_size, wlan_comm_id, id, input_handle, unk1, unk2, offset);
 }
 
 void NWM_UDS::InitializeWithVersion(Kernel::HLERequestContext& ctx) {
@@ -578,9 +576,7 @@ void NWM_UDS::InitializeWithVersion(Kernel::HLERequestContext& ctx) {
 
     u16 version = rp.Pop<u16>();
 
-    Kernel::Handle sharedmem_handle = rp.PopHandle();
-
-    recv_buffer_memory = Kernel::g_handle_table.Get<Kernel::SharedMemory>(sharedmem_handle);
+    recv_buffer_memory = rp.PopObject<Kernel::SharedMemory>();
 
     initialized = true;
 
@@ -609,10 +605,10 @@ void NWM_UDS::InitializeWithVersion(Kernel::HLERequestContext& ctx) {
 
     IPC::RequestBuilder rb = rp.MakeBuilder(1, 2);
     rb.Push(RESULT_SUCCESS);
-    rb.PushCopyHandles(Kernel::g_handle_table.Create(connection_status_event).Unwrap());
+    rb.PushObjects(connection_status_event);
 
-    LOG_DEBUG(Service_NWM, "called sharedmem_size=0x%08X, version=0x%08X, sharedmem_handle=0x%08X",
-              sharedmem_size, version, sharedmem_handle);
+    LOG_DEBUG(Service_NWM, "called sharedmem_size=0x%08X, version=0x%08X",
+              sharedmem_size, version);
 }
 
 void NWM_UDS::GetConnectionStatus(Kernel::HLERequestContext& ctx) {
@@ -679,6 +675,7 @@ void NWM_UDS::Bind(Kernel::HLERequestContext& ctx) {
         IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
         rb.Push(ResultCode(ErrorDescription::NotAuthorized, ErrorModule::UDS,
                            ErrorSummary::WrongArgument, ErrorLevel::Usage));
+        LOG_DEBUG(Service_NWM, "data_channel = %d, bind_node_id = %d", data_channel, bind_node_id);
         return;
     }
 
@@ -687,6 +684,7 @@ void NWM_UDS::Bind(Kernel::HLERequestContext& ctx) {
         IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
         rb.Push(ResultCode(ErrorDescription::OutOfMemory, ErrorModule::UDS,
                            ErrorSummary::OutOfResource, ErrorLevel::Status));
+        LOG_DEBUG(Service_NWM, "max bind nodes");
         return;
     }
 
@@ -695,6 +693,7 @@ void NWM_UDS::Bind(Kernel::HLERequestContext& ctx) {
         IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
         rb.Push(ResultCode(ErrorDescription::TooLarge, ErrorModule::UDS,
                            ErrorSummary::WrongArgument, ErrorLevel::Usage));
+        LOG_DEBUG(Service_NWM, "MinRecvBufferSize");
         return;
     }
 
@@ -702,14 +701,6 @@ void NWM_UDS::Bind(Kernel::HLERequestContext& ctx) {
     auto event = Kernel::Event::Create(Kernel::ResetType::OneShot,
                                        "NWM::BindNodeEvent" + std::to_string(bind_node_id));
     std::lock_guard<std::mutex> lock(connection_status_mutex);
-    if (connection_status.status != static_cast<u32>(NetworkStatus::ConnectedAsHost) &&
-        connection_status.status != static_cast<u32>(NetworkStatus::ConnectedAsClient) &&
-        connection_status.status != static_cast<u32>(NetworkStatus::ConnectedAsSpectator)) {
-        IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
-        rb.Push(ResultCode(ErrorDescription::NotAuthorized, ErrorModule::UDS,
-                           ErrorSummary::InvalidState, ErrorLevel::Status));
-        return;
-    }
 
     ASSERT(channel_data.find(data_channel) == channel_data.end());
     // TODO(B3N30): Support more than one bind node per channel.
@@ -717,7 +708,7 @@ void NWM_UDS::Bind(Kernel::HLERequestContext& ctx) {
 
     IPC::RequestBuilder rb = rp.MakeBuilder(1, 2);
     rb.Push(RESULT_SUCCESS);
-    rb.PushCopyHandles(Kernel::g_handle_table.Create(event).Unwrap());
+    rb.PushObjects(event);
 }
 
 void NWM_UDS::Unbind(Kernel::HLERequestContext& ctx) {
@@ -919,9 +910,8 @@ void NWM_UDS::SendTo(Kernel::HLERequestContext& ctx) {
     u32 data_size = rp.Pop<u32>();
     u32 flags = rp.Pop<u32>();
 
-    size_t desc_size;
-    const VAddr input_address = rp.PopStaticBuffer(&desc_size);
-    ASSERT(desc_size >= data_size);
+    const std::vector<u8> input_address = rp.PopStaticBuffer();
+    ASSERT(input_address.size() >= data_size);
 
     IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
 
@@ -948,13 +938,10 @@ void NWM_UDS::SendTo(Kernel::HLERequestContext& ctx) {
         return;
     }
 
-    std::vector<u8> data(data_size);
-    Memory::ReadBlock(input_address, data.data(), data.size());
-
     // TODO(B3N30): Increment the sequence number after each sent packet.
     u16 sequence_number = 0;
     std::vector<u8> data_payload = GenerateDataPayload(
-        data, data_channel, dest_node_id, connection_status.network_node_id, sequence_number);
+        input_address, data_channel, dest_node_id, connection_status.network_node_id, sequence_number);
 
     // TODO(B3N30): Retrieve the MAC address of the dest_node_id and our own to encrypt
     // and encapsulate the payload.
@@ -982,9 +969,6 @@ void NWM_UDS::PullPacket(Kernel::HLERequestContext& ctx) {
     u32 max_out_buff_size_aligned = rp.Pop<u32>();
     u32 max_out_buff_size = rp.Pop<u32>();
 
-    size_t desc_size;
-    const VAddr output_address = rp.PeekStaticBuffer(0, &desc_size);
-    ASSERT(desc_size == max_out_buff_size);
 
     std::lock_guard<std::mutex> lock(connection_status_mutex);
     if (connection_status.status != static_cast<u32>(NetworkStatus::ConnectedAsHost) &&
@@ -1009,12 +993,12 @@ void NWM_UDS::PullPacket(Kernel::HLERequestContext& ctx) {
     }
 
     if (channel->second.received_packets.empty()) {
-        Memory::ZeroBlock(output_address, desc_size);
+        std::vector<u8> output_buffer(max_out_buff_size, 0);
         IPC::RequestBuilder rb = rp.MakeBuilder(3, 2);
         rb.Push(RESULT_SUCCESS);
         rb.Push<u32>(0);
         rb.Push<u16>(0);
-        rb.PushStaticBuffer(output_address, desc_size, 0);
+        rb.PushStaticBuffer(output_buffer, 0);
         return;
     }
 
@@ -1031,16 +1015,17 @@ void NWM_UDS::PullPacket(Kernel::HLERequestContext& ctx) {
     }
 
     IPC::RequestBuilder rb = rp.MakeBuilder(3, 2);
-    Memory::ZeroBlock(output_address, desc_size);
+
+    std::vector<u8> output_buffer(max_out_buff_size, 0);
     // Write the actual data.
-    Memory::WriteBlock(output_address,
+    std::memcpy(output_buffer.data(),
                        next_packet.data() + sizeof(LLCHeader) + sizeof(SecureDataHeader),
                        data_size);
 
     rb.Push(RESULT_SUCCESS);
     rb.Push<u32>(data_size);
     rb.Push<u16>(secure_data.src_node_id);
-    rb.PushStaticBuffer(output_address, desc_size, 0);
+    rb.PushStaticBuffer(output_buffer, 0);
 
     channel->second.received_packets.pop_front();
 }
@@ -1080,18 +1065,14 @@ void NWM_UDS::ConnectToNetwork(Kernel::HLERequestContext& ctx) {
 
     // 300 ms
     // Since this timing is handled by core_timing it could differ from the 'real world' time
-    static constexpr u64 UDSConnectionTimeout = 300000;
+    static constexpr u64 UDSConnectionTimeout = 3000000;
 
     connection_event =
         ctx.SleepClientThread(Kernel::GetCurrentThread(), "uds::ConnectToNetwork", UDSConnectionTimeout, [](Kernel::SharedPtr<Kernel::Thread> thread, Kernel::HLERequestContext& ctx,
            ThreadWakeupReason reason) {
-            VAddr address = thread->GetCommandBufferAddress();
-            std::array<u32, IPC::COMMAND_BUFFER_LENGTH> buffer;
-            IPC::RequestBuilder rb(buffer.data(), 0x1E, 1, 0);
             // TODO(B3N30): Add error handling for host full and timeout
+            IPC::RequestBuilder rb(ctx, 0x1E, 1, 0);
             rb.Push(RESULT_SUCCESS);
-            Memory::WriteBlock(address, &*thread->owner_process, *buffer.data());
-
             LOG_DEBUG(Service_NWM, "connection sequence finished");
         });
 
@@ -1137,14 +1118,9 @@ void NWM_UDS::DecryptBeaconData(Kernel::HLERequestContext& ctx) {
     size_t data1_size;
     const VAddr encrypted_data1_addr = rp.PopStaticBuffer(&data1_size);
 
-    size_t output_buffer_size;
-    const VAddr output_buffer_addr = rp.PeekStaticBuffer(0, &output_buffer_size);
 
-    // This size is hardcoded in the 3DS UDS code.
-    ASSERT(output_buffer_size == sizeof(NodeInfo) * UDSMaxNodes);
-
-    LOG_DEBUG(Service_NWM, "called in0=%08X in1=%08X out=%08X", encrypted_data0_addr,
-              encrypted_data1_addr, output_buffer_addr);
+    LOG_DEBUG(Service_NWM, "called in0=%08X in1=%08X", encrypted_data0_addr,
+              encrypted_data1_addr);
 
     NetworkInfo net_info;
     Memory::ReadBlock(network_struct_addr, &net_info, sizeof(net_info));
@@ -1191,12 +1167,12 @@ void NWM_UDS::DecryptBeaconData(Kernel::HLERequestContext& ctx) {
         nodes.push_back(node);
     }
 
-    Memory::ZeroBlock(output_buffer_addr, sizeof(NodeInfo) * UDSMaxNodes);
-    Memory::WriteBlock(output_buffer_addr, nodes.data(), sizeof(NodeInfo) * nodes.size());
-
     IPC::RequestBuilder rb = rp.MakeBuilder(1, 2);
-    rb.PushStaticBuffer(output_buffer_addr, output_buffer_size, 0);
     rb.Push(RESULT_SUCCESS);
+
+    std::vector<u8> output_buffer(sizeof(NodeInfo) * UDSMaxNodes, 0);
+    std::memcpy(output_buffer.data(), nodes.data(), sizeof(NodeInfo) * nodes.size());
+    rb.PushStaticBuffer(output_buffer, 0);
 }
 
 // Sends a 802.11 beacon frame with information about the current network.
