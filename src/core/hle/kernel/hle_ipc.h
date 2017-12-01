@@ -87,7 +87,7 @@ private:
     friend class HLERequestContext;
     u32 id;
     VAddr address;
-    const Process& process;
+    const Process* process;
     size_t size;
     IPC::MappedBufferPermissions perms;
 };

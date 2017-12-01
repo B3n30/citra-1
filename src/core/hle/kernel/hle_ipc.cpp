@@ -226,7 +226,7 @@ MappedBuffer& HLERequestContext::GetMappedBuffer(u32 id_from_cmdbuf) {
 }
 
 MappedBuffer::MappedBuffer(const Process& process, u32 descriptor, VAddr address, u32 id)
-    : process(process), address(address), id(id) {
+    : process(&process), address(address), id(id) {
     IPC::MappedBufferDescInfo desc{descriptor};
     size = desc.size;
     perms = desc.perms;
@@ -235,13 +235,13 @@ MappedBuffer::MappedBuffer(const Process& process, u32 descriptor, VAddr address
 void MappedBuffer::Read(void* dest_buffer, size_t offset, size_t size) {
     ASSERT(perms & IPC::R);
     ASSERT(offset + size <= this->size);
-    Memory::ReadBlock(process, address + offset, dest_buffer, size);
+    Memory::ReadBlock(*process, address + offset, dest_buffer, size);
 }
 
 void MappedBuffer::Write(void* src_buffer, size_t offset, size_t size) {
     ASSERT(perms & IPC::W);
     ASSERT(offset + size <= this->size);
-    Memory::WriteBlock(process, address + offset, src_buffer, size);
+    Memory::WriteBlock(*process, address + offset, src_buffer, size);
 }
 
 } // namespace Kernel
