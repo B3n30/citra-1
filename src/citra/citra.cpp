@@ -71,26 +71,26 @@ static void OnStateChanged(const Network::RoomMember::State& state) {
         LOG_DEBUG(Network, "Lost connection to the room");
         break;
     case Network::RoomMember::State::CouldNotConnect:
-        LOG_DEBUG(Network, "State: CouldNotConnect");
+        LOG_ERROR(Network, "State: CouldNotConnect");
         exit(1);
         break;
     case Network::RoomMember::State::NameCollision:
-        LOG_DEBUG(
+        LOG_ERROR(
             Network,
             "You tried to use the same nickname then another user that is connected to the Room");
         exit(1);
         break;
     case Network::RoomMember::State::MacCollision:
-        LOG_DEBUG(Network, "You tried to use the same MAC-Address then another user that is "
+        LOG_ERROR(Network, "You tried to use the same MAC-Address then another user that is "
                            "connected to the Room");
         exit(1);
         break;
     case Network::RoomMember::State::WrongPassword:
-        LOG_DEBUG(Network, "Room replied with: Wrong password");
+        LOG_ERROR(Network, "Room replied with: Wrong password");
         exit(1);
         break;
     case Network::RoomMember::State::WrongVersion:
-        LOG_DEBUG(Network,
+        LOG_ERROR(Network,
                   "You are using a different version then the room you are trying to connect to");
         exit(1);
         break;
