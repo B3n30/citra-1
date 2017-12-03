@@ -103,6 +103,9 @@ public:
     ~NWM_UDS();
 
 private:
+
+    void UpdateNetworkAttribute(Kernel::HLERequestContext& ctx);
+
     /**
      * NWM_UDS::Shutdown service function
      *  Inputs:

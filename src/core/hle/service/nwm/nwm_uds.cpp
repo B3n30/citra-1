@@ -89,13 +89,6 @@ static Network::RoomMember::CallbackHandle<Network::WifiPacket> wifi_packet_rece
 // network thread.
 static std::mutex connection_status_mutex;
 
-enum class ConnectionResult : u32 {
-    None,
-    Success,
-    Full,
-    Timeout
-};
-static std::atomic<ConnectionResult> connection_result;
 static Kernel::SharedPtr<Kernel::Event> connection_event;
 
 // Mutex to synchronize access to the list of received beacons between the emulation thread and the
@@ -284,7 +277,6 @@ static void HandleEAPoLPacket(const Network::WifiPacket& packet) {
         // If blocking is implemented this lock needs to be changed,
         // otherwise it might cause deadlocks
         connection_status_event->Signal();
-        connection_result = ConnectionResult::Success;
         connection_event->Signal();
     }
 }
@@ -822,6 +814,13 @@ void NWM_UDS::BeginHostingNetwork(Kernel::HLERequestContext& ctx) {
     rb.Push(RESULT_SUCCESS);
 }
 
+void NWM_UDS::UpdateNetworkAttribute(Kernel::HLERequestContext& ctx){
+    IPC::RequestParser rp(ctx, 0x07, 2, 0);
+    rp.Skip(2, false);
+    IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
+    rb.Push(RESULT_SUCCESS);
+}
+
 void NWM_UDS::DestroyNetwork(Kernel::HLERequestContext& ctx) {
     IPC::RequestParser rp(ctx, 0x08, 0, 0);
 
@@ -910,8 +909,8 @@ void NWM_UDS::SendTo(Kernel::HLERequestContext& ctx) {
     u32 data_size = rp.Pop<u32>();
     u32 flags = rp.Pop<u32>();
 
-    const std::vector<u8> input_address = rp.PopStaticBuffer();
-    ASSERT(input_address.size() >= data_size);
+    std::vector<u8> input_buffer = rp.PopStaticBuffer();
+    ASSERT(input_buffer.size() >= data_size);
 
     IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
 
@@ -941,7 +940,7 @@ void NWM_UDS::SendTo(Kernel::HLERequestContext& ctx) {
     // TODO(B3N30): Increment the sequence number after each sent packet.
     u16 sequence_number = 0;
     std::vector<u8> data_payload = GenerateDataPayload(
-        input_address, data_channel, dest_node_id, connection_status.network_node_id, sequence_number);
+        input_buffer, data_channel, dest_node_id, connection_status.network_node_id, sequence_number);
 
     // TODO(B3N30): Retrieve the MAC address of the dest_node_id and our own to encrypt
     // and encapsulate the payload.
@@ -1016,7 +1015,8 @@ void NWM_UDS::PullPacket(Kernel::HLERequestContext& ctx) {
 
     IPC::RequestBuilder rb = rp.MakeBuilder(3, 2);
 
-    std::vector<u8> output_buffer(max_out_buff_size, 0);
+    std::vector<u8> output_buffer;
+    output_buffer.resize(data_size);
     // Write the actual data.
     std::memcpy(output_buffer.data(),
                        next_packet.data() + sizeof(LLCHeader) + sizeof(SecureDataHeader),
@@ -1065,7 +1065,7 @@ void NWM_UDS::ConnectToNetwork(Kernel::HLERequestContext& ctx) {
 
     // 300 ms
     // Since this timing is handled by core_timing it could differ from the 'real world' time
-    static constexpr u64 UDSConnectionTimeout = 3000000;
+    static constexpr u64 UDSConnectionTimeout = 300000000;
 
     connection_event =
         ctx.SleepClientThread(Kernel::GetCurrentThread(), "uds::ConnectToNetwork", UDSConnectionTimeout, [](Kernel::SharedPtr<Kernel::Thread> thread, Kernel::HLERequestContext& ctx,
@@ -1206,7 +1206,7 @@ NWM_UDS::NWM_UDS() : ServiceFramework("nwm::UDS") {
         {0x00040402, nullptr, "CreateNetwork (deprecated)"},
         {0x00050040, nullptr, "EjectClient"},
         {0x00060000, nullptr, "EjectSpectator"},
-        {0x00070080, nullptr, "UpdateNetworkAttribute"},
+        {0x00070080, &NWM_UDS::UpdateNetworkAttribute, "UpdateNetworkAttribute"},
         {0x00080000, &NWM_UDS::DestroyNetwork, "DestroyNetwork"},
         {0x00090442, nullptr, "ConnectNetwork (deprecated)"},
         {0x000A0000, &NWM_UDS::DisconnectNetwork, "DisconnectNetwork"},
