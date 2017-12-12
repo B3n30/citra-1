@@ -9,6 +9,7 @@
 #endif
 
 #include "citra_qt/bootmanager.h"
+#include "common/assert.h"
 #include "common/microprofile.h"
 #include "common/scm_rev.h"
 #include "common/string_util.h"
@@ -34,12 +35,17 @@ void EmuThread::run() {
     // so that the DebugModeLeft signal can be emitted before the
     // next execution step.
     bool was_active = false;
+
     while (!stop_run) {
         if (running) {
             if (!was_active)
                 emit DebugModeLeft();
-
-            Core::System::ResultStatus result = Core::System::GetInstance().RunLoop();
+            Core::System::ResultStatus result;
+            try {
+                result = Core::System::GetInstance().RunLoop();
+            } catch (const AssertException& e){
+                stop_run = true;
+            }
             if (result != Core::System::ResultStatus::Success) {
                 emit ErrorThrown(result, Core::System::GetInstance().GetStatusDetails());
             }
@@ -52,7 +58,11 @@ void EmuThread::run() {
                 emit DebugModeLeft();
 
             exec_step = false;
-            Core::System::GetInstance().SingleStep();
+            try {
+                Core::System::GetInstance().SingleStep();
+            } catch (const AssertException& e){
+                stop_run = true;
+            }
             emit DebugModeEntered();
             yieldCurrentThread();
 

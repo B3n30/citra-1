@@ -5,6 +5,7 @@
 #pragma once
 
 #include <cstdlib>
+#include <exception>
 #include "common/common_funcs.h"
 #include "common/logging/log.h"
 
@@ -15,6 +16,9 @@
 // template that calls the lambda. This seems to generate an extra instruction at the call-site
 // compared to the ideal implementation (which wouldn't support ASSERT_MSG parameters), but is good
 // enough for our purposes.
+
+class AssertException : std::exception {};
+
 template <typename Fn>
 #if defined(_MSC_VER)
 __declspec(noinline, noreturn)
@@ -23,8 +27,7 @@ __declspec(noinline, noreturn)
 #endif
     static void assert_noinline_call(const Fn& fn) {
     fn();
-    Crash();
-    exit(1); // Keeps GCC's mouth shut about this actually returning
+    throw AssertException();
 }
 
 #define ASSERT(_a_)                                                                                \
