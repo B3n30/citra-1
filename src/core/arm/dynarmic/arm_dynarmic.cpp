@@ -16,25 +16,24 @@
 #include "core/memory.h"
 
 jmp_buf jit_exit_point;
-AssertException assert_exception;
+std::exception_ptr caught_exception;
 
-template < class T, T >
+template <class T, T>
 struct ExceptionCatchJmpWrapper;
 
-template < class R, typename... Args, R Func(Args...) >
-struct ExceptionCatchJmpWrapper<R (*)(Args...), Func > {
+template <class R, typename... Args, R Func(Args...)>
+struct ExceptionCatchJmpWrapper<R (*)(Args...), Func> {
     static R call(Args... args) {
         try {
             return Func(args...);
-        } catch (const AssertException& e) {
-            assert_exception = e;
+        } catch (...) {
+            caught_exception = std::current_exception();
             longjmp(jit_exit_point, 1);
         }
     }
 };
 
-#define WRAP_EXCEPTION_HANDLER(x) ExceptionCatchJmpWrapper< decltype(x), (x) >::call
-
+#define WRAP_EXCEPTION_HANDLER(x) ExceptionCatchJmpWrapper<decltype(x), (x)>::call
 
 static void InterpreterFallback(u32 pc, Dynarmic::Jit* jit, void* user_arg) {
     ARMul_State* state = static_cast<ARMul_State*>(user_arg);
@@ -74,21 +73,21 @@ static u64 GetTicksRemaining() {
 static Dynarmic::UserCallbacks GetUserCallbacks(
     const std::shared_ptr<ARMul_State>& interpreter_state, Memory::PageTable* current_page_table) {
     Dynarmic::UserCallbacks user_callbacks{};
-    user_callbacks.InterpreterFallback = WRAP_EXCEPTION_HANDLER(&InterpreterFallback);
+    user_callbacks.InterpreterFallback = &WRAP_EXCEPTION_HANDLER(&InterpreterFallback);
     user_callbacks.user_arg = static_cast<void*>(interpreter_state.get());
-    user_callbacks.CallSVC = WRAP_EXCEPTION_HANDLER(&Kernel::CallSVC);
-    user_callbacks.memory.IsReadOnlyMemory = WRAP_EXCEPTION_HANDLER(&IsReadOnlyMemory);
-    user_callbacks.memory.ReadCode = WRAP_EXCEPTION_HANDLER(&Memory::Read32);
-    user_callbacks.memory.Read8 = WRAP_EXCEPTION_HANDLER(&Memory::Read8);
-    user_callbacks.memory.Read16 = WRAP_EXCEPTION_HANDLER(&Memory::Read16);
-    user_callbacks.memory.Read32 = WRAP_EXCEPTION_HANDLER(&Memory::Read32);
-    user_callbacks.memory.Read64 = WRAP_EXCEPTION_HANDLER(&Memory::Read64);
-    user_callbacks.memory.Write8 = WRAP_EXCEPTION_HANDLER(&Memory::Write8);
-    user_callbacks.memory.Write16 = WRAP_EXCEPTION_HANDLER(&Memory::Write16);
-    user_callbacks.memory.Write32 = WRAP_EXCEPTION_HANDLER(&Memory::Write32);
-    user_callbacks.memory.Write64 = WRAP_EXCEPTION_HANDLER(&Memory::Write64);
-    user_callbacks.AddTicks = WRAP_EXCEPTION_HANDLER(&AddTicks);
-    user_callbacks.GetTicksRemaining = WRAP_EXCEPTION_HANDLER(&GetTicksRemaining);
+    user_callbacks.CallSVC = &WRAP_EXCEPTION_HANDLER(&Kernel::CallSVC);
+    user_callbacks.memory.IsReadOnlyMemory = &WRAP_EXCEPTION_HANDLER(&IsReadOnlyMemory);
+    user_callbacks.memory.ReadCode = &WRAP_EXCEPTION_HANDLER(&Memory::Read32);
+    user_callbacks.memory.Read8 = &WRAP_EXCEPTION_HANDLER(&Memory::Read8);
+    user_callbacks.memory.Read16 = &WRAP_EXCEPTION_HANDLER(&Memory::Read16);
+    user_callbacks.memory.Read32 = &WRAP_EXCEPTION_HANDLER(&Memory::Read32);
+    user_callbacks.memory.Read64 = &WRAP_EXCEPTION_HANDLER(&Memory::Read64);
+    user_callbacks.memory.Write8 = &WRAP_EXCEPTION_HANDLER(&Memory::Write8);
+    user_callbacks.memory.Write16 = &WRAP_EXCEPTION_HANDLER(&Memory::Write16);
+    user_callbacks.memory.Write32 = &WRAP_EXCEPTION_HANDLER(&Memory::Write32);
+    user_callbacks.memory.Write64 = &WRAP_EXCEPTION_HANDLER(&Memory::Write64);
+    user_callbacks.AddTicks = &WRAP_EXCEPTION_HANDLER(&AddTicks);
+    user_callbacks.GetTicksRemaining = &WRAP_EXCEPTION_HANDLER(&GetTicksRemaining);
     user_callbacks.page_table = &current_page_table->pointers;
     user_callbacks.coprocessors[15] = std::make_shared<DynarmicCP15>(interpreter_state);
     return user_callbacks;
@@ -108,7 +107,7 @@ void ARM_Dynarmic::Run() {
     if (!asserted) {
         jit->Run(GetTicksRemaining());
     } else {
-        throw assert_exception;
+        std::rethrow_exception(caught_exception);
     }
 }
 
