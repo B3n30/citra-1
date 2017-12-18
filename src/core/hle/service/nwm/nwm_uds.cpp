@@ -958,8 +958,6 @@ void NWM_UDS::PullPacket(Kernel::HLERequestContext& ctx) {
     u32 max_out_buff_size_aligned = rp.Pop<u32>();
     u32 max_out_buff_size = rp.Pop<u32>();
 
-    size_t buff_size = (max_out_buff_size_aligned < 0x127 ? max_out_buff_size_aligned : 0x127 ) << 2;
-
     std::lock_guard<std::mutex> lock(connection_status_mutex);
     if (connection_status.status != static_cast<u32>(NetworkStatus::ConnectedAsHost) &&
         connection_status.status != static_cast<u32>(NetworkStatus::ConnectedAsClient) &&
@@ -983,7 +981,7 @@ void NWM_UDS::PullPacket(Kernel::HLERequestContext& ctx) {
     }
 
     if (channel->second.received_packets.empty()) {
-        std::vector<u8> output_buffer(buff_size, 0);
+        std::vector<u8> output_buffer(max_out_buff_size, 0);
         IPC::RequestBuilder rb = rp.MakeBuilder(3, 2);
         rb.Push(RESULT_SUCCESS);
         rb.Push<u32>(0);
@@ -997,7 +995,7 @@ void NWM_UDS::PullPacket(Kernel::HLERequestContext& ctx) {
     auto secure_data = ParseSecureDataHeader(next_packet);
     auto data_size = secure_data.GetActualDataSize();
 
-    if (data_size > buff_size) {
+    if (data_size > max_out_buff_size) {
         IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
         rb.Push(ResultCode(ErrorDescription::TooLarge, ErrorModule::UDS,
                            ErrorSummary::WrongArgument, ErrorLevel::Usage));
@@ -1006,7 +1004,7 @@ void NWM_UDS::PullPacket(Kernel::HLERequestContext& ctx) {
 
     IPC::RequestBuilder rb = rp.MakeBuilder(3, 2);
 
-    std::vector<u8> output_buffer(buff_size, 0);
+    std::vector<u8> output_buffer(max_out_buff_size, 0);
     // Write the actual data.
     std::memcpy(output_buffer.data(),
                 next_packet.data() + sizeof(LLCHeader) + sizeof(SecureDataHeader), data_size);
