@@ -4,7 +4,9 @@
 
 #pragma once
 
+#include <future>
 #include <memory>
+#include <vector>
 #include <QMainWindow>
 #include <QTimer>
 #include "core/core.h"
@@ -70,6 +72,8 @@ signals:
     void EmulationStopping();
     void UpdateProgress(size_t written, size_t total);
 
+    void GotConsoleIDBlacklist();
+
 private:
     void InitializeWidgets();
     void InitializeDebugWidgets();
@@ -91,6 +95,7 @@ private:
     void ShowUpdatePrompt();
     void ShowNoUpdatePrompt();
     void CheckForUpdates();
+    void CheckConsoleID();
 
     /**
      * Stores the filename in the recently loaded files list.
@@ -152,6 +157,8 @@ private slots:
     void OnCheckForUpdates();
     void OnOpenUpdater();
 
+    void OnGetConsoleIDBlacklist();
+
 private:
     void UpdateStatusBar();
 
@@ -160,6 +167,7 @@ private:
     GRenderWindow* render_window;
     GameList* game_list;
     QFutureWatcher<Service::AM::InstallStatus>* watcher = nullptr;
+    std::future<std::vector<u64>> console_id_future;
 
     // Status bar elements
     QProgressBar* progress_bar = nullptr;

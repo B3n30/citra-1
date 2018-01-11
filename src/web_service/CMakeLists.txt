@@ -1,4 +1,6 @@
 add_library(web_service STATIC
+    console_id_blacklist.cpp
+    console_id_blacklist.h
     telemetry_json.cpp
     telemetry_json.h
     verify_login.cpp

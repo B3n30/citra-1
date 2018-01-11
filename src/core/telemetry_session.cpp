@@ -16,6 +16,7 @@
 #include "core/telemetry_session.h"
 
 #ifdef ENABLE_WEB_SERVICE
+#include "web_service/console_id_blacklist.h"
 #include "web_service/telemetry_json.h"
 #include "web_service/verify_login.h"
 #endif
@@ -87,6 +88,19 @@ std::future<bool> VerifyLogin(std::string username, std::string token, std::func
     return std::async(std::launch::async, [func{std::move(func)}]() {
         func();
         return false;
+    });
+#endif
+}
+
+std::future<std::vector<u64>> GetConsoleIDBlacklist(std::function<void()> func) {
+#ifdef ENABLE_WEB_SERVICE
+    return WebService::GetConsoleIDBlacklist(Settings::values.console_id_blacklist_endpoint_url,
+                                             func);
+#else
+    return std::async(std::launch::deferred, [func{std::move(func)}]() {
+        func();
+        std::vector<u64> result;
+        return result;
     });
 #endif
 }

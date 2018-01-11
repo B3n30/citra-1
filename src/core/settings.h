@@ -134,6 +134,7 @@ struct Values {
     bool enable_telemetry;
     std::string telemetry_endpoint_url;
     std::string verify_endpoint_url;
+    std::string console_id_blacklist_endpoint_url;
     std::string citra_username;
     std::string citra_token;
 } extern values;

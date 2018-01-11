@@ -136,5 +136,8 @@ std::future<T> GetJson(std::function<T(const std::string&)> func, const std::str
 template std::future<bool> GetJson(std::function<bool(const std::string&)> func,
                                    const std::string& url, bool allow_anonymous,
                                    const std::string& username, const std::string& token);
+template std::future<std::vector<u64>> GetJson(
+    std::function<std::vector<u64>(const std::string&)> func, const std::string& url,
+    bool allow_anonymous, const std::string& username, const std::string& token);
 
 } // namespace WebService

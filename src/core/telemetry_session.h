@@ -6,6 +6,7 @@
 
 #include <future>
 #include <memory>
+#include <vector>
 #include "common/telemetry.h"
 
 namespace Core {
@@ -56,5 +57,12 @@ u64 RegenerateTelemetryId();
  * @returns Future with bool indicating whether the verification succeeded
  */
 std::future<bool> VerifyLogin(std::string username, std::string token, std::function<void()> func);
+
+/**
+ * Gets a list of blacklisted Console IDs from web service.
+ * @param func A function that gets exectued when the get is finished
+ * @returns Future with vector of console ids
+ */
+std::future<std::vector<u64>> GetConsoleIDBlacklist(std::function<void()> func);
 
 } // namespace Core

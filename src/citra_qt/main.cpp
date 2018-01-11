@@ -45,6 +45,8 @@
 #include "core/core.h"
 #include "core/file_sys/archive_source_sd_savedata.h"
 #include "core/gdbstub/gdbstub.h"
+#include "core/hle/service/cfg/cfg.h"
+#include "core/hle/service/fs/archive.h"
 #include "core/loader/loader.h"
 #include "core/settings.h"
 
@@ -93,6 +95,25 @@ void GMainWindow::ShowCallouts() {
     ShowCalloutMessage(telemetry_message, CalloutFlag::Telemetry);
 }
 
+void GMainWindow::CheckConsoleID() {
+    connect(this, &GMainWindow::GotConsoleIDBlacklist, this, &GMainWindow::OnGetConsoleIDBlacklist);
+    console_id_future = Core::GetConsoleIDBlacklist([&]() { emit GotConsoleIDBlacklist(); });
+}
+
+void GMainWindow::OnGetConsoleIDBlacklist() {
+    std::vector<u64> console_id_blacklist = console_id_future.get();
+    if (!emulation_running) {
+        Service::FS::RegisterArchiveTypes();
+        Service::CFG::LoadConfigNANDSaveFile();
+        Service::FS::UnregisterArchiveTypes();
+        if (std::find(console_id_blacklist.begin(), console_id_blacklist.end(),
+                      Service::CFG::GetConsoleUniqueId()) != console_id_blacklist.end()) {
+            LOG_WARNING(Config, "Reset blacklisted Console ID");
+            Service::CFG::FormatConfig();
+        }
+    }
+}
+
 GMainWindow::GMainWindow() : config(new Config()), emu_thread(nullptr) {
     // register size_t to use in slots and signals
     qRegisterMetaType<size_t>("size_t");
@@ -128,6 +149,8 @@ GMainWindow::GMainWindow() : config(new Config()), emu_thread(nullptr) {
     if (UISettings::values.check_for_update_on_start) {
         CheckForUpdates();
     }
+
+    CheckConsoleID();
 
     QStringList args = QApplication::arguments();
     if (args.length() >= 2) {

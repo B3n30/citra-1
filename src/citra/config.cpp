@@ -164,6 +164,9 @@ void Config::ReadValues() {
         "WebService", "telemetry_endpoint_url", "https://services.citra-emu.org/api/telemetry");
     Settings::values.verify_endpoint_url = sdl2_config->Get(
         "WebService", "verify_endpoint_url", "https://services.citra-emu.org/api/profile");
+    Settings::values.console_id_blacklist_endpoint_url =
+        sdl2_config->Get("WebService", "console_id_blacklist_endpoint_url",
+                         "https://api.citra-emu.org/console/blacklist");
     Settings::values.citra_username = sdl2_config->Get("WebService", "citra_username", "");
     Settings::values.citra_token = sdl2_config->Get("WebService", "citra_token", "");
 }
