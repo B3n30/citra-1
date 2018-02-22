@@ -19,4 +19,16 @@ public:
 };
 
 } // namespace MVD
+
+namespace PS {
+
+class PS_PS final : public Interface {
+public:
+    PS_PS();
+
+    std::string GetPortName() const override {
+        return "ps:ps";
+    }
+};
+}
 } // namespace Service

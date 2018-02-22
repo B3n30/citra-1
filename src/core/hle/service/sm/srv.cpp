@@ -192,7 +192,7 @@ void SRV::RegisterService(Kernel::HLERequestContext& ctx) {
     u32 max_sessions = rp.Pop<u32>();
 
     std::string name(name_buf.data(), std::min(name_len, name_buf.size()));
-
+    LOG_ERROR(Service, "%s", name.c_str());
     auto port = service_manager->RegisterService(name, max_sessions);
 
     if (port.Failed()) {

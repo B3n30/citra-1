@@ -11,4 +11,11 @@ namespace MVD {
 void Init();
 
 } // namespace MVD
+
+
+namespace PS {
+
+void Init();
+
+} // namespace PS
 } // namespace Service

@@ -60,15 +60,7 @@ Module::Interface::Interface(std::shared_ptr<Module> mcu, const char* name, u32 
 
 void InstallInterfaces(SM::ServiceManager& service_manager) {
     auto mcu = std::make_shared<Module>();
-    std::make_shared<CAM>(mcu)->InstallAsService(service_manager);
-    std::make_shared<CDC>(mcu)->InstallAsService(service_manager);
-    std::make_shared<GPU>(mcu)->InstallAsService(service_manager);
-    std::make_shared<HID>(mcu)->InstallAsService(service_manager);
-    std::make_shared<HWC>(mcu)->InstallAsService(service_manager);
     std::make_shared<NWM>(mcu)->InstallAsService(service_manager);
-    std::make_shared<PLS>(mcu)->InstallAsService(service_manager);
-    std::make_shared<RTC>(mcu)->InstallAsService(service_manager);
-    std::make_shared<SND>(mcu)->InstallAsService(service_manager);
 }
 
 } // namespace MCU

@@ -14,4 +14,13 @@ void Init() {
 }
 
 } // namespace MVD
+
+namespace PS {
+
+void Init() {
+    AddService(new PS_PS());
+}
+
+} // namespace PS
+
 } // namespace Service

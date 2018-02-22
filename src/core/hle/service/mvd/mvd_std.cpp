@@ -29,4 +29,17 @@ MVD_STD::MVD_STD() {
 }
 
 } // namespace MVD
+
+
+namespace PS {
+
+const Interface::FunctionInfo FunctionTable[] = {
+    {0x00210100, nullptr, "OverrideOutputBuffers"}
+};
+
+PS_PS::PS_PS() {
+    Register(FunctionTable);
+}
+
+} // namespace MVD
 } // namespace Service

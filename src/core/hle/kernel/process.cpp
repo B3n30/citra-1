@@ -15,6 +15,64 @@
 #include "core/hle/kernel/vm_manager.h"
 #include "core/memory.h"
 
+class MYMMIO : public Memory::MMIORegion {
+public:
+    MYMMIO() {
+        mmio_data.fill(0);
+        mmio_data[0x1EC2202C-offset] = 1;
+        mmio_data[0x1EC220E0-offset] = 0x7;
+    }
+
+    bool IsValidAddress(VAddr addr) override {
+        if (addr >= 0x1EC22000 && addr <= 0x1EC22FFF)
+            return true;
+        return false;
+    }
+
+    u8 Read8(VAddr addr) override {
+        return 0;
+    }
+
+    u16 Read16(VAddr addr) override {
+        u16 value = mmio_data[addr-offset];
+        LOG_ERROR(HW_Memory, "Read from 0x%08x returned 0x%08x", addr, value);
+        return value;
+    }
+
+    u32 Read32(VAddr addr) override {
+        return 0;
+    }
+
+    u64 Read64(VAddr addr) override {
+        return 0;
+    }
+
+    bool ReadBlock(VAddr src_addr, void* dest_buffer, size_t size) override {
+        return true;
+    }
+
+    void Write8(VAddr addr, u8 data) override {}
+    void Write16(VAddr addr, u16 data) override {
+        switch (addr) {
+        case 0x1EC22100:
+            break;
+        default:
+            mmio_data[addr-offset] = data;
+            break;
+        }
+        LOG_ERROR(HW_Memory, "Write to 0x%08x with value 0x%08x", addr, data);
+    }
+    void Write32(VAddr addr, u32 data)  override {}
+    void Write64(VAddr addr, u64 data)  override {}
+
+    bool WriteBlock(VAddr dest_addr, const void* src_buffer, size_t size) override {
+        return true;
+    }
+    private:
+        const size_t offset = 0x1EC22000;
+        std::array<u16,0x1EC22FFFF-0x1EC22000> mmio_data;
+};
+
 namespace Kernel {
 
 // Lists all processes that exist in the current session.
@@ -136,6 +194,9 @@ void Process::Run(s32 main_thread_priority, u32 stack_size) {
     MapSegment(codeset->code, VMAPermission::ReadExecute, MemoryState::Code);
     MapSegment(codeset->rodata, VMAPermission::Read, MemoryState::Code);
     MapSegment(codeset->data, VMAPermission::ReadWrite, MemoryState::Private);
+
+    Memory::MMIORegionPointer mmio_handler(std::make_shared<MYMMIO>());
+    vm_manager.MapMMIO(0x1E000000, 0, 0x1000000, MemoryState::Code, mmio_handler);
 
     // Allocate and map stack
     vm_manager

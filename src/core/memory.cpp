@@ -21,6 +21,9 @@
 
 namespace Memory {
 
+
+static u16 value(0x8);
+
 static std::array<u8, Memory::VRAM_SIZE> vram;
 static std::array<u8, Memory::N3DS_EXTRA_RAM_SIZE> n3ds_extra_ram;
 
@@ -153,6 +156,13 @@ T Read(const VAddr vaddr) {
     switch (type) {
     case PageType::Unmapped:
         LOG_ERROR(HW_Memory, "unmapped Read%lu @ 0x%08X", sizeof(T) * 8, vaddr);
+        if (vaddr == 0x1EC220D8)
+            return 0x1010;
+        if (vaddr == 0x1EC2202C)
+            return 0x1;
+        if (vaddr == 0x1EC220E0)
+            value--;
+            return value;
         return 0;
     case PageType::Memory:
         ASSERT_MSG(false, "Mapped memory page without a pointer @ %08X", vaddr);

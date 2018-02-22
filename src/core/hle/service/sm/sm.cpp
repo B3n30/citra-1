@@ -34,7 +34,7 @@ void ServiceManager::InstallInterfaces(std::shared_ptr<ServiceManager> self) {
 
 ResultVal<Kernel::SharedPtr<Kernel::ServerPort>> ServiceManager::RegisterService(
     std::string name, unsigned int max_sessions) {
-
+    LOG_ERROR(Service, "%s", name.c_str());
     CASCADE_CODE(ValidateServiceName(name));
 
     if (registered_services.find(name) != registered_services.end())

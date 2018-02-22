@@ -53,6 +53,8 @@
 #include "core/hle/service/ssl_c.h"
 #include "core/hle/service/y2r_u.h"
 
+#include "core/loader/loader.h"
+
 using Kernel::ClientPort;
 using Kernel::ServerPort;
 using Kernel::ServerSession;
@@ -88,6 +90,11 @@ void Interface::HandleSyncRequest(SharedPtr<ServerSession> server_session) {
 
     u32* cmd_buff = Kernel::GetCommandBuffer();
     auto itr = m_functions.find(cmd_buff[0]);
+
+    if (GetPortName() == "nwm::UDS") {
+        LOG_ERROR(Service, "%s",
+              MakeFunctionString(itr->second.name, GetPortName().c_str(), cmd_buff).c_str());
+    }
 
     if (itr == m_functions.end() || itr->second.func == nullptr) {
         std::string function_name = (itr == m_functions.end())
@@ -170,6 +177,12 @@ void ServiceFrameworkBase::HandleSyncRequest(SharedPtr<ServerSession> server_ses
     u32 header_code = cmd_buf[0];
     auto itr = handlers.find(header_code);
     const FunctionInfoBase* info = itr == handlers.end() ? nullptr : &itr->second;
+
+    if (GetServiceName() == "nwm::UDS") {
+        LOG_ERROR(Service, "%s",
+              MakeFunctionString(info->name, GetServiceName().c_str(), cmd_buf).c_str());
+    }
+
     if (info == nullptr || info->handler_callback == nullptr) {
         return ReportUnimplementedFunction(cmd_buf, info);
     }
@@ -275,6 +288,7 @@ void Init() {
     BOSS::Init();
     CAM::InstallInterfaces(*SM::g_service_manager);
     CECD::Init();
+    PS::Init();
     CFG::Init();
     DLP::Init();
     FRD::Init();
@@ -286,7 +300,9 @@ void Init() {
     NEWS::Init();
     NFC::Init();
     NIM::Init();
-    NWM::Init();
+    //NWM::Init();
+    SharedPtr<Kernel::Process> temp_process;
+    Loader::GetLoader("/Users/bthomas/Downloads/3ds_games/nwm.cxi")->Load(temp_process);
     PTM::InstallInterfaces(*SM::g_service_manager);
     QTM::Init();
 
