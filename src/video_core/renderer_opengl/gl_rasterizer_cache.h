@@ -301,6 +301,8 @@ public:
     RasterizerCacheOpenGL();
     ~RasterizerCacheOpenGL();
 
+    void ClearCacheOpenGL();
+
     /// Blit one surface's texture to another
     bool BlitSurfaces(const Surface& src_surface, const MathUtil::Rectangle<u32>& src_rect,
                       const Surface& dst_surface, const MathUtil::Rectangle<u32>& dst_rect);

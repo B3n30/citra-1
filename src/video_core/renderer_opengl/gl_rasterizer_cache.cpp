@@ -994,6 +994,12 @@ RasterizerCacheOpenGL::~RasterizerCacheOpenGL() {
         UnregisterSurface(*surface_cache.begin()->second.begin());
 }
 
+void RasterizerCacheOpenGL::ClearCacheOpenGL() {
+    FlushAll();
+    while (!surface_cache.empty())
+        UnregisterSurface(*surface_cache.begin()->second.begin());
+}
+
 bool RasterizerCacheOpenGL::BlitSurfaces(const Surface& src_surface,
                                          const MathUtil::Rectangle<u32>& src_rect,
                                          const Surface& dst_surface,

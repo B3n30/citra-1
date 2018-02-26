@@ -194,6 +194,14 @@ static ResultCode WriteHWRegsWithMask(u32 base_address, u32 size_in_bytes,
     }
 }
 
+void GSP_GPU::ClientDisconnected(Kernel::SharedPtr<Kernel::ServerSession> server_session) {
+    SessionData* session_data = GetSessionData(server_session);
+    if (active_thread_id == session_data->thread_id) {
+        active_thread_id = -1;
+    }
+    SessionRequestHandler::ClientDisconnected(server_session);
+};
+
 void GSP_GPU::WriteHWRegs(Kernel::HLERequestContext& ctx) {
     IPC::RequestParser rp(ctx, 0x1, 2, 2);
     u32 reg_addr = rp.Pop<u32>();

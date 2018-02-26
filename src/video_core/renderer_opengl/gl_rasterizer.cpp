@@ -950,6 +950,11 @@ void RasterizerOpenGL::FlushAll() {
     res_cache.FlushAll();
 }
 
+void RasterizerOpenGL::ClearCache() {
+    MICROPROFILE_SCOPE(OpenGL_CacheManagement);
+    res_cache.ClearCacheOpenGL();
+}
+
 void RasterizerOpenGL::FlushRegion(PAddr addr, u32 size) {
     MICROPROFILE_SCOPE(OpenGL_CacheManagement);
     res_cache.FlushRegion(addr, size);

@@ -17,6 +17,7 @@
 #include "core/hle/service/apt/apt_s.h"
 #include "core/hle/service/apt/apt_u.h"
 #include "core/hle/service/apt/bcfnt/bcfnt.h"
+#include "core/hle/service/apt/errors.h"
 #include "core/hle/service/cfg/cfg.h"
 #include "core/hle/service/fs/archive.h"
 #include "core/hle/service/ptm/ptm.h"
@@ -491,6 +492,35 @@ void Module::Interface::PrepareToStartLibraryApplet(Kernel::HLERequestContext& c
     IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
     rb.Push(apt->applet_manager->PrepareToStartLibraryApplet(applet_id));
 }
+
+void Module::Interface::PrepareToCloseLibraryApplet(Kernel::HLERequestContext& ctx) {
+    IPC::RequestParser rp(ctx, 0x25, 3, 0); // 0x002500C0
+    bool not_pause = rp.Pop<bool>();
+    bool exiting = rp.Pop<bool>();
+    bool jump_to_home = rp.Pop<bool>();
+
+    LOG_DEBUG(Service_APT, "called not_pause=%u exiting=%u jump_to_home=%u",
+              static_cast<u32>(not_pause), static_cast<u32>(exiting),
+              static_cast<u32>(jump_to_home));
+    ResultCode result = apt->applet_manager->PrepareToCloseLibraryApplet(not_pause, exiting, jump_to_home);
+    IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
+    rb.Push(result);
+
+}
+
+void Module::Interface::CloseLibraryApplet(Kernel::HLERequestContext& ctx) {
+    IPC::RequestParser rp(ctx, 0x28, 1, 4); // 0x00280044
+    u32 parameter_size = rp.Pop<u32>();
+    Kernel::Handle handle = rp.PopHandle();
+
+    std::vector<u8> buffer = rp.PopStaticBuffer();
+    LOG_DEBUG(Service_APT, "called size=%u handle=%u", parameter_size, static_cast<u32>(handle));
+    ResultCode result = apt->applet_manager->CloseLibraryApplet(parameter_size, buffer, handle);
+
+    IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
+    rb.Push(result);
+}
+
 
 void Module::Interface::PrepareToStartNewestHomeMenu(Kernel::HLERequestContext& ctx) {
     IPC::RequestParser rp(ctx, 0x1A, 0, 0); // 0x1A0000

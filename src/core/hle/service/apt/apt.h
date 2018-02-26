@@ -361,6 +361,10 @@ public:
          */
         void PrepareToStartLibraryApplet(Kernel::HLERequestContext& ctx);
 
+        void PrepareToCloseLibraryApplet(Kernel::HLERequestContext& ctx);
+
+        void CloseLibraryApplet(Kernel::HLERequestContext& ctx);
+
         /**
          * APT::PrepareToStartNewestHomeMenu service function
          *  Inputs:

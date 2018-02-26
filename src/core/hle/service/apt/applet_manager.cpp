@@ -4,6 +4,7 @@
 
 #include "common/common_paths.h"
 #include "core/hle/applets/applet.h"
+#include "core/hle/kernel/handle_table.h"
 #include "core/hle/service/apt/applet_manager.h"
 #include "core/hle/service/apt/errors.h"
 #include "core/hle/service/cfg/cfg.h"
@@ -335,6 +336,48 @@ ResultCode AppletManager::PrepareToStartLibraryApplet(AppletId applet_id) {
     } else {
         return HLE::Applets::Applet::Create(applet_id, shared_from_this());
     }
+}
+
+ResultCode AppletManager::PrepareToCloseLibraryApplet(bool not_pause, bool exiting, bool jump_to_home) {
+
+    if (next_parameter) {
+        return ResultCode(ErrCodes::ParameterPresent, ErrorModule::Applet,
+                           ErrorSummary::InvalidState, ErrorLevel::Status);
+    }
+
+    if (!not_pause)
+        library_applet_closing_command = SignalType::WakeupByPause;
+    else if (jump_to_home)
+        library_applet_closing_command = SignalType::WakeupToJumpHome;
+    else if (exiting)
+        library_applet_closing_command = SignalType::WakeupByCancel;
+    else
+        library_applet_closing_command = SignalType::WakeupByExit;
+
+    return RESULT_SUCCESS;
+}
+
+ResultCode AppletManager::CloseLibraryApplet(u32 parameter_size, std::vector<u8>& buffer, Kernel::Handle handle) {
+    auto& slot = applet_slots[static_cast<size_t>(AppletManager::AppletSlot::LibraryApplet)];
+
+    MessageParameter param;
+
+    param.buffer = std::move(buffer);
+    // TODO(Subv): The destination id should be the "current applet slot id", which changes
+    // constantly depending on what is going on in the system. Most of the time it is the running
+    // application, but it could be something else if a system applet is launched.
+    param.destination_id = AppletId::Application;
+    param.sender_id = slot.applet_id;
+    param.object = Kernel::g_handle_table.GetGeneric(handle);
+    param.signal = library_applet_closing_command;
+    SendParameter(param);
+
+    if (library_applet_closing_command != SignalType::WakeupByPause) {
+        // TODO(Subv): Terminate the running applet title
+        slot.Reset();
+    }
+
+    return RESULT_SUCCESS;
 }
 
 ResultCode AppletManager::PreloadLibraryApplet(AppletId applet_id) {

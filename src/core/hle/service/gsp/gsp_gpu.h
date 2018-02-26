@@ -212,6 +212,8 @@ public:
      */
     FrameBufferUpdate* GetFrameBufferInfo(u32 thread_id, u32 screen_index);
 
+    void ClientDisconnected(Kernel::SharedPtr<Kernel::ServerSession> server_session) override;
+
 private:
     /**
      * Signals that the specified interrupt type has occurred to userland code for the specified GSP
