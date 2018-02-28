@@ -32,14 +32,8 @@ enum class PageType {
     Unmapped,
     /// Page is mapped to regular memory. This is the only type you can get pointers to.
     Memory,
-    /// Page is mapped to regular memory, but also needs to check for rasterizer cache flushing and
-    /// invalidation
-    RasterizerCachedMemory,
     /// Page is mapped to a I/O region. Writing and reading to this page is handled by functions.
     Special,
-    /// Page is mapped to a I/O region, but also needs to check for rasterizer cache flushing and
-    /// invalidation
-    RasterizerCachedSpecial,
 };
 
 struct SpecialRegion {
@@ -238,10 +232,6 @@ boost::optional<VAddr> PhysicalToVirtualAddress(PAddr addr);
  */
 u8* GetPhysicalPointer(PAddr address);
 
-/**
- * Mark each page touching the region as cached.
- */
-void RasterizerMarkRegionCached(PAddr start, u32 size, bool cached);
 
 /**
  * Flushes any externally cached rasterizer resources touching the given region.

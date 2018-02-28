@@ -994,10 +994,8 @@ RasterizerCacheOpenGL::~RasterizerCacheOpenGL() {
         UnregisterSurface(*surface_cache.begin()->second.begin());
 }
 
-void RasterizerCacheOpenGL::ClearCacheOpenGL() {
-    FlushAll();
-    while (!surface_cache.empty())
-        UnregisterSurface(*surface_cache.begin()->second.begin());
+bool RasterizerCacheOpenGL::IsCached(PAddr paddr) {
+    return boost::icl::contains(cached_pages, paddr);
 }
 
 bool RasterizerCacheOpenGL::BlitSurfaces(const Surface& src_surface,
@@ -1588,25 +1586,5 @@ void RasterizerCacheOpenGL::UpdatePagesCachedCount(PAddr addr, u32 size, int del
     // Interval maps will erase segments if count reaches 0, so if delta is negative we have to
     // subtract after iterating
     const auto pages_interval = PageMap::interval_type::right_open(page_start, page_end);
-    if (delta > 0)
-        cached_pages.add({pages_interval, delta});
-
-    for (auto& pair : RangeFromInterval(cached_pages, pages_interval)) {
-        const auto interval = pair.first & pages_interval;
-        const int count = pair.second;
-
-        const PAddr interval_start_addr = boost::icl::first(interval) << Memory::PAGE_BITS;
-        const PAddr interval_end_addr = boost::icl::last_next(interval) << Memory::PAGE_BITS;
-        const u32 interval_size = interval_end_addr - interval_start_addr;
-
-        if (delta > 0 && count == delta)
-            Memory::RasterizerMarkRegionCached(interval_start_addr, interval_size, true);
-        else if (delta < 0 && count == -delta)
-            Memory::RasterizerMarkRegionCached(interval_start_addr, interval_size, false);
-        else
-            ASSERT(count >= 0);
-    }
-
-    if (delta < 0)
-        cached_pages.add({pages_interval, delta});
+    cached_pages.add({pages_interval, delta});
 }

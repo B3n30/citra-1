@@ -42,7 +42,7 @@ public:
     void DrawTriangles() override;
     void NotifyPicaRegisterChanged(u32 id) override;
     void FlushAll() override;
-    void ClearCache() override;
+    bool IsCached(PAddr paddr) override;
     void FlushRegion(PAddr addr, u32 size) override;
     void InvalidateRegion(PAddr addr, u32 size) override;
     void FlushAndInvalidateRegion(PAddr addr, u32 size) override;

@@ -35,7 +35,7 @@ public:
     /// Notify rasterizer that all caches should be flushed to 3DS memory
     virtual void FlushAll() = 0;
 
-    virtual void ClearCache() {}
+    virtual bool IsCached(PAddr paddr) = 0;
 
     /// Notify rasterizer that any caches of the specified region should be flushed to 3DS memory
     virtual void FlushRegion(PAddr addr, u32 size) = 0;
