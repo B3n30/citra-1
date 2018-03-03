@@ -567,7 +567,7 @@ void Module::Interface::ReceiveCaptureBufferInfo(Kernel::HLERequestContext& ctx)
 
     IPC::RequestBuilder rb = rp.MakeBuilder(1, 2);
     rb.Push(RESULT_SUCCESS);
-    rb.PushStaticBuffer(apt->screen_capture_buffer, 0);
+    rb.PushStaticBuffer(std::move(apt->screen_capture_buffer), 0);
 }
 
 void Module::Interface::SetScreenCapPostPermission(Kernel::HLERequestContext& ctx) {
