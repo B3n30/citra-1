@@ -554,7 +554,6 @@ void Module::Interface::SendCaptureBufferInfo(Kernel::HLERequestContext& ctx) {
     IPC::RequestParser rp(ctx, 0x40, 1, 2);  // 0x00400042
     u32 size = rp.Pop<u32>();
     ASSERT(size == 0x20);
-    apt->screen_capture_buffer.resize(size);
     apt->screen_capture_buffer = rp.PopStaticBuffer();
 
     IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
@@ -566,7 +565,7 @@ void Module::Interface::ReceiveCaptureBufferInfo(Kernel::HLERequestContext& ctx)
     u32 size = rp.Pop<u32>();
     ASSERT(size == 0x20);
 
-    IPC::RequestBuilder rb = rp.MakeBuilder(1, 1);
+    IPC::RequestBuilder rb = rp.MakeBuilder(1, 2);
     rb.Push(RESULT_SUCCESS);
     rb.PushStaticBuffer(apt->screen_capture_buffer, 0);
 }
