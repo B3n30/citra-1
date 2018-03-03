@@ -565,8 +565,9 @@ void Module::Interface::ReceiveCaptureBufferInfo(Kernel::HLERequestContext& ctx)
     u32 size = rp.Pop<u32>();
     ASSERT(size == 0x20);
 
-    IPC::RequestBuilder rb = rp.MakeBuilder(1, 2);
+    IPC::RequestBuilder rb = rp.MakeBuilder(2, 2);
     rb.Push(RESULT_SUCCESS);
+    rb.Push(apt->screen_capture_buffer.size());
     rb.PushStaticBuffer(std::move(apt->screen_capture_buffer), 0);
 }
 
