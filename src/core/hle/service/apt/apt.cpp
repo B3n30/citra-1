@@ -551,7 +551,7 @@ void Module::Interface::CancelLibraryApplet(Kernel::HLERequestContext& ctx) {
 }
 
 void Module::Interface::SendCaptureBufferInfo(Kernel::HLERequestContext& ctx) {
-    IPC::RequestParser rp(ctx, 0x40, 1, 2);  // 0x00400042
+    IPC::RequestParser rp(ctx, 0x40, 1, 2); // 0x00400042
     u32 size = rp.Pop<u32>();
     ASSERT(size == 0x20);
     apt->screen_capture_buffer = rp.PopStaticBuffer();
@@ -561,7 +561,7 @@ void Module::Interface::SendCaptureBufferInfo(Kernel::HLERequestContext& ctx) {
 }
 
 void Module::Interface::ReceiveCaptureBufferInfo(Kernel::HLERequestContext& ctx) {
-    IPC::RequestParser rp(ctx, 0x41, 1, 0);  // 0x00410040
+    IPC::RequestParser rp(ctx, 0x41, 1, 0); // 0x00410040
     u32 size = rp.Pop<u32>();
     ASSERT(size == 0x20);
 
