@@ -904,7 +904,7 @@ void NWM_UDS::SendTo(Kernel::HLERequestContext& ctx) {
     u8 data_channel = rp.Pop<u8>();
     rp.Skip(1, false);
     u32 data_size = rp.Pop<u32>();
-    u32 flags = rp.Pop<u32>();
+    u8 flags = rp.Pop<u8>();
 
     std::vector<u8> input_buffer = rp.PopStaticBuffer();
     ASSERT(input_buffer.size() >= data_size);
@@ -929,7 +929,7 @@ void NWM_UDS::SendTo(Kernel::HLERequestContext& ctx) {
     Network::MacAddress dest_address;
 
     if (!(flags & 0x1) || (flags >> 2)) {
-        LOG_ERROR(Service_NWM, "Unexpected flags 0x%08X", flags);
+        LOG_ERROR(Service_NWM, "Unexpected flags 0x%02X", flags);
     }
 
     if (flags & (0x1 << 1)) {
