@@ -937,8 +937,20 @@ void NWM_UDS::SendTo(Kernel::HLERequestContext& ctx) {
         dest_address = Network::BroadcastMac;
     } else {
         if (connection_status.status == static_cast<u32>(NetworkStatus::ConnectedAsHost)) {
-            ASSERT_MSG(false, "Direct messages from the host to one client aren't implemented yet");
+            // Send from host to specific client
+            auto destination =
+                std::find_if(node_map.begin(), node_map.end(), [dest_node_id](const auto& node) {
+                    return node.second == dest_node_id;
+                });
+            if (destination != node_map.end()) {
+                rb.Push(ResultCode(ErrorDescription::NotFound, ErrorModule::UDS,
+                                   ErrorSummary::WrongArgument, ErrorLevel::Status));
+                return;
+            }
+            dest_address = destination->first;
         } else if (dest_node_id != 0) {
+            // TODO(B3N30): Find a way to store the mac address together with the node id on the clients
+            // if necessary
             ASSERT_MSG(
                 false,
                 "Direct messages from the one client to another client aren't implemented yet");
