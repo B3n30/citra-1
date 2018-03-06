@@ -926,7 +926,27 @@ void NWM_UDS::SendTo(Kernel::HLERequestContext& ctx) {
         return;
     }
 
-    // TODO(B3N30): Do something with the flags.
+    Network::MacAddress dest_address;
+
+    if (!(flags & 0x1) || (flags >> 2)) {
+        LOG_ERROR(Service_NWM, "Unexpected flags 0x%08X", flags);
+    }
+
+    if (flags & (0x1 << 1)) {
+        // Broadcast and don't listen to the dest node id
+        dest_address = Network::BroadcastMac;
+    } else {
+        if (connection_status.status == static_cast<u32>(NetworkStatus::ConnectedAsHost)) {
+            ASSERT_MSG(false, "Direct messages from the host to one client aren't implemented yet");
+        } else if (dest_node_id != 0) {
+            ASSERT_MSG(
+                false,
+                "Direct messages from the one client to another client aren't implemented yet");
+        } else {
+            // Send message to host
+            dest_address = network_info.host_mac_address;
+        }
+    }
 
     constexpr size_t MaxSize = 0x5C6;
     if (data_size > MaxSize) {
@@ -945,12 +965,8 @@ void NWM_UDS::SendTo(Kernel::HLERequestContext& ctx) {
     // and encapsulate the payload.
 
     Network::WifiPacket packet;
-    // Data frames are sent to the host, who then decides where to route it to. If we're the host,
-    // just directly broadcast the frame.
-    if (connection_status.status == static_cast<u32>(NetworkStatus::ConnectedAsHost))
-        packet.destination_address = Network::BroadcastMac;
-    else
-        packet.destination_address = network_info.host_mac_address;
+
+    packet.destination_address = dest_address;
     packet.channel = network_channel;
     packet.data = std::move(data_payload);
     packet.type = Network::WifiPacket::PacketType::Data;
