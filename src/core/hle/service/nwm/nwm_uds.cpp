@@ -151,6 +151,43 @@ static u16 GetNextAvailableNodeId() {
     ASSERT_MSG(false, "No available connection slots in the network");
 }
 
+static void BroadcastNodeMap() {
+    // Note: This is not how UDS on a 3ds does it but it shouldn't be
+    // necessary for citra
+    Network::WifiPacket packet;
+    packet.channel = network_channel;
+    packet.type = Network::WifiPacket::PacketType::NodeMap;
+    packet.destination_address = Network::BroadcastMac;
+    size_t size = node_map.size();
+    packet.data.resize(sizeof(size) + (sizeof(Network::MacAddress) + sizeof(u32)) * size);
+    std::memcpy(packet.data.data(), &size, sizeof(size));
+    size_t offset = sizeof(size);
+    for (auto node : node_map) {
+        std::memcpy(packet.data.data() + offset, node.first.data(), sizeof(node.first));
+        std::memcpy(packet.data.data() + offset + sizeof(node.first), &node.second,
+                    sizeof(node.second));
+        offset += sizeof(Network::MacAddress) + sizeof(u32);
+    }
+
+    SendPacket(packet);
+}
+
+static void HandleNodeMapPacket(const Network::WifiPacket& packet) {
+    std::lock_guard<std::mutex> lock(connection_status_mutex);
+    node_map.clear();
+    size_t num_entries;
+    Network::MacAddress address;
+    u32 id;
+    std::memcpy(&num_entries, packet.data.data(), sizeof(num_entries));
+    size_t offset = sizeof(num_entries);
+    for (size_t i = 0; i < num_entries; ++i) {
+        std::memcpy(&address, packet.data.data() + offset, sizeof(address));
+        std::memcpy(&id, packet.data.data() + offset + sizeof(address), sizeof(id));
+        node_map[address] = id;
+        offset += sizeof(address) + sizeof(id);
+    }
+}
+
 // Inserts the received beacon frame in the beacon queue and removes any older beacons if the size
 // limit is exceeded.
 void HandleBeaconFrame(const Network::WifiPacket& packet) {
@@ -243,8 +280,8 @@ static void HandleEAPoLPacket(const Network::WifiPacket& packet) {
         eapol_logoff.type = WifiPacket::PacketType::Data;
 
         SendPacket(eapol_logoff);
-        // TODO(B3N30): Broadcast updated node list
-        // The 3ds does this presumably to support spectators.
+        BroadcastNodeMap();
+
         connection_status_event->Signal();
     } else {
         if (connection_status.status != static_cast<u32>(NetworkStatus::Connecting)) {
@@ -474,6 +511,9 @@ void OnWifiPacketReceived(const Network::WifiPacket& packet) {
     case Network::WifiPacket::PacketType::Deauthentication:
         HandleDeauthenticationFrame(packet);
         break;
+    case Network::WifiPacket::PacketType::NodeMap:
+        HandleNodeMapPacket(packet);
+        break;
     }
 }
 
@@ -487,6 +527,7 @@ void NWM_UDS::Shutdown(Kernel::HLERequestContext& ctx) {
         bind_node.second.event->Signal();
     }
     channel_data.clear();
+    node_map.clear();
 
     recv_buffer_memory.reset();
 
@@ -839,6 +880,7 @@ void NWM_UDS::DestroyNetwork(Kernel::HLERequestContext& ctx) {
     connection_status = {};
     connection_status.status = static_cast<u32>(NetworkStatus::NotConnected);
     connection_status.network_node_id = tmp_node_id;
+    node_map.clear();
     connection_status_event->Signal();
 
     IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
@@ -867,6 +909,7 @@ void NWM_UDS::DisconnectNetwork(Kernel::HLERequestContext& ctx) {
             connection_status = {};
             connection_status.status = static_cast<u32>(NetworkStatus::ConnectedAsHost);
             connection_status.network_node_id = tmp_node_id;
+            node_map.clear();
             LOG_DEBUG(Service_NWM, "called as a host");
             rb.Push(ResultCode(ErrCodes::WrongStatus, ErrorModule::UDS, ErrorSummary::InvalidState,
                                ErrorLevel::Status));
@@ -876,6 +919,7 @@ void NWM_UDS::DisconnectNetwork(Kernel::HLERequestContext& ctx) {
         connection_status = {};
         connection_status.status = static_cast<u32>(NetworkStatus::NotConnected);
         connection_status.network_node_id = tmp_node_id;
+        node_map.clear();
         connection_status_event->Signal();
 
         deauth.channel = network_channel;
@@ -921,6 +965,7 @@ void NWM_UDS::SendTo(Kernel::HLERequestContext& ctx) {
     }
 
     if (dest_node_id == connection_status.network_node_id) {
+        LOG_ERROR(Service_NWM, "tried to send packet to unknown dest id");
         rb.Push(ResultCode(ErrorDescription::NotFound, ErrorModule::UDS,
                            ErrorSummary::WrongArgument, ErrorLevel::Status));
         return;
@@ -942,18 +987,25 @@ void NWM_UDS::SendTo(Kernel::HLERequestContext& ctx) {
                 std::find_if(node_map.begin(), node_map.end(), [dest_node_id](const auto& node) {
                     return node.second == dest_node_id;
                 });
-            if (destination != node_map.end()) {
+            if (destination == node_map.end()) {
+                LOG_ERROR(Service_NWM, "tried to send packet to unknown dest id");
                 rb.Push(ResultCode(ErrorDescription::NotFound, ErrorModule::UDS,
                                    ErrorSummary::WrongArgument, ErrorLevel::Status));
                 return;
             }
             dest_address = destination->first;
         } else if (dest_node_id != 0) {
-            // TODO(B3N30): Find a way to store the mac address together with the node id on the clients
-            // if necessary
-            ASSERT_MSG(
-                false,
-                "Direct messages from the one client to another client aren't implemented yet");
+            auto destination =
+                std::find_if(node_map.begin(), node_map.end(), [dest_node_id](const auto& node) {
+                    return node.second == dest_node_id;
+                });
+            if (destination == node_map.end()) {
+                LOG_ERROR(Service_NWM, "tried to send packet to unknown dest id");
+                rb.Push(ResultCode(ErrorDescription::NotFound, ErrorModule::UDS,
+                                   ErrorSummary::WrongArgument, ErrorLevel::Status));
+                return;
+            }
+            dest_address = destination->first;
         } else {
             // Send message to host
             dest_address = network_info.host_mac_address;
