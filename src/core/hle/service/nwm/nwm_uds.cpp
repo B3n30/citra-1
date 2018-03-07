@@ -162,7 +162,7 @@ static void BroadcastNodeMap() {
     packet.data.resize(sizeof(size) + (sizeof(Network::MacAddress) + sizeof(u32)) * size);
     std::memcpy(packet.data.data(), &size, sizeof(size));
     size_t offset = sizeof(size);
-    for (auto node : node_map) {
+    for (const auto& node : node_map) {
         std::memcpy(packet.data.data() + offset, node.first.data(), sizeof(node.first));
         std::memcpy(packet.data.data() + offset + sizeof(node.first), &node.second,
                     sizeof(node.second));
