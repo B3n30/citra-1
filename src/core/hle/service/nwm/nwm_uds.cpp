@@ -977,30 +977,18 @@ void NWM_UDS::SendTo(Kernel::HLERequestContext& ctx) {
         LOG_ERROR(Service_NWM, "Unexpected flags 0x%02X", flags);
     }
 
-    if (flags & (0x1 << 1)) {
+    if ((flags & (0x1 << 1)) || dest_node_id == 0xFFFF) {
         // Broadcast and don't listen to the dest node id
         dest_address = Network::BroadcastMac;
     } else {
-        if (connection_status.status == static_cast<u32>(NetworkStatus::ConnectedAsHost)) {
+        if ((connection_status.status == static_cast<u32>(NetworkStatus::ConnectedAsHost)) || dest_node_id != 0) {
             // Send from host to specific client
             auto destination =
                 std::find_if(node_map.begin(), node_map.end(), [dest_node_id](const auto& node) {
                     return node.second == dest_node_id;
                 });
             if (destination == node_map.end()) {
-                LOG_ERROR(Service_NWM, "tried to send packet to unknown dest id");
-                rb.Push(ResultCode(ErrorDescription::NotFound, ErrorModule::UDS,
-                                   ErrorSummary::WrongArgument, ErrorLevel::Status));
-                return;
-            }
-            dest_address = destination->first;
-        } else if (dest_node_id != 0) {
-            auto destination =
-                std::find_if(node_map.begin(), node_map.end(), [dest_node_id](const auto& node) {
-                    return node.second == dest_node_id;
-                });
-            if (destination == node_map.end()) {
-                LOG_ERROR(Service_NWM, "tried to send packet to unknown dest id");
+                LOG_ERROR(Service_NWM, "tried to send packet to unknown dest id %u", dest_node_id);
                 rb.Push(ResultCode(ErrorDescription::NotFound, ErrorModule::UDS,
                                    ErrorSummary::WrongArgument, ErrorLevel::Status));
                 return;
@@ -1331,3 +1319,4 @@ NWM_UDS::~NWM_UDS() {
 
 } // namespace NWM
 } // namespace Service
+
