@@ -144,7 +144,7 @@ void SendPacket(Network::WifiPacket& packet) {
 static u16 GetNextAvailableNodeId() {
     for (u16 index = 0; index < connection_status.max_nodes; ++index) {
         if ((connection_status.node_bitmask & (1 << index)) == 0)
-            return index;
+            return index + 1;
     }
 
     // Any connection attempts to an already full network should have been refused.
@@ -254,11 +254,11 @@ static void HandleEAPoLPacket(const Network::WifiPacket& packet) {
 
         // Get an unused network node id
         u16 node_id = GetNextAvailableNodeId();
-        node.network_node_id = node_id + 1;
+        node.network_node_id = node_id;
 
-        connection_status.node_bitmask |= 1 << node_id;
-        connection_status.changed_nodes |= 1 << node_id;
-        connection_status.nodes[node_id] = node.network_node_id;
+        connection_status.node_bitmask |= 1 << (node_id - 1);
+        connection_status.changed_nodes |= 1 << (node_id - 1);
+        connection_status.nodes[node_id - 1] = node.network_node_id;
         connection_status.total_nodes++;
 
         u8 current_nodes = network_info.total_nodes;
@@ -474,8 +474,8 @@ void HandleDeauthenticationFrame(const Network::WifiPacket& packet) {
     });
     ASSERT(node != node_info.end());
 
-    connection_status.node_bitmask &= ~(1 << (node_id-1));
-    connection_status.changed_nodes |= 1 << (node_id-1);
+    connection_status.node_bitmask &= ~(1 << (node_id - 1));
+    connection_status.changed_nodes |= 1 << (node_id - 1);
     connection_status.total_nodes--;
 
     network_info.total_nodes--;
@@ -951,6 +951,9 @@ void NWM_UDS::SendTo(Kernel::HLERequestContext& ctx) {
     u32 data_size = rp.Pop<u32>();
     u8 flags = rp.Pop<u8>();
 
+    // There should never be a dest_node_id of 0
+    ASSERT(dest_node_id != 0);
+
     std::vector<u8> input_buffer = rp.PopStaticBuffer();
     ASSERT(input_buffer.size() >= data_size);
     input_buffer.resize(data_size);
@@ -985,9 +988,8 @@ void NWM_UDS::SendTo(Kernel::HLERequestContext& ctx) {
                dest_node_id != 1) {
         // Send to specific client
         auto destination =
-            std::find_if(node_map.begin(), node_map.end(), [dest_node_id](const auto& node) {
-                return node.second == dest_node_id;
-            });
+            std::find_if(node_map.begin(), node_map.end(),
+                         [dest_node_id](const auto& node) { return node.second == dest_node_id; });
         if (destination == node_map.end()) {
             LOG_ERROR(Service_NWM, "tried to send packet to unknown dest id %u", dest_node_id);
             rb.Push(ResultCode(ErrorDescription::NotFound, ErrorModule::UDS,
