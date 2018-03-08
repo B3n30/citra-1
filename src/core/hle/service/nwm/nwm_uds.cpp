@@ -266,7 +266,7 @@ static void HandleEAPoLPacket(const Network::WifiPacket& packet) {
 
         network_info.total_nodes++;
 
-        node_map[packet.transmitter_address] = node_id;
+        node_map[packet.transmitter_address] = node.network_node_id;
 
         // Send the EAPoL-Logoff packet.
         using Network::WifiPacket;
@@ -470,12 +470,12 @@ void HandleDeauthenticationFrame(const Network::WifiPacket& packet) {
 
     u16 node_id = node_map[packet.transmitter_address];
     auto node = std::find_if(node_info.begin(), node_info.end(), [&node_id](const NodeInfo& info) {
-        return info.network_node_id == node_id + 1;
+        return info.network_node_id == node_id;
     });
     ASSERT(node != node_info.end());
 
-    connection_status.node_bitmask &= ~(1 << node_id);
-    connection_status.changed_nodes |= 1 << node_id;
+    connection_status.node_bitmask &= ~(1 << (node_id-1));
+    connection_status.changed_nodes |= 1 << (node_id-1);
     connection_status.total_nodes--;
 
     network_info.total_nodes--;
@@ -986,7 +986,7 @@ void NWM_UDS::SendTo(Kernel::HLERequestContext& ctx) {
         // Send to specific client
         auto destination =
             std::find_if(node_map.begin(), node_map.end(), [dest_node_id](const auto& node) {
-                return node.second == dest_node_id - 1;
+                return node.second == dest_node_id;
             });
         if (destination == node_map.end()) {
             LOG_ERROR(Service_NWM, "tried to send packet to unknown dest id %u", dest_node_id);
