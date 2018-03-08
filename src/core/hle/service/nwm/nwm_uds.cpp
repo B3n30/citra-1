@@ -279,8 +279,8 @@ static void HandleEAPoLPacket(const Network::WifiPacket& packet) {
         eapol_logoff.destination_address = packet.transmitter_address;
         eapol_logoff.type = WifiPacket::PacketType::Data;
 
-        SendPacket(eapol_logoff);
         BroadcastNodeMap();
+        SendPacket(eapol_logoff);
 
         connection_status_event->Signal();
     } else {
@@ -854,6 +854,7 @@ void NWM_UDS::BeginHostingNetwork(Kernel::HLERequestContext& ctx) {
 void NWM_UDS::UpdateNetworkAttribute(Kernel::HLERequestContext& ctx) {
     IPC::RequestParser rp(ctx, 0x07, 2, 0);
     rp.Skip(2, false);
+    LOG_WARNING(Service_NWM, "stubbed");
     IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
     rb.Push(RESULT_SUCCESS);
 }
@@ -965,7 +966,7 @@ void NWM_UDS::SendTo(Kernel::HLERequestContext& ctx) {
     }
 
     if (dest_node_id == connection_status.network_node_id) {
-        LOG_ERROR(Service_NWM, "tried to send packet to unknown dest id");
+        LOG_ERROR(Service_NWM, "tried to send packet to itself");
         rb.Push(ResultCode(ErrorDescription::NotFound, ErrorModule::UDS,
                            ErrorSummary::WrongArgument, ErrorLevel::Status));
         return;
@@ -973,31 +974,30 @@ void NWM_UDS::SendTo(Kernel::HLERequestContext& ctx) {
 
     Network::MacAddress dest_address;
 
-    if (!(flags & 0x1) || (flags >> 2)) {
+    if (flags >> 2) {
         LOG_ERROR(Service_NWM, "Unexpected flags 0x%02X", flags);
     }
 
     if ((flags & (0x1 << 1)) || dest_node_id == 0xFFFF) {
-        // Broadcast and don't listen to the dest node id
+        // Broadcast
         dest_address = Network::BroadcastMac;
-    } else {
-        if ((connection_status.status == static_cast<u32>(NetworkStatus::ConnectedAsHost)) || dest_node_id != 0) {
-            // Send from host to specific client
-            auto destination =
-                std::find_if(node_map.begin(), node_map.end(), [dest_node_id](const auto& node) {
-                    return node.second == dest_node_id;
-                });
-            if (destination == node_map.end()) {
-                LOG_ERROR(Service_NWM, "tried to send packet to unknown dest id %u", dest_node_id);
-                rb.Push(ResultCode(ErrorDescription::NotFound, ErrorModule::UDS,
-                                   ErrorSummary::WrongArgument, ErrorLevel::Status));
-                return;
-            }
-            dest_address = destination->first;
-        } else {
-            // Send message to host
-            dest_address = network_info.host_mac_address;
+    } else if ((connection_status.status == static_cast<u32>(NetworkStatus::ConnectedAsHost)) ||
+               dest_node_id != 1) {
+        // Send to specific client
+        auto destination =
+            std::find_if(node_map.begin(), node_map.end(), [dest_node_id](const auto& node) {
+                return node.second == dest_node_id - 1;
+            });
+        if (destination == node_map.end()) {
+            LOG_ERROR(Service_NWM, "tried to send packet to unknown dest id %u", dest_node_id);
+            rb.Push(ResultCode(ErrorDescription::NotFound, ErrorModule::UDS,
+                               ErrorSummary::WrongArgument, ErrorLevel::Status));
+            return;
         }
+        dest_address = destination->first;
+    } else {
+        // Not host and dest_node_id == 1: Send message to host
+        dest_address = network_info.host_mac_address;
     }
 
     constexpr size_t MaxSize = 0x5C6;
@@ -1319,4 +1319,3 @@ NWM_UDS::~NWM_UDS() {
 
 } // namespace NWM
 } // namespace Service
-
