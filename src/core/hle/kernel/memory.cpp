@@ -80,6 +80,7 @@ void MemoryShutdown() {
         region.used = 0;
         region.linear_heap_memory = nullptr;
     }
+    SharedPage::Reset();
 }
 
 MemoryRegionInfo* GetMemoryRegion(MemoryRegion region) {
@@ -160,11 +161,13 @@ void MapSharedPages(VMManager& address_space) {
                            .Unwrap();
     address_space.Reprotect(cfg_mem_vma, VMAPermission::Read);
 
-    auto shared_page_vma = address_space
-                               .MapBackingMemory(Memory::SHARED_PAGE_VADDR,
-                                                 reinterpret_cast<u8*>(&SharedPage::shared_page),
-                                                 Memory::SHARED_PAGE_SIZE, MemoryState::Shared)
-                               .Unwrap();
+    auto shared_page_handler = SharedPage::GetHandler().lock();
+    auto shared_page_vma =
+        address_space
+            .MapBackingMemory(Memory::SHARED_PAGE_VADDR,
+                              reinterpret_cast<u8*>(&shared_page_handler->GetSharedPage()),
+                              Memory::SHARED_PAGE_SIZE, MemoryState::Shared)
+            .Unwrap();
     address_space.Reprotect(shared_page_vma, VMAPermission::Read);
 }
 

@@ -1333,8 +1333,10 @@ NWM_UDS::NWM_UDS() : ServiceFramework("nwm::UDS") {
             mac = room_member->GetMacAddress();
         }
     }
-    SharedPage::SetMacAddress(mac);
-    SharedPage::SetWifiLinkLevel(SharedPage::WifiLinkLevel::BEST);
+
+    auto shared_page_handler = SharedPage::GetHandler().lock();
+    shared_page_handler->SetMacAddress(mac);
+    shared_page_handler->SetWifiLinkLevel(SharedPage::WifiLinkLevel::BEST);
 }
 
 NWM_UDS::~NWM_UDS() {

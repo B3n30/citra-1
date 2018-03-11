@@ -732,7 +732,9 @@ void GSP_GPU::SetLedForceOff(Kernel::HLERequestContext& ctx) {
     IPC::RequestParser rp(ctx, 0x1C, 1, 0);
 
     u8 state = rp.Pop<u8>();
-    SharedPage::Set3DLed(state);
+
+    auto shared_page_handler = SharedPage::GetHandler().lock();
+    shared_page_handler->Set3DLed(state);
 
     IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
     rb.Push(RESULT_SUCCESS);
