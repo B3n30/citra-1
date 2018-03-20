@@ -268,6 +268,8 @@ static void HandleEAPoLPacket(const Network::WifiPacket& packet) {
 
         node_map[packet.transmitter_address] = node.network_node_id;
 
+        BroadcastNodeMap();
+
         // Send the EAPoL-Logoff packet.
         using Network::WifiPacket;
         WifiPacket eapol_logoff;
@@ -279,7 +281,6 @@ static void HandleEAPoLPacket(const Network::WifiPacket& packet) {
         eapol_logoff.destination_address = packet.transmitter_address;
         eapol_logoff.type = WifiPacket::PacketType::Data;
 
-        BroadcastNodeMap();
         SendPacket(eapol_logoff);
 
         connection_status_event->Signal();
@@ -984,8 +985,7 @@ void NWM_UDS::SendTo(Kernel::HLERequestContext& ctx) {
     if ((flags & (0x1 << 1)) || dest_node_id == 0xFFFF) {
         // Broadcast
         dest_address = Network::BroadcastMac;
-    } else if ((connection_status.status == static_cast<u32>(NetworkStatus::ConnectedAsHost)) ||
-               dest_node_id != 1) {
+    } else if (dest_node_id != 1) {
         // Send to specific client
         auto destination =
             std::find_if(node_map.begin(), node_map.end(),
@@ -998,7 +998,7 @@ void NWM_UDS::SendTo(Kernel::HLERequestContext& ctx) {
         }
         dest_address = destination->first;
     } else {
-        // Not host and dest_node_id == 1: Send message to host
+        // Send message to host
         dest_address = network_info.host_mac_address;
     }
 
