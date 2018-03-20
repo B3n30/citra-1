@@ -381,11 +381,11 @@ static void HandleSecureDataPacket(const Network::WifiPacket& packet) {
     for (auto bind_node : bind_node_data) {
         // Ignore packets from channels we're not interested in.
         if (bind_node.second.channel != secure_data.data_channel)
-            break;
+            continue;
 
         if (bind_node.second.network_node_id != BroadcastNetworkNodeId &&
             bind_node.second.network_node_id != secure_data.src_node_id)
-            break;
+            continue;
 
         // Add the received packet to the data queue.
         bind_node.second.received_packets.emplace_back(packet.data);
