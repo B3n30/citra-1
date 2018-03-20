@@ -758,7 +758,9 @@ void NWM_UDS::Bind(Kernel::HLERequestContext& ctx) {
                                        "NWM::BindNodeEvent" + std::to_string(bind_node_id));
     std::lock_guard<std::mutex> lock(connection_status_mutex);
 
+    // A 3DS segfaults if you try to bind with an already used bind_node_id
     ASSERT(bind_node_data.find(bind_node_id) == bind_node_data.end());
+
     bind_node_data[bind_node_id] = {bind_node_id, data_channel, network_node_id, event};
 
     IPC::RequestBuilder rb = rp.MakeBuilder(1, 2);
