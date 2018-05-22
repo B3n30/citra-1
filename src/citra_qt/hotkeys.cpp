@@ -49,3 +49,14 @@ QShortcut* HotkeyRegistry::GetHotkey(const QString& group, const QString& action
 
     return hk.shortcut;
 }
+
+QKeySequence HotkeyRegistry::GetKeySequence(const QString& group, const QString& action) {
+    Hotkey& hk = hotkey_groups[group][action];
+    return hk.keyseq;
+}
+
+Qt::ShortcutContext HotkeyRegistry::GetShortcutContext(const QString& group,
+                                                       const QString& action) {
+    Hotkey& hk = hotkey_groups[group][action];
+    return hk.context;
+}

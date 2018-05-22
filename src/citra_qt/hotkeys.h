@@ -93,16 +93,3 @@ private:
 
     HotkeyGroupMap hotkey_groups;
 };
-
-class GHotkeysDialog : public QWidget {
-    Q_OBJECT
-
-public:
-    explicit GHotkeysDialog(QWidget* parent = nullptr);
-    void retranslateUi();
-
-    void Populate(const HotkeyRegistry& registry);
-
-private:
-    Ui::hotkeys ui;
-};

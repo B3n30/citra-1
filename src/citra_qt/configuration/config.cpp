@@ -272,87 +272,86 @@ void Config::ReadValues() {
     qt_config->beginGroup("Main Window");
     qt_config->beginGroup("Load File");
     UISettings::values.shortcuts.emplace_back(UISettings::Shortcut(
-            "Main Window/Load File",
-            UISettings::ContextualShortcut(
-                    qt_config->value("KeySeq", QKeySequence(Qt::CTRL + Qt::Key_O).toString()).toString(),
-                    qt_config->value("Context", 1).toInt())));
+        "Main Window//Load File",
+        UISettings::ContextualShortcut(qt_config->value("KeySeq", QKeySequence::Open).toString(),
+                                       qt_config->value("Context", 1).toInt())));
     qt_config->endGroup();
     qt_config->beginGroup("Exit Citra");
     UISettings::values.shortcuts.emplace_back(UISettings::Shortcut(
-            "Main Window/Exit Citra",
-            UISettings::ContextualShortcut(
-                    qt_config->value("KeySeq", QKeySequence(Qt::CTRL + Qt::Key_Q).toString()).toString(),
-                    qt_config->value("Context", 2).toInt())));
+        "Main Window//Exit Citra",
+        UISettings::ContextualShortcut(
+            qt_config->value("KeySeq", QKeySequence(Qt::CTRL + Qt::Key_Q).toString()).toString(),
+            qt_config->value("Context", 2).toInt())));
     qt_config->endGroup();
-    qt_config->beginGroup("Start Emulation");
+    qt_config->beginGroup("Start/Pause Emulation");
     UISettings::values.shortcuts.emplace_back(UISettings::Shortcut(
-            "Main Window/Start Emulation",
-            UISettings::ContextualShortcut(
-                    qt_config->value("KeySeq", QKeySequence(Qt::Key_F5).toString()).toString(),
-                    qt_config->value("Context", 1).toInt())));
-    qt_config->endGroup();
-    qt_config->beginGroup("Pause Emulation");
-    UISettings::values.shortcuts.emplace_back(UISettings::Shortcut(
-            "Main Window/Pause Emulation",
-            UISettings::ContextualShortcut(
-                    qt_config->value("KeySeq", QKeySequence(Qt::Key_F6).toString()).toString(),
-                    qt_config->value("Context", 1).toInt())));
+        "Main Window//Start/Pause Emulation",
+        UISettings::ContextualShortcut(
+            qt_config->value("KeySeq", QKeySequence(Qt::Key_F5).toString()).toString(),
+            qt_config->value("Context", 1).toInt())));
     qt_config->endGroup();
     qt_config->beginGroup("Stop Emulation");
     UISettings::values.shortcuts.emplace_back(UISettings::Shortcut(
-            "Main Window/Stop Emulation",
-            UISettings::ContextualShortcut(
-                    qt_config->value("KeySeq", QKeySequence(Qt::Key_F7).toString()).toString(),
-                    qt_config->value("Context", 1).toInt())));
+        "Main Window//Stop Emulation",
+        UISettings::ContextualShortcut(
+            qt_config->value("KeySeq", QKeySequence(Qt::Key_F7).toString()).toString(),
+            qt_config->value("Context", 1).toInt())));
     qt_config->endGroup();
     qt_config->beginGroup("Swap Screens");
     UISettings::values.shortcuts.emplace_back(UISettings::Shortcut(
-            "Main Window/Swap Screens",
-            UISettings::ContextualShortcut(
-                    qt_config->value("KeySeq", QKeySequence(Qt::CTRL + Qt::Key_Tab).toString()).toString(),
-                    qt_config->value("Context", 1).toInt())));
+        "Main Window//Swap Screens",
+        UISettings::ContextualShortcut(
+            qt_config->value("KeySeq", QKeySequence(Qt::Key_F9).toString()).toString(),
+            qt_config->value("Context", 1).toInt())));
     qt_config->endGroup();
     qt_config->beginGroup("Toggle Filter Bar");
     UISettings::values.shortcuts.emplace_back(UISettings::Shortcut(
-            "Main Window/Toggle Filter Bar",
-            UISettings::ContextualShortcut(
-                    qt_config->value("KeySeq", QKeySequence(Qt::CTRL + Qt::Key_F).toString()).toString(),
-                    qt_config->value("Context", 1).toInt())));
+        "Main Window//Toggle Filter Bar",
+        UISettings::ContextualShortcut(
+            qt_config->value("KeySeq", QKeySequence(Qt::CTRL + Qt::Key_F).toString()).toString(),
+            qt_config->value("Context", 1).toInt())));
+    qt_config->endGroup();
+    qt_config->beginGroup("Toggle Status Bar");
+    UISettings::values.shortcuts.emplace_back(UISettings::Shortcut(
+        "Main Window//Toggle Status Bar",
+        UISettings::ContextualShortcut(
+            qt_config->value("KeySeq", QKeySequence(Qt::CTRL + Qt::Key_S).toString()).toString(),
+            qt_config->value("Context", 1).toInt())));
     qt_config->endGroup();
     qt_config->beginGroup("Toggle Screen Layout");
     UISettings::values.shortcuts.emplace_back(UISettings::Shortcut(
-            "Main Window/Toggle Screen Layout",
-            UISettings::ContextualShortcut(
-                    qt_config->value("KeySeq", QKeySequence(Qt::Key_F10).toString()).toString(),
-                    qt_config->value("Context", 1).toInt())));
+        "Main Window//Toggle Screen Layout",
+        UISettings::ContextualShortcut(
+            qt_config->value("KeySeq", QKeySequence(Qt::Key_F10).toString()).toString(),
+            qt_config->value("Context", 1).toInt())));
     qt_config->endGroup();
     qt_config->beginGroup("Decrease Speed Limit");
     UISettings::values.shortcuts.emplace_back(UISettings::Shortcut(
-            "Main Window/Decrease Speed Limit",
-            UISettings::ContextualShortcut(
-                    qt_config->value("KeySeq", QKeySequence(Qt::Key_Minus).toString()).toString(),
-                    qt_config->value("Context", 2).toInt())));
+        "Main Window//Decrease Speed Limit",
+        UISettings::ContextualShortcut(
+            qt_config->value("KeySeq", QKeySequence(Qt::Key_Minus).toString()).toString(),
+            qt_config->value("Context", 2).toInt())));
     qt_config->endGroup();
     qt_config->beginGroup("Increase Speed Limit");
     UISettings::values.shortcuts.emplace_back(UISettings::Shortcut(
-            "Main Window/Increase Speed Limit",
-            UISettings::ContextualShortcut(
-                    qt_config->value("KeySeq", QKeySequence(Qt::Key_Plus).toString()).toString(),
-                    qt_config->value("Context", 2).toInt())));
+        "Main Window//Increase Speed Limit",
+        UISettings::ContextualShortcut(
+            qt_config->value("KeySeq", QKeySequence(Qt::Key_Plus).toString()).toString(),
+            qt_config->value("Context", 2).toInt())));
     qt_config->endGroup();
     qt_config->beginGroup("Fullscreen");
-    UISettings::values.shortcuts.emplace_back(UISettings::Shortcut(
-            "Main Window/Fullscreen",
-            UISettings::ContextualShortcut(
-                    qt_config->value("KeySeq", QKeySequence(Qt::Key_F11).toString()).toString(),
-                    qt_config->value("Context", 1).toInt())));
+    UISettings::values.shortcuts.emplace_back(
+        UISettings::Shortcut("Main Window//Fullscreen",
+                             UISettings::ContextualShortcut(
+                                 qt_config->value("KeySeq", QKeySequence::FullScreen).toString(),
+                                 qt_config->value("Context", 1).toInt())));
     qt_config->endGroup();
     qt_config->beginGroup("Exit Fullscreen");
     UISettings::values.shortcuts.emplace_back(UISettings::Shortcut(
-            "Main Window/Exit Fullscreen",
-            UISettings::ContextualShortcut(
-                    qt_config->value("KeySeq", QKeySequence(Qt::Key_Escape).toString()).toString(),
-                    qt_config->value("Context", 2).toInt())));
+        "Main Window//Exit Fullscreen",
+        UISettings::ContextualShortcut(
+            qt_config->value("KeySeq", QKeySequence(Qt::Key_Escape).toString()).toString(),
+            qt_config->value("Context", 2).toInt())));
     qt_config->endGroup();
     qt_config->endGroup();
     qt_config->endGroup();
