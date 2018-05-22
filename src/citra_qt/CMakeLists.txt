@@ -37,6 +37,8 @@ add_executable(citra-qt
     configuration/configure_general.h
     configuration/configure_graphics.cpp
     configuration/configure_graphics.h
+    configuration/configure_hotkeys.cpp
+    configuration/configure_hotkeys.h
     configuration/configure_input.cpp
     configuration/configure_input.h
     configuration/configure_motion_touch.cpp
@@ -116,6 +118,7 @@ set(UIS
     configuration/configure_debug.ui
     configuration/configure_general.ui
     configuration/configure_graphics.ui
+    configuration/configure_hotkeys.ui
     configuration/configure_input.ui
     configuration/configure_motion_touch.ui
     configuration/configure_system.ui
@@ -127,7 +130,6 @@ set(UIS
     multiplayer/client_room.ui
     multiplayer/host_room.ui
     aboutdialog.ui
-    hotkeys.ui
     main.ui
     compatdb.ui
 )
