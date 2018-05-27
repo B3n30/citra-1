@@ -101,8 +101,10 @@ add_executable(citra-qt
     updater/updater.cpp
     updater/updater.h
     updater/updater_p.h
-    util/clickable_label.h
+    util/sequence_dialog/sequence_dialog.h
+    util/sequence_dialog/sequence_dialog.cpp
     util/clickable_label.cpp
+    util/clickable_label.h
     util/spinbox.cpp
     util/spinbox.h
     util/util.cpp
@@ -129,6 +131,7 @@ set(UIS
     multiplayer/chat_room.ui
     multiplayer/client_room.ui
     multiplayer/host_room.ui
+    util/sequence_dialog/sequence_dialog.ui
     aboutdialog.ui
     main.ui
     compatdb.ui

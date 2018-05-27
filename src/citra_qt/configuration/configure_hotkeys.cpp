@@ -3,19 +3,19 @@
 // Refer to the license.txt file included.
 
 #include <QKeyEvent>
+#include <QMessageBox>
 #include <QTimer>
 #include "citra_qt/configuration/configure_hotkeys.h"
 #include "citra_qt/hotkeys.h"
 #include "citra_qt/ui_settings.h"
+#include "citra_qt/util/sequence_dialog/sequence_dialog.h"
 #include "common/param_package.h"
 #include "core/settings.h"
 #include "input_common/main.h"
 #include "ui_configure_hotkeys.h"
 
 ConfigureHotkeys::ConfigureHotkeys(QWidget* parent)
-        : QWidget(parent), ui(std::make_unique<Ui::ConfigureHotkeys>()),
-          timer(std::make_unique<QTimer>()) {
-
+    : QWidget(parent), ui(std::make_unique<Ui::ConfigureHotkeys>()) {
     ui->setupUi(this);
     setFocusPolicy(Qt::ClickFocus);
 
@@ -36,26 +36,18 @@ ConfigureHotkeys::ConfigureHotkeys(QWidget* parent)
         model->appendRow(parent_item);
     }
 
-    ui->treeView->setSelectionMode(QTreeView::SingleSelection);
-    ui->treeView->setModel(model);
+    ui->hotkey_list->setSelectionMode(QTreeView::SingleSelection);
+    ui->hotkey_list->setModel(model);
 
-    ui->treeView->expandAll();
+    ui->hotkey_list->expandAll();
 
     // TODO: Make context configurable as well (hiding the column for now)
-    ui->treeView->hideColumn(2);
+    ui->hotkey_list->hideColumn(2);
 
-    ui->treeView->setColumnWidth(0, 200);
-    ui->treeView->resizeColumnToContents(1);
+    ui->hotkey_list->setColumnWidth(0, 200);
+    ui->hotkey_list->resizeColumnToContents(1);
 
-    ui->treeView->installEventFilter(this);
-
-    timer->setSingleShot(true);
-    connect(timer.get(), &QTimer::timeout, [this]() {
-        releaseKeyboard();
-        releaseMouse();
-        QStandardItemModel* model = (QStandardItemModel*)ui->treeView->model();
-        model->setData(last_index, last_index_value);
-    });
+    ui->hotkey_list->installEventFilter(this);
 
     std::transform(Settings::values.buttons.begin(), Settings::values.buttons.end(),
                    buttons_param.begin(),
@@ -68,58 +60,70 @@ ConfigureHotkeys::ConfigureHotkeys(QWidget* parent)
 ConfigureHotkeys::~ConfigureHotkeys() {}
 
 bool ConfigureHotkeys::eventFilter(QObject* o, QEvent* e) {
-    if (o == ui->treeView && e->type() == QEvent::KeyPress) {
-        QModelIndexList list = ui->treeView->selectionModel()->selectedIndexes();
-        QStandardItemModel* model = (QStandardItemModel*)ui->treeView->model();
-        int row = -1;
-        for (QModelIndex index : list) {
-            if (index.row() != row && index.column() == 1) {
-                QKeyEvent* key = static_cast<QKeyEvent*>(e);
-                if (key->key() == Qt::Key_Control) {
-                    last_index = index;
-                    last_index_value = model->data(last_index);
-                    timer->start(2000); // Cancel after 2 seconds
-                    model->setData(index, tr("Press another key (2sec)"));
-                } else if (timer->isActive()) {
-                    timer->stop();
-                    if (!isUsedKey(QKeySequence(Qt::CTRL + key->key()))) {
-                        model->setData(last_index, QKeySequence(Qt::CTRL + key->key()).toString());
-                    }
-                } else {
-                    if (!isUsedKey(QKeySequence(key->key()))) {
-                        model->setData(index, QKeySequence(key->key()).toString());
-                    }
-                }
-            }
+    if (o == ui->hotkey_list && e->type() != QEvent::ContextMenu) {
+        return false;
+    }
+
+    for (QModelIndex index : ui->hotkey_list->selectionModel()->selectedIndexes()) {
+        if (index.row() == -1 || index.column() != 1) {
+            continue;
+        } else {
+            configure(index);
         }
     }
+
     return false;
 }
 
+void ConfigureHotkeys::configure(QModelIndex index) {
+
+    auto model = ui->hotkey_list->model();
+    auto previous_key = model->data(index);
+
+    SequenceDialog* hotkey_dialog = new SequenceDialog();
+    hotkey_dialog->setWindowTitle(QString::fromStdString("Enter a hotkey"));
+    hotkey_dialog->exec();
+
+    auto key_string = hotkey_dialog->getSequence();
+
+    if (isUsedKey(key_string)) {
+        model->setData(index, previous_key);
+        QMessageBox::critical(this, tr("Error!"), tr("You're using a key that's already bound."));
+    } else if (key_string == QKeySequence(Qt::Key_Escape)) {
+        model->setData(index, previous_key);
+    } else {
+        model->setData(index, key_string.toString());
+    }
+}
+
 const std::array<std::string, ConfigureHotkeys::ANALOG_SUB_BUTTONS_NUM>
-        ConfigureHotkeys::analog_sub_buttons{{
-                                                     "up", "down", "left", "right", "modifier",
-                                             }};
+    ConfigureHotkeys::analog_sub_buttons{{
+        "up",
+        "down",
+        "left",
+        "right",
+        "modifier",
+    }};
 
 static QString getKeyName(int key_code) {
     switch (key_code) {
-        case Qt::Key_Shift:
-            return QObject::tr("Shift");
-        case Qt::Key_Control:
-            return QObject::tr("Ctrl");
-        case Qt::Key_Alt:
-            return QObject::tr("Alt");
-        case Qt::Key_Meta:
-            return "";
-        default:
-            return QKeySequence(key_code).toString();
+    case Qt::Key_Shift:
+        return QObject::tr("Shift");
+    case Qt::Key_Control:
+        return QObject::tr("Ctrl");
+    case Qt::Key_Alt:
+        return QObject::tr("Alt");
+    case Qt::Key_Meta:
+        return "";
+    default:
+        return QKeySequence(key_code).toString();
     }
 }
 
 bool ConfigureHotkeys::isUsedKey(QKeySequence key_sequence) {
 
     // Check HotKeys
-    QStandardItemModel* model = (QStandardItemModel*)ui->treeView->model();
+    auto model = static_cast<QStandardItemModel*>(ui->hotkey_list->model());
     for (int r = 0; r < model->rowCount(); r++) {
         QStandardItem* parent = model->item(r, 0);
         for (int r2 = 0; r2 < parent->rowCount(); r2++) {
@@ -131,7 +135,7 @@ bool ConfigureHotkeys::isUsedKey(QKeySequence key_sequence) {
     }
 
     // Check InputKeys
-    QString non_keyboard(tr("[non-keyboard]"));
+    const QString non_keyboard(tr("[non-keyboard]"));
 
     auto KeyToText = [&non_keyboard](const Common::ParamPackage& param) {
         if (param.Get("engine", "") != "keyboard") {
@@ -153,7 +157,7 @@ bool ConfigureHotkeys::isUsedKey(QKeySequence key_sequence) {
         } else {
             for (int sub_button_id = 0; sub_button_id < ANALOG_SUB_BUTTONS_NUM; sub_button_id++) {
                 Common::ParamPackage param(
-                        analogs_param[analog_id].Get(analog_sub_buttons[sub_button_id], ""));
+                    analogs_param[analog_id].Get(analog_sub_buttons[sub_button_id], ""));
                 if (KeyToText(param) == key_sequence.toString()) {
                     return true;
                 }
@@ -165,17 +169,18 @@ bool ConfigureHotkeys::isUsedKey(QKeySequence key_sequence) {
 }
 
 void ConfigureHotkeys::applyConfiguration() {
-    QStandardItemModel* model = (QStandardItemModel*)ui->treeView->model();
-    for (int r = 0; r < model->rowCount(); r++) {
-        QStandardItem* parent = model->item(r, 0);
-        for (int r2 = 0; r2 < parent->rowCount(); r2++) {
-            QStandardItem* action = parent->child(r2, 0);
-            QStandardItem* keyseq = parent->child(r2, 1);
-            for (HotkeyGroupMap::iterator it = hotkey_groups.begin(); it != hotkey_groups.end();
-                 ++it) {
-                if (it->first == parent->text()) {
-                    for (HotkeyMap::iterator it2 = it->second.begin(); it2 != it->second.end();
-                         ++it2) {
+    auto model = static_cast<QStandardItemModel*>(ui->hotkey_list->model());
+
+    for (int key_id = 0; key_id < model->rowCount(); key_id++) {
+        QStandardItem* parent = model->item(key_id, 0);
+        for (int key_column_id = 0; key_column_id < parent->rowCount(); key_column_id++) {
+            QStandardItem* action = parent->child(key_column_id, 0);
+            QStandardItem* keyseq = parent->child(key_column_id, 1);
+            for (HotkeyGroupMap::iterator key_iterator = hotkey_groups.begin();
+                 key_iterator != hotkey_groups.end(); ++key_iterator) {
+                if (key_iterator->first == parent->text()) {
+                    for (HotkeyMap::iterator it2 = key_iterator->second.begin();
+                         it2 != key_iterator->second.end(); ++it2) {
                         if (it2->first == action->text()) {
                             it2->second.keyseq = QKeySequence(keyseq->text());
                         }
