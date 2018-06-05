@@ -6,6 +6,7 @@
 #include <QMessageBox>
 #include <QTimer>
 #include "citra_qt/configuration/configure_hotkeys.h"
+#include "citra_qt/configuration/configure_input.h"
 #include "citra_qt/hotkeys.h"
 #include "citra_qt/ui_settings.h"
 #include "citra_qt/util/sequence_dialog/sequence_dialog.h"
@@ -48,13 +49,6 @@ ConfigureHotkeys::ConfigureHotkeys(QWidget* parent)
     ui->hotkey_list->resizeColumnToContents(1);
 
     ui->hotkey_list->installEventFilter(this);
-
-    std::transform(Settings::values.buttons.begin(), Settings::values.buttons.end(),
-                   buttons_param.begin(),
-                   [](const std::string& str) { return Common::ParamPackage(str); });
-    std::transform(Settings::values.analogs.begin(), Settings::values.analogs.end(),
-                   analogs_param.begin(),
-                   [](const std::string& str) { return Common::ParamPackage(str); });
 }
 
 ConfigureHotkeys::~ConfigureHotkeys() {}
@@ -73,6 +67,27 @@ bool ConfigureHotkeys::eventFilter(QObject* o, QEvent* e) {
     }
 
     return false;
+}
+
+void ConfigureHotkeys::emitHotkeysChanged() {
+    emit hotkeysChanged(getUsedKeyList());
+}
+
+QList<QKeySequence> ConfigureHotkeys::getUsedKeyList() {
+    QList<QKeySequence> list;
+    auto model = static_cast<QStandardItemModel*>(ui->hotkey_list->model());
+    for (int r = 0; r < model->rowCount(); r++) {
+        QStandardItem* parent = model->item(r, 0);
+        for (int r2 = 0; r2 < parent->rowCount(); r2++) {
+            QStandardItem* keyseq = parent->child(r2, 1);
+            list << QKeySequence::fromString(keyseq->text());
+        }
+    }
+    return list;
+}
+
+void ConfigureHotkeys::onInputKeysChanged(QList<QKeySequence> new_key_list) {
+    usedInputKeys = new_key_list;
 }
 
 void ConfigureHotkeys::configure(QModelIndex index) {
@@ -94,30 +109,8 @@ void ConfigureHotkeys::configure(QModelIndex index) {
     } else {
         model->setData(index, key_string.toString());
     }
-}
 
-const std::array<std::string, ConfigureHotkeys::ANALOG_SUB_BUTTONS_NUM>
-    ConfigureHotkeys::analog_sub_buttons{{
-        "up",
-        "down",
-        "left",
-        "right",
-        "modifier",
-    }};
-
-static QString getKeyName(int key_code) {
-    switch (key_code) {
-    case Qt::Key_Shift:
-        return QObject::tr("Shift");
-    case Qt::Key_Control:
-        return QObject::tr("Ctrl");
-    case Qt::Key_Alt:
-        return QObject::tr("Alt");
-    case Qt::Key_Meta:
-        return "";
-    default:
-        return QKeySequence(key_code).toString();
-    }
+    emit hotkeysChanged(getUsedKeyList());
 }
 
 bool ConfigureHotkeys::isUsedKey(QKeySequence key_sequence) {
@@ -135,34 +128,8 @@ bool ConfigureHotkeys::isUsedKey(QKeySequence key_sequence) {
     }
 
     // Check InputKeys
-    const QString non_keyboard(tr("[non-keyboard]"));
-
-    auto KeyToText = [&non_keyboard](const Common::ParamPackage& param) {
-        if (param.Get("engine", "") != "keyboard") {
-            return non_keyboard;
-        } else {
-            return getKeyName(param.Get("code", 0));
-        }
-    };
-
-    for (int button = 0; button < Settings::NativeButton::NumButtons; button++) {
-        if (KeyToText(buttons_param[button]) == key_sequence.toString()) {
-            return true;
-        }
-    }
-
-    for (int analog_id = 0; analog_id < Settings::NativeAnalog::NumAnalogs; analog_id++) {
-        if (analogs_param[analog_id].Get("engine", "") != "analog_from_button") {
-            return false;
-        } else {
-            for (int sub_button_id = 0; sub_button_id < ANALOG_SUB_BUTTONS_NUM; sub_button_id++) {
-                Common::ParamPackage param(
-                    analogs_param[analog_id].Get(analog_sub_buttons[sub_button_id], ""));
-                if (KeyToText(param) == key_sequence.toString()) {
-                    return true;
-                }
-            }
-        }
+    if (usedInputKeys.contains(key_sequence)) {
+        return true;
     }
 
     return false;

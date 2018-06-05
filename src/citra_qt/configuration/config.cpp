@@ -294,7 +294,7 @@ void Config::ReadValues() {
     UISettings::values.shortcuts.emplace_back(UISettings::Shortcut(
         "Main Window//Stop Emulation",
         UISettings::ContextualShortcut(
-            qt_config->value("KeySeq", QKeySequence(Qt::Key_F7).toString()).toString(),
+            qt_config->value("KeySeq", QKeySequence(Qt::Key_F5).toString()).toString(),
             qt_config->value("Context", 1).toInt())));
     qt_config->endGroup();
     qt_config->beginGroup("Swap Screens");

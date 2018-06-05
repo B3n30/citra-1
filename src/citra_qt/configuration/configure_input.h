@@ -10,6 +10,7 @@
 #include <string>
 #include <unordered_map>
 #include <QKeyEvent>
+#include <QKeySequence>
 #include <QWidget>
 #include <boost/optional.hpp>
 #include "common/param_package.h"
@@ -34,6 +35,14 @@ public:
     /// Save all button configurations to settings file
     void applyConfiguration();
     void retranslateUi();
+
+    void emitInputKeysChanged();
+
+public slots:
+    void onHotkeysChanged(QList<QKeySequence> new_key_list);
+
+signals:
+    void inputKeysChanged(QList<QKeySequence> new_key_list);
 
 private:
     std::unique_ptr<Ui::ConfigureInput> ui;
@@ -64,6 +73,11 @@ private:
     static const std::array<std::string, ANALOG_SUB_BUTTONS_NUM> analog_sub_buttons;
 
     std::vector<std::unique_ptr<InputCommon::Polling::DevicePoller>> device_pollers;
+
+    /// Updates keyboard_used
+    QList<QKeySequence> generateUsedKeyboardKeys();
+
+    QList<QKeySequence> hotkey_list;
 
     /// A flag to indicate if keyboard keys are okay when configuring an input. If this is false,
     /// keyboard events are ignored.

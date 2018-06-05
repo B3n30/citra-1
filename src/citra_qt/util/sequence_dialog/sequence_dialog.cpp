@@ -5,8 +5,7 @@
 #include "citra_qt/util/sequence_dialog/sequence_dialog.h"
 #include "ui_sequence_dialog.h"
 
-SequenceDialog::SequenceDialog(QWidget* parent)
-    : QDialog(parent), ui(new Ui::SequenceDialog ) {
+SequenceDialog::SequenceDialog(QWidget* parent) : QDialog(parent), ui(new Ui::SequenceDialog) {
     ui->setupUi(this);
 
     connect(ui->ok_button, &QPushButton::clicked, this, &QDialog::close);

@@ -25,16 +25,21 @@ public:
 
     void applyConfiguration();
 
+    void emitHotkeysChanged();
+
+public slots:
+    void onInputKeysChanged(QList<QKeySequence> new_key_list);
+
+signals:
+    void hotkeysChanged(QList<QKeySequence> new_key_list);
+
 private:
     bool eventFilter(QObject* o, QEvent* e);
-    void configure(QModelIndex);
+    void configure(QModelIndex index);
     bool isUsedKey(QKeySequence key_sequence);
+    QList<QKeySequence> getUsedKeyList();
 
     std::unique_ptr<Ui::ConfigureHotkeys> ui;
 
-    std::array<Common::ParamPackage, Settings::NativeButton::NumButtons> buttons_param;
-    std::array<Common::ParamPackage, Settings::NativeAnalog::NumAnalogs> analogs_param;
-
-    static const int ANALOG_SUB_BUTTONS_NUM = 5;
-    static const std::array<std::string, ANALOG_SUB_BUTTONS_NUM> analog_sub_buttons;
+    QList<QKeySequence> usedInputKeys;
 };

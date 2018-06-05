@@ -193,6 +193,30 @@ void ConfigureInput::applyConfiguration() {
                    [](const Common::ParamPackage& param) { return param.Serialize(); });
 }
 
+void ConfigureInput::emitInputKeysChanged() {
+    emit inputKeysChanged(generateUsedKeyboardKeys());
+}
+
+void ConfigureInput::onHotkeysChanged(QList<QKeySequence> new_key_list) {
+    hotkey_list = new_key_list;
+}
+
+QList<QKeySequence> ConfigureInput::generateUsedKeyboardKeys() {
+    QList<QKeySequence> list;
+    for (int button = 0; button < Settings::NativeButton::NumButtons; button++) {
+
+        auto button_label = ButtonToText(buttons_param[button]);
+
+        if (button_label.contains("Joystick") || button_label.contains("Hat") ||
+            button_label.contains("Axis") || button_label.contains("Button")) {
+            continue;
+        }
+
+        list << QKeySequence::fromString(button_label);
+    }
+    return list;
+}
+
 void ConfigureInput::loadConfiguration() {
     std::transform(Settings::values.buttons.begin(), Settings::values.buttons.end(),
                    buttons_param.begin(),
@@ -234,6 +258,8 @@ void ConfigureInput::updateButtonLabels() {
         }
         analog_map_stick[analog_id]->setText(tr("Set Analog Stick"));
     }
+
+    emit inputKeysChanged(generateUsedKeyboardKeys());
 }
 
 void ConfigureInput::handleClick(QPushButton* button,
@@ -282,6 +308,13 @@ void ConfigureInput::keyPressEvent(QKeyEvent* event) {
 
     if (event->key() != Qt::Key_Escape) {
         if (want_keyboard_keys) {
+            // Check if key is already bound in hotkeys
+            if (hotkey_list.contains(QKeySequence(event->key()))) {
+                setPollingResult({}, true);
+                QMessageBox::critical(this, tr("Error!"),
+                                      tr("You're using a key that's already bound."));
+                return;
+            }
             setPollingResult(Common::ParamPackage{InputCommon::GenerateKeyboardParam(event->key())},
                              false);
         } else {
