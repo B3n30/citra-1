@@ -205,14 +205,12 @@ QList<QKeySequence> ConfigureInput::generateUsedKeyboardKeys() {
     QList<QKeySequence> list;
     for (int button = 0; button < Settings::NativeButton::NumButtons; button++) {
 
-        auto button_label = ButtonToText(buttons_param[button]);
+        auto button_param = buttons_param[button];
+        QString button_label;
 
-        if (button_label.contains("Joystick") || button_label.contains("Hat") ||
-            button_label.contains("Axis") || button_label.contains("Button")) {
-            continue;
+        if (button_param.Get("engine", "") == "keyboard") {
+            list << QKeySequence(button_param.Get("code", 0));
         }
-
-        list << QKeySequence::fromString(button_label);
     }
     return list;
 }
@@ -318,7 +316,8 @@ void ConfigureInput::keyPressEvent(QKeyEvent* event) {
             setPollingResult(Common::ParamPackage{InputCommon::GenerateKeyboardParam(event->key())},
                              false);
         } else {
-            // Escape key wasn't pressed and we don't want any keyboard keys, so don't stop polling
+            // Escape key wasn't pressed and we don't want any keyboard keys, so don't stop
+            // polling
             return;
         }
     }

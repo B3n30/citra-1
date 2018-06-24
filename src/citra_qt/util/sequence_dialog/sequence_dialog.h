@@ -23,5 +23,5 @@ public:
     QKeySequence getSequence();
 
 private:
-    Ui::SequenceDialog* ui;
+    std::unique_ptr<Ui::SequenceDialog> ui;
 };
