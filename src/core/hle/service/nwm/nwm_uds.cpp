@@ -377,7 +377,6 @@ static void HandleSecureDataPacket(const Network::WifiPacket& packet) {
     // TODO(B3N30): We don't currently send nor handle management frames.
     ASSERT(!secure_data.is_management);
 
-
     for (auto bind_node : bind_node_data) {
         // Ignore packets from channels we're not interested in.
         if (bind_node.second.channel != secure_data.data_channel)
