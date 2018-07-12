@@ -4,10 +4,8 @@
 
 #pragma once
 
-#include <future>
 #include <memory>
 #include <QDialog>
-#include <QPushButton>
 
 namespace Ui {
 class SequenceDialog;
@@ -20,7 +18,8 @@ public:
     explicit SequenceDialog(QWidget* parent = nullptr);
     ~SequenceDialog();
 
-    QKeySequence getSequence();
+    QKeySequence GetSequence();
+    void closeEvent(QCloseEvent*) override;
 
 private:
     std::unique_ptr<Ui::SequenceDialog> ui;

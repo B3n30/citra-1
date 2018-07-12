@@ -10,8 +10,6 @@
 #include "common/param_package.h"
 #include "core/settings.h"
 
-class QTimer;
-
 namespace Ui {
 class ConfigureHotkeys;
 }
@@ -24,22 +22,22 @@ public:
     ~ConfigureHotkeys();
 
     void applyConfiguration();
+    void retranslateUi();
 
-    void emitHotkeysChanged();
+    void EmitHotkeysChanged();
 
 public slots:
-    void onInputKeysChanged(QList<QKeySequence> new_key_list);
+    void OnInputKeysChanged(QList<QKeySequence> new_key_list);
 
 signals:
-    void hotkeysChanged(QList<QKeySequence> new_key_list);
+    void HotkeysChanged(QList<QKeySequence> new_key_list);
 
 private:
-    bool eventFilter(QObject* o, QEvent* e);
-    void configure(QModelIndex index);
-    bool isUsedKey(QKeySequence key_sequence);
-    QList<QKeySequence> getUsedKeyList();
+    void Configure(QModelIndex index);
+    bool IsUsedKey(QKeySequence key_sequence);
+    QList<QKeySequence> GetUsedKeyList();
 
     std::unique_ptr<Ui::ConfigureHotkeys> ui;
 
-    QList<QKeySequence> usedInputKeys;
+    QList<QKeySequence> input_keys_list;
 };

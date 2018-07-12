@@ -29,7 +29,13 @@ ConfigureGeneral::ConfigureGeneral(QWidget* parent)
     // retranslating when passing back.
     connect(ui->language_combobox,
             static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this,
-            &ConfigureGeneral::onLanguageChanged);
+            &ConfigureGeneral::OnLanguageChanged);
+
+    connect(ui->hotkeys, &ConfigureHotkeys::HotkeysChanged, this,
+            [this](QList<QKeySequence> new_key_list) { emit HotkeysChanged(new_key_list); });
+
+    connect(this, &ConfigureGeneral::InputKeysChanged, ui->hotkeys,
+            &ConfigureHotkeys::OnInputKeysChanged);
 
     for (auto theme : UISettings::themes) {
         ui->theme_combobox->addItem(theme.first, theme.second);
@@ -69,16 +75,26 @@ void ConfigureGeneral::applyConfiguration() {
     UISettings::values.update_on_close = ui->toggle_auto_update->isChecked();
 
     Settings::values.region_value = ui->region_combobox->currentIndex() - 1;
+
+    ui->hotkeys->applyConfiguration();
 }
 
-void ConfigureGeneral::onLanguageChanged(int index) {
+void ConfigureGeneral::OnLanguageChanged(int index) {
     if (index == -1)
         return;
 
     emit languageChanged(ui->language_combobox->itemData(index).toString());
 }
 
+void ConfigureGeneral::OnInputKeysChanged(QList<QKeySequence> new_key_list) {
+    emit InputKeysChanged(new_key_list);
+}
+
+void ConfigureGeneral::EmitHotkeysChanged() {
+    ui->hotkeys->EmitHotkeysChanged();
+}
+
 void ConfigureGeneral::retranslateUi() {
     ui->retranslateUi(this);
-    ui->hotkeysDialog->retranslateUi();
+    ui->hotkeys->retranslateUi();
 }

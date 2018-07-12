@@ -193,25 +193,29 @@ void ConfigureInput::applyConfiguration() {
                    [](const Common::ParamPackage& param) { return param.Serialize(); });
 }
 
-void ConfigureInput::emitInputKeysChanged() {
-    emit inputKeysChanged(generateUsedKeyboardKeys());
+void ConfigureInput::EmitInputKeysChanged() {
+    emit InputKeysChanged(GetUsedKeyboardKeys());
 }
 
 void ConfigureInput::onHotkeysChanged(QList<QKeySequence> new_key_list) {
     hotkey_list = new_key_list;
 }
 
-QList<QKeySequence> ConfigureInput::generateUsedKeyboardKeys() {
+QList<QKeySequence> ConfigureInput::GetUsedKeyboardKeys() {
     QList<QKeySequence> list;
     for (int button = 0; button < Settings::NativeButton::NumButtons; button++) {
 
         auto button_param = buttons_param[button];
-        QString button_label;
+        // QString button_label;
 
         if (button_param.Get("engine", "") == "keyboard") {
             list << QKeySequence(button_param.Get("code", 0));
         }
     }
+
+    // TODO(adityaruplaha): Add home button to list when we finally emulate it
+    // Button ID of home button is 14: Reffered from citra_qt/configuration/config.cpp
+    list.removeAt(list.indexOf(QKeySequence(buttons_param[14].Get("code", 0))));
     return list;
 }
 
@@ -257,12 +261,13 @@ void ConfigureInput::updateButtonLabels() {
         analog_map_stick[analog_id]->setText(tr("Set Analog Stick"));
     }
 
-    emit inputKeysChanged(generateUsedKeyboardKeys());
+    emit InputKeysChanged(GetUsedKeyboardKeys());
 }
 
 void ConfigureInput::handleClick(QPushButton* button,
                                  std::function<void(const Common::ParamPackage&)> new_input_setter,
                                  InputCommon::Polling::DeviceType type) {
+    previous_key_code = QKeySequence(button->text())[0];
     button->setText(tr("[press key]"));
     button->setFocus();
 
@@ -304,10 +309,11 @@ void ConfigureInput::keyPressEvent(QKeyEvent* event) {
     if (!input_setter || !event)
         return;
 
-    if (event->key() != Qt::Key_Escape) {
+    if (event->key() != Qt::Key_Escape && event->key() != previous_key_code) {
         if (want_keyboard_keys) {
-            // Check if key is already bound in hotkeys
-            if (hotkey_list.contains(QKeySequence(event->key()))) {
+            // Check if key is already bound
+            if (hotkey_list.contains(QKeySequence(event->key())) ||
+                GetUsedKeyboardKeys().contains(QKeySequence(event->key()))) {
                 setPollingResult({}, true);
                 QMessageBox::critical(this, tr("Error!"),
                                       tr("You're using a key that's already bound."));
@@ -322,6 +328,7 @@ void ConfigureInput::keyPressEvent(QKeyEvent* event) {
         }
     }
     setPollingResult({}, true);
+    previous_key_code = 0;
 }
 
 void ConfigureInput::retranslateUi() {

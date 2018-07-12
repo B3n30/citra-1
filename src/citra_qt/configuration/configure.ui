@@ -24,11 +24,6 @@
        <string>General</string>
       </attribute>
      </widget>
-     <widget class="ConfigureHotkeys" name="hotkeysTab">
-      <attribute name="title">
-       <string>Hotkeys</string>
-      </attribute>
-     </widget>
      <widget class="ConfigureSystem" name="systemTab">
       <attribute name="title">
        <string>System</string>
@@ -49,7 +44,7 @@
        <string>Audio</string>
       </attribute>
      </widget>
-      <widget class="ConfigureCamera" name="cameraTab">
+     <widget class="ConfigureCamera" name="cameraTab">
       <attribute name="title">
        <string>Camera</string>
       </attribute>
@@ -83,12 +78,6 @@
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>ConfigureHotkeys</class>
-   <extends>QWidget</extends>
-   <header>configuration/configure_hotkeys.h</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
    <class>ConfigureSystem</class>
    <extends>QWidget</extends>
    <header>configuration/configure_system.h</header>
@@ -100,7 +89,7 @@
    <header>configuration/configure_audio.h</header>
    <container>1</container>
   </customwidget>
-   <customwidget>
+  <customwidget>
    <class>ConfigureCamera</class>
    <extends>QWidget</extends>
    <header>configuration/configure_camera.h</header>
