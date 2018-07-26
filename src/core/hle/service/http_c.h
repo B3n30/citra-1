@@ -197,6 +197,8 @@ private:
      */
     void AddRequestHeader(Kernel::HLERequestContext& ctx);
 
+    void DecryptDefaultClientCert();
+
     Kernel::SharedPtr<Kernel::SharedMemory> shared_memory = nullptr;
 
     /// The next handle number to use when a new HTTP context is created.
@@ -210,6 +212,8 @@ private:
 
     /// Global list of  ClientCert contexts currently opened.
     std::unordered_map<ClientCertContext::Handle, ClientCertContext> client_certs;
+
+    ClientCertContext default_client_cert_context;
 };
 
 void InstallInterfaces(SM::ServiceManager& service_manager);

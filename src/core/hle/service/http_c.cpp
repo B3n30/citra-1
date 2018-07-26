@@ -2,9 +2,16 @@
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
+#include <cryptopp/aes.h>
+#include <cryptopp/modes.h>
+#include "core/file_sys/file_backend.h"
 #include "core/hle/ipc_helpers.h"
 #include "core/hle/kernel/ipc.h"
+#include "core/hle/romfs.h"
+#include "core/hle/service/fs/archive.h"
 #include "core/hle/service/http_c.h"
+#include "core/hw/aes/ccm.h"
+#include "core/hw/aes/key.h"
 
 namespace Service {
 namespace HTTP {
@@ -279,6 +286,73 @@ void HTTP_C::AddRequestHeader(Kernel::HLERequestContext& ctx) {
               context_handle);
 }
 
+void HTTP_C::DecryptDefaultClientCert() {
+    static constexpr u32 iv_length = 16;
+
+    const u64_le ClCertA_archive_id_low = 0x0004001b00010002;
+    const u64_le ClCertA_archive_id_high = 0x00000001ffffff00;
+    std::vector<u8> ClCertA_archive_id(16);
+    std::memcpy(&ClCertA_archive_id[0], &ClCertA_archive_id_low, sizeof(u64));
+    std::memcpy(&ClCertA_archive_id[8], &ClCertA_archive_id_high, sizeof(u64));
+    FileSys::Path archive_path(ClCertA_archive_id);
+    auto archive_result = Service::FS::OpenArchive(Service::FS::ArchiveIdCode::NCCH, archive_path);
+    if (archive_result.Failed()) {
+        LOG_ERROR(Service_HTTP, "ClCertA archive missing");
+        return;
+    }
+
+    std::vector<u8> romfs_path(20, 0); // 20-byte all zero path for opening RomFS
+    FileSys::Path file_path(romfs_path);
+    FileSys::Mode open_mode = {};
+    open_mode.read_flag.Assign(1);
+    auto file_result = Service::FS::OpenFileFromArchive(*archive_result, file_path, open_mode);
+    if (file_result.Failed()) {
+        LOG_ERROR(Service_HTTP, "ClCertA file missing");
+        return;
+    }
+
+    auto romfs = std::move(file_result).Unwrap();
+    std::vector<u8> romfs_buffer(romfs->backend->GetSize());
+    romfs->backend->Read(0, romfs_buffer.size(), romfs_buffer.data());
+    romfs->backend->Close();
+
+    if (!HW::AES::IsNormalKeyAvailable(HW::AES::KeySlotID::SSLKey)) {
+        LOG_ERROR(Service_HTTP, "NormalKey in KeySlot 0x0D missing");
+        return;
+    }
+    HW::AES::AESKey key = HW::AES::GetNormalKey(HW::AES::KeySlotID::SSLKey);
+
+    const RomFS::RomFSFile cert_file =
+        RomFS::GetFile(romfs_buffer.data(), {u"ctr-common-1-cert.bin"});
+    ASSERT_MSG(cert_file.Length() > iv_length, "ctr-common-1-cert.bin missing");
+
+    std::vector<u8> cert_data;
+    cert_data.resize(cert_file.Length() - iv_length);
+
+    using CryptoPP::AES;
+    CryptoPP::CBC_Mode<AES>::Decryption aes;
+    std::array<u8, iv_length> cert_iv;
+    std::memcpy(cert_iv.data(), cert_file.Data(), iv_length);
+    aes.SetKeyWithIV(key.data(), AES::BLOCKSIZE, cert_iv.data());
+    aes.ProcessData(cert_data.data(), cert_file.Data() + iv_length, cert_file.Length() - iv_length);
+
+    const RomFS::RomFSFile key_file =
+        RomFS::GetFile(romfs_buffer.data(), {u"ctr-common-1-key.bin"});
+    ASSERT_MSG(key_file.Length() > iv_length, "ctr-common-1-key.bin missing");
+
+    std::vector<u8> key_data;
+    key_data.resize(key_file.Length() - iv_length);
+
+    CryptoPP::CBC_Mode<AES>::Decryption aes;
+    std::array<u8, iv_length> key_iv;
+    std::memcpy(key_iv.data(), key_file.Data(), iv_length);
+    aes.SetKeyWithIV(key.data(), AES::BLOCKSIZE, key_iv.data());
+    aes.ProcessData(key_data.data(), key_file.Data() + iv_length, key_file.Length() - iv_length);
+
+    default_client_cert_context.certificate = std::move(cert_data);
+    default_client_cert_context.private_key = std::move(key_data);
+}
+
 HTTP_C::HTTP_C() : ServiceFramework("http:C", 32) {
     static const FunctionInfo functions[] = {
         {0x00010044, &HTTP_C::Initialize, "Initialize"},
@@ -339,6 +413,8 @@ HTTP_C::HTTP_C() : ServiceFramework("http:C", 32) {
         {0x00390000, nullptr, "Finalize"},
     };
     RegisterHandlers(functions);
+
+    DecryptDefaultClientCert();
 }
 
 void InstallInterfaces(SM::ServiceManager& service_manager) {
