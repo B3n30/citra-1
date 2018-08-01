@@ -100,6 +100,13 @@ struct ci {
 
 enum class HttpVersion { v1_0 = 0, v1_1 };
 
+enum class SSLVerifyMode {
+    None = SSL_VERIFY_NONE,
+    Peer = SSL_VERIFY_PEER,
+    FailNoPeerCert = SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+    VerifyOnce =  SSL_VERIFY_CLIENT_ONCE
+};
+
 typedef std::multimap<std::string, std::string, detail::ci>  Headers;
 
 template<typename uint64_t, typename... Args>
@@ -265,6 +272,12 @@ public:
 
     virtual bool is_valid() const;
 
+    virtual void set_verify(SSLVerifyMode mode);
+
+    virtual void add_client_cert_ASN1(std::vector<unsigned char> cert, std::vector<unsigned char> key);
+
+    virtual void add_cert(std::vector<unsigned char> cert);
+
     std::shared_ptr<Response> Get(const char* path, Progress progress = nullptr);
     std::shared_ptr<Response> Get(const char* path, const Headers& headers, Progress progress = nullptr);
 
@@ -346,6 +359,12 @@ public:
     virtual ~SSLClient();
 
     virtual bool is_valid() const;
+
+    virtual void set_verify(SSLVerifyMode mode);
+
+    virtual void add_client_cert_ASN1(std::vector<unsigned char> cert, std::vector<unsigned char> key);
+
+    virtual void add_cert(std::vector<unsigned char> cert);
 
 private:
     virtual bool read_and_close_socket(socket_t sock, Request& req, Response& res);
@@ -1867,6 +1886,18 @@ inline bool Client::is_valid() const
     return true;
 }
 
+inline void Client::set_verify(SSLVerifyMode mode) {
+    // nothing to do here
+}
+
+inline void Client::add_client_cert_ASN1(std::vector<unsigned char> cert, std::vector<unsigned char> key) {
+    // nothing to do here
+}
+
+inline void Client::add_cert(std::vector<unsigned char> cert) {
+    // nothing to do here
+}
+
 inline socket_t Client::create_client_socket() const
 {
     return detail::create_socket(host_.c_str(), port_,
@@ -2320,6 +2351,29 @@ inline SSLClient::~SSLClient()
 inline bool SSLClient::is_valid() const
 {
     return ctx_;
+}
+
+inline void SSLClient::set_verify(SSLVerifyMode mode) {
+    if (is_valid()) {
+        SSL_CTX_set_verify(ctx_, static_cast<int>(mode), NULL);
+    }
+}
+
+inline void SSLClient::add_client_cert_ASN1(std::vector<unsigned char> cert, std::vector<unsigned char> key) {
+    if (is_valid()) {
+        SSL_CTX_use_certificate_ASN1(ctx_, cert.size(), cert.data());
+        SSL_CTX_use_PrivateKey_ASN1(SSL_FILETYPE_ASN1, ctx_, key.data(), key.size());
+    }
+}
+
+inline void SSLClient::add_cert(std::vector<unsigned char> cert) {
+    if (is_valid()) {
+        BIO* bio = BIO_new_mem_buf(cert.data(), cert.size());
+        X509* x509_cert;
+        PEM_read_bio_X509(bio, &x509_cert, 0, NULL);
+        X509_STORE* store = SSL_CTX_get_cert_store(ctx_);
+        X509_STORE_add_cert(store, x509_cert);
+    }
 }
 
 inline bool SSLClient::read_and_close_socket(socket_t sock, Request& req, Response& res)
