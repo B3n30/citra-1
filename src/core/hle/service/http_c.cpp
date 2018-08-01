@@ -326,7 +326,7 @@ void HTTP_C::DecryptDefaultClientCert() {
         return;
     }
     if (cert_file.Length() <= iv_length) {
-        LOG_ERROR(Service_HTTP, "ctr-common-1-cert.bin size is to small. Size: {}",
+        LOG_ERROR(Service_HTTP, "ctr-common-1-cert.bin size is too small. Size: {}",
                   cert_file.Length());
         return;
     }
@@ -348,7 +348,7 @@ void HTTP_C::DecryptDefaultClientCert() {
         return;
     }
     if (key_file.Length() <= iv_length) {
-        LOG_ERROR(Service_HTTP, "ctr-common-1-key.bin size is to small. Size: {}",
+        LOG_ERROR(Service_HTTP, "ctr-common-1-key.bin size is too small. Size: {}",
                   key_file.Length());
         return;
     }
