@@ -4,6 +4,7 @@
 
 #include <cryptopp/aes.h>
 #include <cryptopp/modes.h>
+#include "core/file_sys/archive_ncch.h"
 #include "core/file_sys/file_backend.h"
 #include "core/hle/ipc_helpers.h"
 #include "core/hle/kernel/ipc.h"
@@ -288,20 +289,17 @@ void HTTP_C::AddRequestHeader(Kernel::HLERequestContext& ctx) {
 void HTTP_C::DecryptDefaultClientCert() {
     static constexpr u32 iv_length = 16;
 
-    const u64_le ClCertA_archive_id_low = 0x0004001b00010002;
-    const u64_le ClCertA_archive_id_high = 0x00000001ffffff00;
-    std::vector<u8> ClCertA_archive_id(16);
-    std::memcpy(&ClCertA_archive_id[0], &ClCertA_archive_id_low, sizeof(u64));
-    std::memcpy(&ClCertA_archive_id[8], &ClCertA_archive_id_high, sizeof(u64));
-    FileSys::Path archive_path(ClCertA_archive_id);
+    FileSys::Path archive_path =
+        FileSys::MakeNCCHArchivePath(0x0004001b00010002, Service::FS::MediaType::NAND);
     auto archive_result = Service::FS::OpenArchive(Service::FS::ArchiveIdCode::NCCH, archive_path);
     if (archive_result.Failed()) {
         LOG_ERROR(Service_HTTP, "ClCertA archive missing");
         return;
     }
 
-    std::vector<u8> romfs_path(20, 0); // 20-byte all zero path for opening RomFS
-    FileSys::Path file_path(romfs_path);
+    std::array<char, 8> exefs_filepath;
+    FileSys::Path file_path = FileSys::MakeNCCHFilePath(
+        FileSys::NCCHFileOpenType::NCCHData, 0, FileSys::NCCHFilePathType::RomFS, exefs_filepath);
     FileSys::Mode open_mode = {};
     open_mode.read_flag.Assign(1);
     auto file_result = Service::FS::OpenFileFromArchive(*archive_result, file_path, open_mode);
@@ -333,8 +331,7 @@ void HTTP_C::DecryptDefaultClientCert() {
         return;
     }
 
-    std::vector<u8> cert_data;
-    cert_data.resize(cert_file.Length() - iv_length);
+    std::vector<u8> cert_data(cert_file.Length() - iv_length);
 
     using CryptoPP::AES;
     CryptoPP::CBC_Mode<AES>::Decryption aes_cert;
@@ -356,8 +353,7 @@ void HTTP_C::DecryptDefaultClientCert() {
         return;
     }
 
-    std::vector<u8> key_data;
-    key_data.resize(key_file.Length() - iv_length);
+    std::vector<u8> key_data(key_file.Length() - iv_length);
 
     CryptoPP::CBC_Mode<AES>::Decryption aes_key;
     std::array<u8, iv_length> key_iv;
@@ -366,8 +362,9 @@ void HTTP_C::DecryptDefaultClientCert() {
     aes_key.ProcessData(key_data.data(), key_file.Data() + iv_length,
                         key_file.Length() - iv_length);
 
-    default_client_cert_context.certificate = std::move(cert_data);
-    default_client_cert_context.private_key = std::move(key_data);
+    ClCertA.certificate = std::move(cert_data);
+    ClCertA.private_key = std::move(key_data);
+    ClCertA.init = true;
 }
 
 HTTP_C::HTTP_C() : ServiceFramework("http:C", 32) {

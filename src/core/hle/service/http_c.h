@@ -213,7 +213,11 @@ private:
     /// Global list of  ClientCert contexts currently opened.
     std::unordered_map<ClientCertContext::Handle, ClientCertContext> client_certs;
 
-    ClientCertContext default_client_cert_context;
+    struct {
+        std::vector<u8> certificate;
+        std::vector<u8> private_key;
+        bool init = false;
+    } ClCertA;
 };
 
 void InstallInterfaces(SM::ServiceManager& service_manager);
