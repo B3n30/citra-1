@@ -10,7 +10,6 @@
 #include "core/hle/romfs.h"
 #include "core/hle/service/fs/archive.h"
 #include "core/hle/service/http_c.h"
-#include "core/hw/aes/ccm.h"
 #include "core/hw/aes/key.h"
 
 namespace Service {
@@ -330,11 +329,12 @@ void HTTP_C::DecryptDefaultClientCert() {
     cert_data.resize(cert_file.Length() - iv_length);
 
     using CryptoPP::AES;
-    CryptoPP::CBC_Mode<AES>::Decryption aes;
+    CryptoPP::CBC_Mode<AES>::Decryption aes_cert;
     std::array<u8, iv_length> cert_iv;
     std::memcpy(cert_iv.data(), cert_file.Data(), iv_length);
-    aes.SetKeyWithIV(key.data(), AES::BLOCKSIZE, cert_iv.data());
-    aes.ProcessData(cert_data.data(), cert_file.Data() + iv_length, cert_file.Length() - iv_length);
+    aes_cert.SetKeyWithIV(key.data(), AES::BLOCKSIZE, cert_iv.data());
+    aes_cert.ProcessData(cert_data.data(), cert_file.Data() + iv_length,
+                         cert_file.Length() - iv_length);
 
     const RomFS::RomFSFile key_file =
         RomFS::GetFile(romfs_buffer.data(), {u"ctr-common-1-key.bin"});
@@ -343,11 +343,12 @@ void HTTP_C::DecryptDefaultClientCert() {
     std::vector<u8> key_data;
     key_data.resize(key_file.Length() - iv_length);
 
-    CryptoPP::CBC_Mode<AES>::Decryption aes;
+    CryptoPP::CBC_Mode<AES>::Decryption aes_key;
     std::array<u8, iv_length> key_iv;
     std::memcpy(key_iv.data(), key_file.Data(), iv_length);
-    aes.SetKeyWithIV(key.data(), AES::BLOCKSIZE, key_iv.data());
-    aes.ProcessData(key_data.data(), key_file.Data() + iv_length, key_file.Length() - iv_length);
+    aes_key.SetKeyWithIV(key.data(), AES::BLOCKSIZE, key_iv.data());
+    aes_key.ProcessData(key_data.data(), key_file.Data() + iv_length,
+                        key_file.Length() - iv_length);
 
     default_client_cert_context.certificate = std::move(cert_data);
     default_client_cert_context.private_key = std::move(key_data);
