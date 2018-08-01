@@ -323,7 +323,15 @@ void HTTP_C::DecryptDefaultClientCert() {
 
     const RomFS::RomFSFile cert_file =
         RomFS::GetFile(romfs_buffer.data(), {u"ctr-common-1-cert.bin"});
-    ASSERT_MSG(cert_file.Length() > iv_length, "ctr-common-1-cert.bin missing");
+    if (cert_file.Length() == 0) {
+        LOG_ERROR(Service_HTTP, "ctr-common-1-cert.bin missing");
+        return;
+    }
+    if (cert_file.Length() <= iv_length) {
+        LOG_ERROR(Service_HTTP, "ctr-common-1-cert.bin size is to small. Size: {}",
+                  cert_file.Length());
+        return;
+    }
 
     std::vector<u8> cert_data;
     cert_data.resize(cert_file.Length() - iv_length);
@@ -338,7 +346,15 @@ void HTTP_C::DecryptDefaultClientCert() {
 
     const RomFS::RomFSFile key_file =
         RomFS::GetFile(romfs_buffer.data(), {u"ctr-common-1-key.bin"});
-    ASSERT_MSG(key_file.Length() > iv_length, "ctr-common-1-key.bin missing");
+    if (key_file.Length() == 0) {
+        LOG_ERROR(Service_HTTP, "ctr-common-1-key.bin missing");
+        return;
+    }
+    if (key_file.Length() <= iv_length) {
+        LOG_ERROR(Service_HTTP, "ctr-common-1-key.bin size is to small. Size: {}",
+                  key_file.Length());
+        return;
+    }
 
     std::vector<u8> key_data;
     key_data.resize(key_file.Length() - iv_length);
