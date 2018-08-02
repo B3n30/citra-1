@@ -286,7 +286,7 @@ void HTTP_C::AddRequestHeader(Kernel::HLERequestContext& ctx) {
               context_handle);
 }
 
-void HTTP_C::DecryptDefaultClientCert() {
+void HTTP_C::DecryptClCertA() {
     static constexpr u32 iv_length = 16;
 
     FileSys::Path archive_path =
@@ -428,7 +428,7 @@ HTTP_C::HTTP_C() : ServiceFramework("http:C", 32) {
     };
     RegisterHandlers(functions);
 
-    DecryptDefaultClientCert();
+    DecryptClCertA();
 }
 
 void InstallInterfaces(SM::ServiceManager& service_manager) {

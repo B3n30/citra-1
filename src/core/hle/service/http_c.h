@@ -197,7 +197,7 @@ private:
      */
     void AddRequestHeader(Kernel::HLERequestContext& ctx);
 
-    void DecryptDefaultClientCert();
+    void DecryptClCertA();
 
     Kernel::SharedPtr<Kernel::SharedMemory> shared_memory = nullptr;
 
