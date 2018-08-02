@@ -101,7 +101,4 @@ private:
     SharedPageDef shared_page;
 };
 
-std::weak_ptr<Handler> GetHandler();
-void Reset();
-
 } // namespace SharedPage

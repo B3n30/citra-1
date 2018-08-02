@@ -13,8 +13,6 @@
 
 namespace SharedPage {
 
-static std::shared_ptr<Handler> handler;
-
 static std::time_t GetInitTime() {
     switch (Settings::values.init_clock) {
     case Settings::InitClock::SystemTime: {
@@ -57,19 +55,9 @@ Handler::Handler() {
     shared_page.sliderstate_3d = slidestate;
 }
 
-std::weak_ptr<Handler> GetHandler() {
-    if (handler == nullptr)
-        handler = std::make_shared<Handler>();
-    return handler;
-}
-
-void Reset() {
-    handler.reset();
-}
-
 /// Gets system time in 3DS format. The epoch is Jan 1900, and the unit is millisecond.
 u64 Handler::GetSystemTime() const {
-    std::time_t now = init_time * 1000 + CoreTiming::GetGlobalTimeUs() / 1000;
+    u64 now = init_time * 1000 + CoreTiming::GetGlobalTimeUs() / 1000;
 
     // 3DS system does't allow user to set a time before Jan 1 2000,
     // so we use it as an auxiliary epoch to calculate the console time.
@@ -81,7 +69,7 @@ u64 Handler::GetSystemTime() const {
     epoch_tm.tm_mon = 0;
     epoch_tm.tm_year = 100;
     epoch_tm.tm_isdst = 0;
-    std::time_t epoch = std::mktime(&epoch_tm);
+    u64 epoch = std::mktime(&epoch_tm) * 1000;
 
     // 3DS console time uses Jan 1 1900 as internal epoch,
     // so we use the milliseconds between 1900 and 2000 as base console time
@@ -89,7 +77,7 @@ u64 Handler::GetSystemTime() const {
 
     // Only when system time is after 2000, we set it as 3DS system time
     if (now > epoch) {
-        console_time += (now - epoch * 1000);
+        console_time += (now - epoch);
     }
 
     return console_time;

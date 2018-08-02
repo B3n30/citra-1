@@ -11,11 +11,11 @@
 #include "common/assert.h"
 #include "common/common_types.h"
 #include "common/logging/log.h"
+#include "core/core.h"
 #include "core/hle/config_mem.h"
 #include "core/hle/kernel/memory.h"
 #include "core/hle/kernel/vm_manager.h"
 #include "core/hle/result.h"
-#include "core/hle/shared_page.h"
 #include "core/memory.h"
 #include "core/memory_setup.h"
 
@@ -80,7 +80,6 @@ void MemoryShutdown() {
         region.used = 0;
         region.linear_heap_memory = nullptr;
     }
-    SharedPage::Reset();
 }
 
 MemoryRegionInfo* GetMemoryRegion(MemoryRegion region) {
@@ -161,12 +160,13 @@ void MapSharedPages(VMManager& address_space) {
                            .Unwrap();
     address_space.Reprotect(cfg_mem_vma, VMAPermission::Read);
 
-    auto shared_page_handler = SharedPage::GetHandler().lock();
     auto shared_page_vma =
         address_space
-            .MapBackingMemory(Memory::SHARED_PAGE_VADDR,
-                              reinterpret_cast<u8*>(&shared_page_handler->GetSharedPage()),
-                              Memory::SHARED_PAGE_SIZE, MemoryState::Shared)
+            .MapBackingMemory(
+                Memory::SHARED_PAGE_VADDR,
+                reinterpret_cast<u8*>(
+                    &Core::System::GetInstance().GetSharedPageHandler()->GetSharedPage()),
+                Memory::SHARED_PAGE_SIZE, MemoryState::Shared)
             .Unwrap();
     address_space.Reprotect(shared_page_vma, VMAPermission::Read);
 }

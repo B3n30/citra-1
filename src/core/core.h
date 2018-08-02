@@ -8,6 +8,7 @@
 #include <string>
 #include "common/common_types.h"
 #include "core/frontend/applets/swkbd.h"
+#include "core/hle/shared_page.h"
 #include "core/loader/loader.h"
 #include "core/memory.h"
 #include "core/perf_stats.h"
@@ -159,6 +160,10 @@ public:
         return registered_swkbd;
     }
 
+    std::shared_ptr<SharedPage::Handler> GetSharedPageHandler() const {
+        return shared_page_handler;
+    }
+
 private:
     /**
      * Initialize the emulated system.
@@ -191,6 +196,9 @@ private:
 
     /// Frontend applets
     std::shared_ptr<Frontend::SoftwareKeyboard> registered_swkbd;
+
+    /// Shared PAge
+    std::shared_ptr<SharedPage::Handler> shared_page_handler;
 
     static System s_instance;
 
