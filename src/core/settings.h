@@ -114,7 +114,7 @@ struct Values {
     // System
     int region_value;
     InitClock init_clock;
-    time_t init_time;
+    u64 init_time;
 
     // Renderer
     bool use_hw_renderer;

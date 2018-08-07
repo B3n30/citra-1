@@ -10,6 +10,7 @@
  * write access, according to 3dbrew; this is not emulated)
  */
 
+#include <chrono>
 #include <ctime>
 #include <memory>
 #include "common/bit_field.h"
@@ -96,7 +97,7 @@ private:
     u64 GetSystemTime() const;
     void UpdateTimeCallback(u64 userdata, int cycles_late);
     CoreTiming::EventType* update_time_event;
-    std::time_t init_time;
+    std::chrono::seconds init_time;
 
     SharedPageDef shared_page;
 };

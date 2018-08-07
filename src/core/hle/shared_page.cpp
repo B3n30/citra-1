@@ -13,7 +13,7 @@
 
 namespace SharedPage {
 
-static std::time_t GetInitTime() {
+static std::chrono::seconds GetInitTime() {
     switch (Settings::values.init_clock) {
     case Settings::InitClock::SystemTime: {
         auto now = std::chrono::system_clock::now();
@@ -21,11 +21,11 @@ static std::time_t GetInitTime() {
         std::time_t now_time_t = std::chrono::system_clock::to_time_t(now);
         std::tm* now_tm = std::localtime(&now_time_t);
         if (now_tm && now_tm->tm_isdst > 0)
-            now_time_t += 60 * 60 * 1000;
-        return now_time_t;
+            now = now + std::chrono::hours(1);
+        return std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch());
     }
     case Settings::InitClock::FixedTime:
-        return Settings::values.init_time;
+        return std::chrono::seconds(Settings::values.init_time);
     }
 }
 
@@ -57,7 +57,8 @@ Handler::Handler() {
 
 /// Gets system time in 3DS format. The epoch is Jan 1900, and the unit is millisecond.
 u64 Handler::GetSystemTime() const {
-    u64 now = init_time * 1000 + CoreTiming::GetGlobalTimeUs() / 1000;
+    std::chrono::milliseconds now =
+        init_time + std::chrono::milliseconds(CoreTiming::GetGlobalTimeUs() / 1000);
 
     // 3DS system does't allow user to set a time before Jan 1 2000,
     // so we use it as an auxiliary epoch to calculate the console time.
@@ -76,8 +77,8 @@ u64 Handler::GetSystemTime() const {
     u64 console_time = 3155673600000ULL;
 
     // Only when system time is after 2000, we set it as 3DS system time
-    if (now > epoch) {
-        console_time += (now - epoch);
+    if (now.count() > epoch) {
+        console_time += (now.count() - epoch);
     }
 
     return console_time;
