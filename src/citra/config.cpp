@@ -186,7 +186,10 @@ void Config::ReadValues() {
         if (string_stream.fail()) {
             LOG_ERROR(Config, "Failed To parse init_time. Using 2000-01-01 00:00:01");
         }
-        Settings::values.init_time = std::mktime(&t);
+        Settings::values.init_time =
+            std::chrono::duration_cast<std::chrono::seconds>(
+                std::chrono::system_clock::from_time_t(std::mktime(&t)).time_since_epoch())
+                .count();
     }
 
     // Camera
