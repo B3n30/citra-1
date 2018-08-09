@@ -4,8 +4,8 @@
 
 #include <iomanip>
 #include <memory>
-#include <unordered_map>
 #include <sstream>
+#include <unordered_map>
 #include <SDL.h>
 #include <inih/cpp/INIReader.h>
 #include "citra/config.h"
