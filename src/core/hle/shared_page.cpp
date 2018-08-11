@@ -58,7 +58,8 @@ Handler::Handler() {
 /// Gets system time in 3DS format. The epoch is Jan 1900, and the unit is millisecond.
 u64 Handler::GetSystemTime() const {
     std::chrono::milliseconds now =
-        init_time + std::chrono::milliseconds(CoreTiming::GetGlobalTimeUs() / 1000);
+        init_time +
+        std::chrono::duration_cast<std::chrono::milliseconds>(CoreTiming::GetGlobalTimeUs());
 
     // 3DS system does't allow user to set a time before Jan 1 2000,
     // so we use it as an auxiliary epoch to calculate the console time.
