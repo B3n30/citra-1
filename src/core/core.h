@@ -197,7 +197,7 @@ private:
     /// Frontend applets
     std::shared_ptr<Frontend::SoftwareKeyboard> registered_swkbd;
 
-    /// Shared PAge
+    /// Shared Page
     std::shared_ptr<SharedPage::Handler> shared_page_handler;
 
     static System s_instance;
