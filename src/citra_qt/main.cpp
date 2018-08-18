@@ -340,13 +340,10 @@ void GMainWindow::InitializeHotkeys() {
     ui.action_Exit->setShortcutContext(
         hotkey_registry.GetShortcutContext("Main Window", "Exit Citra"));
 
-    ui.action_Start->setShortcut(hotkey_registry.GetKeySequence("Main Window", "Start Emulation"));
+    ui.action_Start->setShortcut(
+        hotkey_registry.GetKeySequence("Main Window", "Continue/Pause Emulation"));
     ui.action_Start->setShortcutContext(
-        hotkey_registry.GetShortcutContext("Main Window", "Start Emulation"));
-
-    ui.action_Pause->setShortcut(hotkey_registry.GetKeySequence("Main Window", "Pause Emulation"));
-    ui.action_Pause->setShortcutContext(
-        hotkey_registry.GetShortcutContext("Main Window", "Pause Emulation"));
+        hotkey_registry.GetShortcutContext("Main Window", "Continue/Pause Emulation"));
 
     ui.action_Stop->setShortcut(hotkey_registry.GetKeySequence("Main Window", "Stop Emulation"));
     ui.action_Stop->setShortcutContext(
@@ -356,6 +353,7 @@ void GMainWindow::InitializeHotkeys() {
         hotkey_registry.GetKeySequence("Main Window", "Toggle Filter Bar"));
     ui.action_Show_Filter_Bar->setShortcutContext(
         hotkey_registry.GetShortcutContext("Main Window", "Toggle Filter Bar"));
+
     ui.action_Show_Status_Bar->setShortcut(
         hotkey_registry.GetKeySequence("Main Window", "Toggle Status Bar"));
     ui.action_Show_Status_Bar->setShortcutContext(
@@ -364,10 +362,8 @@ void GMainWindow::InitializeHotkeys() {
     connect(hotkey_registry.GetHotkey("Main Window", "Load File", this), &QShortcut::activated,
             this, &GMainWindow::OnMenuLoadFile);
 
-    connect(hotkey_registry.GetHotkey("Main Window", "Start Emulation", this),
-            &QShortcut::activated, this, &GMainWindow::OnStartGame);
-    connect(hotkey_registry.GetHotkey("Main Window", "Continue/Pause", this), &QShortcut::activated,
-            this, [&] {
+    connect(hotkey_registry.GetHotkey("Main Window", "Continue/Pause Emulation", this),
+            &QShortcut::activated, this, [&] {
                 if (emulation_running) {
                     if (emu_thread->IsRunning()) {
                         OnPauseGame();
@@ -376,8 +372,8 @@ void GMainWindow::InitializeHotkeys() {
                     }
                 }
             });
-    connect(hotkey_registry.GetHotkey("Main Window", "Restart", this), &QShortcut::activated, this,
-            [this] {
+    connect(hotkey_registry.GetHotkey("Main Window", "Restart Emulation", this),
+            &QShortcut::activated, this, [this] {
                 if (!Core::System::GetInstance().IsPoweredOn())
                     return;
                 BootGame(QString(game_path));

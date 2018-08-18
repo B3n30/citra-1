@@ -16,7 +16,7 @@ void HotkeyRegistry::SaveHotkeys() {
     for (auto group : hotkey_groups) {
         for (auto hotkey : group.second) {
             UISettings::values.shortcuts.emplace_back(
-                UISettings::Shortcut(group.first + "//" + hotkey.first,
+                UISettings::Shortcut(hotkey.first, group.first,
                                      UISettings::ContextualShortcut(hotkey.second.keyseq.toString(),
                                                                     hotkey.second.context)));
         }
@@ -27,14 +27,10 @@ void HotkeyRegistry::LoadHotkeys() {
     // Make sure NOT to use a reference here because it would become invalid once we call
     // beginGroup()
     for (auto shortcut : UISettings::values.shortcuts) {
-        QStringList cat = shortcut.first.split("//");
-        Q_ASSERT(cat.size() >= 2);
-
-        // RegisterHotkey assigns default keybindings, so use old values as default parameters
-        Hotkey& hk = hotkey_groups[cat[0]][cat[1]];
-        if (!shortcut.second.first.isEmpty()) {
-            hk.keyseq = QKeySequence::fromString(shortcut.second.first);
-            hk.context = static_cast<Qt::ShortcutContext>(shortcut.second.second);
+        Hotkey& hk = hotkey_groups[shortcut.group][shortcut.name];
+        if (!shortcut.shortcut.first.isEmpty()) {
+            hk.keyseq = QKeySequence::fromString(shortcut.shortcut.first);
+            hk.context = (Qt::ShortcutContext)shortcut.shortcut.second;
         }
         if (hk.shortcut)
             hk.shortcut->setKey(hk.keyseq);

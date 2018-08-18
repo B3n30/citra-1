@@ -73,8 +73,11 @@ void ConfigureHotkeys::OnInputKeysChanged(QList<QKeySequence> new_key_list) {
 }
 
 void ConfigureHotkeys::Configure(QModelIndex index) {
+    // TODO(adityaruplaha): Ensure item being edited is NOT a parent item.
+    if (index.column() != 1)
+        return;
 
-    auto model = ui->hotkey_list->model();
+    auto* model = ui->hotkey_list->model();
     auto previous_key = model->data(index);
 
     SequenceDialog* hotkey_dialog = new SequenceDialog();
@@ -89,13 +92,10 @@ void ConfigureHotkeys::Configure(QModelIndex index) {
     if (IsUsedKey(key_string) && key_string != QKeySequence(previous_key.toString())) {
         model->setData(index, previous_key);
         QMessageBox::critical(this, tr("Error!"), tr("You're using a key that's already bound."));
-    } else if (key_string == QKeySequence(Qt::Key_Escape)) {
-        model->setData(index, previous_key);
     } else {
         model->setData(index, key_string.toString());
+        emit HotkeysChanged(GetUsedKeyList());
     }
-
-    emit HotkeysChanged(GetUsedKeyList());
 }
 
 bool ConfigureHotkeys::IsUsedKey(QKeySequence key_sequence) {
