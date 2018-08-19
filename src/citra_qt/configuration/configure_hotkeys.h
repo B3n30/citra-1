@@ -40,4 +40,5 @@ private:
     std::unique_ptr<Ui::ConfigureHotkeys> ui;
 
     QList<QKeySequence> input_keys_list;
+    QStandardItemModel* model;
 };

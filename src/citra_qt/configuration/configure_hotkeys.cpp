@@ -19,7 +19,7 @@ ConfigureHotkeys::ConfigureHotkeys(QWidget* parent)
     ui->setupUi(this);
     setFocusPolicy(Qt::ClickFocus);
 
-    QStandardItemModel* model = new QStandardItemModel(this);
+    model = new QStandardItemModel(this);
     model->setColumnCount(3);
     model->setHorizontalHeaderLabels({tr("Action"), tr("Hotkey"), tr("Context")});
 
@@ -47,6 +47,7 @@ ConfigureHotkeys::ConfigureHotkeys(QWidget* parent)
 
     ui->hotkey_list->setColumnWidth(0, 200);
     ui->hotkey_list->resizeColumnToContents(1);
+    ui->hotkey_list->setEditTriggers(QTreeView::NoEditTriggers);
 }
 
 ConfigureHotkeys::~ConfigureHotkeys() {}
@@ -57,7 +58,6 @@ void ConfigureHotkeys::EmitHotkeysChanged() {
 
 QList<QKeySequence> ConfigureHotkeys::GetUsedKeyList() {
     QList<QKeySequence> list;
-    auto model = static_cast<QStandardItemModel*>(ui->hotkey_list->model());
     for (int r = 0; r < model->rowCount(); r++) {
         QStandardItem* parent = model->item(r, 0);
         for (int r2 = 0; r2 < parent->rowCount(); r2++) {
@@ -73,8 +73,7 @@ void ConfigureHotkeys::OnInputKeysChanged(QList<QKeySequence> new_key_list) {
 }
 
 void ConfigureHotkeys::Configure(QModelIndex index) {
-    // TODO(adityaruplaha): Ensure item being edited is NOT a parent item.
-    if (index.column() != 1)
+    if (index.column() != 1 || index.parent() == QModelIndex())
         return;
 
     auto* model = ui->hotkey_list->model();
@@ -102,13 +101,10 @@ bool ConfigureHotkeys::IsUsedKey(QKeySequence key_sequence) {
     if (input_keys_list.contains(key_sequence) || GetUsedKeyList().contains(key_sequence)) {
         return true;
     }
-
     return false;
 }
 
 void ConfigureHotkeys::applyConfiguration() {
-    auto* model = static_cast<QStandardItemModel*>(ui->hotkey_list->model());
-
     for (int key_id = 0; key_id < model->rowCount(); key_id++) {
         QStandardItem* parent = model->item(key_id, 0);
         for (int key_column_id = 0; key_column_id < parent->rowCount(); key_column_id++) {

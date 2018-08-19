@@ -22,5 +22,6 @@ public:
     void closeEvent(QCloseEvent*) override;
 
 private:
+    bool focusNextPrevChild(bool next) override;
     std::unique_ptr<Ui::SequenceDialog> ui;
 };

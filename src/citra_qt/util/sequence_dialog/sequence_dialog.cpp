@@ -21,6 +21,10 @@ QKeySequence SequenceDialog::GetSequence() {
     return QKeySequence(ui->key_sequence->keySequence()[0]);
 }
 
+bool SequenceDialog::focusNextPrevChild(bool next) {
+    return false;
+}
+
 void SequenceDialog::closeEvent(QCloseEvent*) {
     reject();
 }
