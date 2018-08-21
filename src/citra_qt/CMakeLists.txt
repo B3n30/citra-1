@@ -131,7 +131,6 @@ set(UIS
     multiplayer/chat_room.ui
     multiplayer/client_room.ui
     multiplayer/host_room.ui
-    util/sequence_dialog/sequence_dialog.ui
     aboutdialog.ui
     main.ui
     compatdb.ui

@@ -197,7 +197,7 @@ void ConfigureInput::EmitInputKeysChanged() {
     emit InputKeysChanged(GetUsedKeyboardKeys());
 }
 
-void ConfigureInput::onHotkeysChanged(QList<QKeySequence> new_key_list) {
+void ConfigureInput::OnHotkeysChanged(QList<QKeySequence> new_key_list) {
     hotkey_list = new_key_list;
 }
 
@@ -215,7 +215,7 @@ QList<QKeySequence> ConfigureInput::GetUsedKeyboardKeys() {
 
     // TODO(adityaruplaha): Add home button to list when we finally emulate it
     // Button ID of home button is 14: Reffered from citra_qt/configuration/config.cpp
-    list.removeAt(list.indexOf(QKeySequence(buttons_param[14].Get("code", 0))));
+    list.removeOne(list.indexOf(QKeySequence(buttons_param[14].Get("code", 0))));
     return list;
 }
 
@@ -261,7 +261,7 @@ void ConfigureInput::updateButtonLabels() {
         analog_map_stick[analog_id]->setText(tr("Set Analog Stick"));
     }
 
-    emit InputKeysChanged(GetUsedKeyboardKeys());
+    EmitInputKeysChanged();
 }
 
 void ConfigureInput::handleClick(QPushButton* button,

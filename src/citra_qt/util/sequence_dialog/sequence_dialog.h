@@ -6,10 +6,7 @@
 
 #include <memory>
 #include <QDialog>
-
-namespace Ui {
-class SequenceDialog;
-}
+#include <QKeySequenceEdit>
 
 class SequenceDialog : public QDialog {
     Q_OBJECT
@@ -22,6 +19,6 @@ public:
     void closeEvent(QCloseEvent*) override;
 
 private:
+    QKeySequenceEdit* key_sequence;
     bool focusNextPrevChild(bool next) override;
-    std::unique_ptr<Ui::SequenceDialog> ui;
 };

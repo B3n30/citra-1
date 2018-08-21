@@ -2,23 +2,28 @@
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
-#include <QPushButton>
+#include <QDialogButtonBox>
+#include <QVBoxLayout>
 #include "citra_qt/util/sequence_dialog/sequence_dialog.h"
-#include "ui_sequence_dialog.h"
 
-SequenceDialog::SequenceDialog(QWidget* parent)
-    : QDialog(parent), ui(std::make_unique<Ui::SequenceDialog>()) {
-    ui->setupUi(this);
-
-    connect(ui->ok_button, &QPushButton::clicked, this, &QDialog::accept);
-    connect(ui->cancel_button, &QPushButton::clicked, this, &QDialog::reject);
+SequenceDialog::SequenceDialog(QWidget* parent) : QDialog(parent) {
+    setWindowTitle(tr("Enter a hotkey"));
+    auto* layout = new QVBoxLayout(this);
+    key_sequence = new QKeySequenceEdit;
+    layout->addWidget(key_sequence);
+    auto* buttons =
+        new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, Qt::Horizontal);
+    buttons->setCenterButtons(true);
+    layout->addWidget(buttons);
+    connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
+    connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
     setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 }
 
 SequenceDialog::~SequenceDialog() = default;
 
 QKeySequence SequenceDialog::GetSequence() {
-    return QKeySequence(ui->key_sequence->keySequence()[0]);
+    return QKeySequence(key_sequence->keySequence()[0]);
 }
 
 bool SequenceDialog::focusNextPrevChild(bool next) {

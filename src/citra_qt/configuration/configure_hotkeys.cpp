@@ -80,7 +80,6 @@ void ConfigureHotkeys::Configure(QModelIndex index) {
     auto previous_key = model->data(index);
 
     SequenceDialog* hotkey_dialog = new SequenceDialog();
-    hotkey_dialog->setWindowTitle(QString::fromStdString("Enter a hotkey"));
     int return_code = hotkey_dialog->exec();
 
     auto key_string = hotkey_dialog->GetSequence();
@@ -90,18 +89,16 @@ void ConfigureHotkeys::Configure(QModelIndex index) {
 
     if (IsUsedKey(key_string) && key_string != QKeySequence(previous_key.toString())) {
         model->setData(index, previous_key);
-        QMessageBox::critical(this, tr("Error!"), tr("You're using a key that's already bound."));
+        QMessageBox::critical(this, tr("Error in inputted key"),
+                              tr("You're using a key that's already bound."));
     } else {
         model->setData(index, key_string.toString());
-        emit HotkeysChanged(GetUsedKeyList());
+        EmitHotkeysChanged();
     }
 }
 
 bool ConfigureHotkeys::IsUsedKey(QKeySequence key_sequence) {
-    if (input_keys_list.contains(key_sequence) || GetUsedKeyList().contains(key_sequence)) {
-        return true;
-    }
-    return false;
+    return input_keys_list.contains(key_sequence) || GetUsedKeyList().contains(key_sequence);
 }
 
 void ConfigureHotkeys::applyConfiguration() {
