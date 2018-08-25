@@ -37,6 +37,9 @@
 #include "citra_qt/discord.h"
 #include "citra_qt/game_list.h"
 #include "citra_qt/hotkeys.h"
+#ifdef HAVE_SDL2
+#include "citra_qt/joystick.h"
+#endif
 #include "citra_qt/main.h"
 #include "citra_qt/multiplayer/state.h"
 #include "citra_qt/ui_settings.h"
@@ -1556,6 +1559,11 @@ int main(int argc, char* argv[]) {
     // Register frontend applets
     Frontend::RegisterDefaultApplets();
     Frontend::RegisterSoftwareKeyboard(std::make_shared<QtKeyboard>(main_window));
+
+#ifdef HAVE_SDL2
+    JoystickEventTicker ticker;
+    ticker.launch();
+#endif
 
     main_window.show();
     return app.exec();

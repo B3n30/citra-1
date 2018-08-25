@@ -74,6 +74,7 @@ add_executable(citra-qt
     game_list_p.h
     hotkeys.cpp
     hotkeys.h
+    joystick.h
     main.cpp
     main.h
     multiplayer/chat_room.h
@@ -220,4 +221,8 @@ if (MSVC)
     include(CopyCitraSDLDeps)
     copy_citra_Qt5_deps(citra-qt)
     copy_citra_SDL_deps(citra-qt)
+endif()
+
+if(SDL2_FOUND)
+    target_compile_definitions(citra-qt PRIVATE HAVE_SDL2)
 endif()
