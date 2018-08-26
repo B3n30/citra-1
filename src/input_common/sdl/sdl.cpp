@@ -30,7 +30,7 @@ static std::unordered_map<int, std::shared_ptr<SDLJoystick>> joystick_list;
 static std::shared_ptr<SDLButtonFactory> button_factory;
 static std::shared_ptr<SDLAnalogFactory> analog_factory;
 
-static std::atomic<bool> polling;
+static std::atomic<SDL_Event*> last_event;
 
 static std::atomic<bool> initialized = false;
 
@@ -404,14 +404,20 @@ void HandleGameControllerEvent(const SDL_Event& event) {
     }
 }
 
-void PollEvent() {
-    SDL_Event event;
-    if (polling) {
+void PollLoop() {
+    if (SDL_Init(SDL_INIT_GAMECONTROLLER | SDL_INIT_JOYSTICK) < 0) {
+        LOG_CRITICAL(Input, "SDL_Init(SDL_INIT_GAMECONTROLLER) failed with: {}", SDL_GetError());
         return;
     }
-    while (SDL_PollEvent(&event)) {
-        HandleGameControllerEvent(event);
+    SDL_Event event;
+    while (initialized) {
+        // Wait for 10 ms or until an event happens
+        if (SDL_WaitEventTimeout(&event, 10)) {
+            last_event = &event;
+            HandleGameControllerEvent(event);
+        }
     }
+    SDL_QuitSubSystem(SDL_INIT_GAMECONTROLLER | SDL_INIT_JOYSTICK);
 }
 
 /// A button device factory that creates button devices from SDL joystick
@@ -523,15 +529,11 @@ public:
 };
 
 void Init() {
-    if (SDL_Init(SDL_INIT_GAMECONTROLLER | SDL_INIT_JOYSTICK) < 0) {
-        LOG_CRITICAL(Input, "SDL_Init(SDL_INIT_GAMECONTROLLER) failed with: {}", SDL_GetError());
-    } else {
-        using namespace Input;
-        RegisterFactory<ButtonDevice>("sdl", std::make_shared<SDLButtonFactory>());
-        RegisterFactory<AnalogDevice>("sdl", std::make_shared<SDLAnalogFactory>());
-        initialized = true;
-        polling = false;
-    }
+    using namespace Input;
+    RegisterFactory<ButtonDevice>("sdl", std::make_shared<SDLButtonFactory>());
+    RegisterFactory<AnalogDevice>("sdl", std::make_shared<SDLAnalogFactory>());
+    initialized = true;
+    static std::future<void> future = std::async(std::launch::async, PollLoop);
 }
 
 void Shutdown() {
@@ -540,7 +542,6 @@ void Shutdown() {
         using namespace Input;
         UnregisterFactory<ButtonDevice>("sdl");
         UnregisterFactory<AnalogDevice>("sdl");
-        SDL_QuitSubSystem(SDL_INIT_GAMECONTROLLER);
     }
 }
 
@@ -618,7 +619,7 @@ public:
 
         // Stop the regular event polling routine. So that the poller can handle the inputs
         // and the inputs aren't transfered to any running game during configuring the input
-        polling = true;
+        last_event = nullptr;
         // SDL joysticks must be opened, otherwise they don't generate events
         int num_joysticks = SDL_NumJoysticks();
         for (int i = 0; i < num_joysticks; i++) {
@@ -628,7 +629,6 @@ public:
 
     void Stop() override {
         // Restart the regular event polling routine
-        polling = false;
     }
 
 private:
@@ -638,18 +638,18 @@ private:
 class SDLButtonPoller final : public SDLPoller {
 public:
     Common::ParamPackage GetNextInput() override {
-        SDL_Event event;
-        polling = true;
-        while (SDL_PollEvent(&event)) {
-            switch (event.type) {
-            case SDL_JOYAXISMOTION:
-                if (std::abs(event.jaxis.value / 32767.0) < 0.5) {
-                    break;
-                }
-            case SDL_JOYBUTTONUP:
-            case SDL_JOYHATMOTION:
-                return SDLEventToButtonParamPackage(event);
+        if (!last_event) {
+            return {};
+        }
+        SDL_Event event = *last_event;
+        switch (event.type) {
+        case SDL_JOYAXISMOTION:
+            if (std::abs(event.jaxis.value / 32767.0) < 0.5) {
+                break;
             }
+        case SDL_JOYBUTTONUP:
+        case SDL_JOYHATMOTION:
+            return SDLEventToButtonParamPackage(event);
         }
         return {};
     }
@@ -667,21 +667,22 @@ public:
     }
 
     Common::ParamPackage GetNextInput() override {
-        SDL_Event event;
-        while (SDL_PollEvent(&event)) {
-            if (event.type != SDL_JOYAXISMOTION || std::abs(event.jaxis.value / 32767.0) < 0.5) {
-                continue;
-            }
-            // An analog device needs two axes, so we need to store the axis for later and wait for
-            // a second SDL event. The axes also must be from the same joystick.
-            int axis = event.jaxis.axis;
-            if (analog_xaxis == -1) {
-                analog_xaxis = axis;
-                analog_axes_joystick = event.jaxis.which;
-            } else if (analog_yaxis == -1 && analog_xaxis != axis &&
-                       analog_axes_joystick == event.jaxis.which) {
-                analog_yaxis = axis;
-            }
+        if (!last_event) {
+            return {};
+        }
+        SDL_Event event = *last_event;
+        if (event.type != SDL_JOYAXISMOTION || std::abs(event.jaxis.value / 32767.0) < 0.5) {
+            return {};
+        }
+        // An analog device needs two axes, so we need to store the axis for later and wait for
+        // a second SDL event. The axes also must be from the same joystick.
+        int axis = event.jaxis.axis;
+        if (analog_xaxis == -1) {
+            analog_xaxis = axis;
+            analog_axes_joystick = event.jaxis.which;
+        } else if (analog_yaxis == -1 && analog_xaxis != axis &&
+                   analog_axes_joystick == event.jaxis.which) {
+            analog_yaxis = axis;
         }
         Common::ParamPackage params;
         if (analog_xaxis != -1 && analog_yaxis != -1) {
