@@ -270,89 +270,92 @@ static std::shared_ptr<SDLJoystick> GetJoystickByGUID(const std::string& guid) {
 
 class SDLButton final : public Input::ButtonDevice {
 public:
-    explicit SDLButton(std::shared_ptr<SDLJoystick> joystick_, int button_, std::string guid_)
-        : joystick(std::move(joystick_)), button(button_), guid(guid_) {}
+    explicit SDLButton(int joystick_, int button_, std::string guid_)
+        : joystick_index(joystick_), button(button_), guid(guid_) {}
 
     bool GetStatus() const override {
+        auto joystick = GetJoystickByID(joystick_index);
         if (!joystick)
             joystick = GetJoystickByGUID(guid);
-        if (joystick)
-            return joystick->GetButton(button);
-        return false;
+        if (!joystick)
+            return false;
+        return joystick->GetButton(button);
+        ;
     }
 
 private:
-    mutable std::shared_ptr<SDLJoystick> joystick;
-    int button;
+    int joystick_index;
     std::string guid;
+    int button;
 };
 
 class SDLDirectionButton final : public Input::ButtonDevice {
 public:
-    explicit SDLDirectionButton(std::shared_ptr<SDLJoystick> joystick_, int hat_, Uint8 direction_,
-                                std::string guid_)
-        : joystick(std::move(joystick_)), hat(hat_), direction(direction_), guid(guid_) {}
+    explicit SDLDirectionButton(int joystick_, int hat_, Uint8 direction_, std::string guid_)
+        : joystick_index(joystick_), hat(hat_), direction(direction_), guid(guid_) {}
 
     bool GetStatus() const override {
+        auto joystick = GetJoystickByID(joystick_index);
         if (!joystick)
             joystick = GetJoystickByGUID(guid);
-        if (joystick)
-            return joystick->GetHatDirection(hat, direction);
-        return false;
+        if (!joystick)
+            return false;
+        return joystick->GetHatDirection(hat, direction);
     }
 
 private:
-    mutable std::shared_ptr<SDLJoystick> joystick;
+    int joystick_index;
+    std::string guid;
     int hat;
     Uint8 direction;
-    std::string guid;
 };
 
 class SDLAxisButton final : public Input::ButtonDevice {
 public:
-    explicit SDLAxisButton(std::shared_ptr<SDLJoystick> joystick_, int axis_, float threshold_,
-                           bool trigger_if_greater_, std::string guid_)
-        : joystick(std::move(joystick_)), axis(axis_), threshold(threshold_),
+    explicit SDLAxisButton(int joystick_, int axis_, float threshold_, bool trigger_if_greater_,
+                           std::string guid_)
+        : joystick_index(joystick_), axis(axis_), threshold(threshold_),
           trigger_if_greater(trigger_if_greater_), guid(guid_) {}
 
     bool GetStatus() const override {
+        auto joystick = GetJoystickByID(joystick_index);
         if (!joystick)
             joystick = GetJoystickByGUID(guid);
-        if (joystick) {
-            float axis_value = joystick->GetAxis(axis);
-            if (trigger_if_greater)
-                return axis_value > threshold;
-            return axis_value < threshold;
-        }
-        return false;
+        if (!joystick)
+            return false;
+        float axis_value = joystick->GetAxis(axis);
+        if (trigger_if_greater)
+            return axis_value > threshold;
+        return axis_value < threshold;
     }
 
 private:
-    mutable std::shared_ptr<SDLJoystick> joystick;
+    int joystick_index;
+    std::string guid;
     int axis;
     float threshold;
     bool trigger_if_greater;
-    std::string guid;
 };
 
 class SDLAnalog final : public Input::AnalogDevice {
 public:
-    SDLAnalog(std::shared_ptr<SDLJoystick> joystick_, int axis_x_, int axis_y_, std::string guid_)
-        : joystick(std::move(joystick_)), axis_x(axis_x_), axis_y(axis_y_), guid(guid_) {}
+    SDLAnalog(int joystick_, int axis_x_, int axis_y_, std::string guid_)
+        : joystick_index(joystick_), axis_x(axis_x_), axis_y(axis_y_), guid(guid_) {}
 
     std::tuple<float, float> GetStatus() const override {
+        auto joystick = GetJoystickByID(joystick_index);
         if (!joystick)
             joystick = GetJoystickByGUID(guid);
-        if (joystick)
-            return joystick->GetAnalog(axis_x, axis_y);
-        return std::make_tuple<float, float>(0.0, 0.0);
+        if (!joystick)
+            return std::make_tuple<float, float>(0.0, 0.0);
+        return joystick->GetAnalog(axis_x, axis_y);
     }
 
 private:
-    mutable std::shared_ptr<SDLJoystick> joystick;
+    int joystick_index;
+    std::string guid;
     int axis_x;
     int axis_y;
-    std::string guid;
 };
 
 void HandleGameControllerEvent(const SDL_Event& event) {
@@ -457,13 +460,7 @@ public:
             } else {
                 direction = 0;
             }
-            auto joystick = GetJoystickByID(id);
-            if (joystick->GetJoystickGUID() == guid) {
-                return std::make_unique<SDLDirectionButton>(joystick, hat, direction, guid);
-            } else {
-                return std::make_unique<SDLDirectionButton>(GetJoystickByGUID(guid), hat, direction,
-                                                            guid);
-            }
+            return std::make_unique<SDLDirectionButton>(id, hat, direction, guid);
         }
 
         if (params.Has("axis")) {
@@ -480,26 +477,12 @@ public:
                 trigger_if_greater = true;
                 LOG_ERROR(Input, "Unknown direction {}", direction_name);
             }
-            auto joystick = GetJoystickByID(id);
-            if (joystick->GetJoystickGUID() == guid) {
-                return std::make_unique<SDLAxisButton>(joystick, axis, threshold,
-                                                       trigger_if_greater, guid);
-            } else {
-                // Can't find the configured joystick, so just use the first with the same guid
-                return std::make_unique<SDLAxisButton>(GetJoystickByGUID(guid), axis, threshold,
-                                                       trigger_if_greater, guid);
-            }
+            return std::make_unique<SDLAxisButton>(id, axis, threshold, trigger_if_greater, guid);
         }
 
         const int button = params.Get("button", 0);
         const std::string guid = params.Get("guid", "0");
-        auto joystick = GetJoystickByID(id);
-        if (joystick->GetJoystickGUID() == guid) {
-            return std::make_unique<SDLButton>(joystick, button, guid);
-        } else {
-            // Can't find the configured joystick, so just use the first with the same guid
-            return std::make_unique<SDLButton>(GetJoystickByGUID(guid), button, guid);
-        }
+        return std::make_unique<SDLButton>(id, button, guid);
     }
 };
 
@@ -518,13 +501,7 @@ public:
         const int axis_x = params.Get("axis_x", 0);
         const int axis_y = params.Get("axis_y", 1);
         const std::string guid = params.Get("guid", "0");
-        auto joystick = GetJoystickByID(joystick_index);
-        if (joystick->GetJoystickGUID() == guid) {
-            return std::make_unique<SDLAnalog>(joystick, axis_x, axis_y, guid);
-        } else {
-            // Can't find the configured joystick, so just use the first with the same guid
-            return std::make_unique<SDLAnalog>(GetJoystickByGUID(guid), axis_x, axis_y, guid);
-        }
+        return std::make_unique<SDLAnalog>(joystick_index, axis_x, axis_y, guid);
     }
 };
 
