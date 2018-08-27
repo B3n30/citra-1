@@ -515,10 +515,11 @@ void Init() {
 
 void Shutdown() {
     if (initialized) {
-        initialized = false;
+        joystick_list.clear();
         using namespace Input;
         UnregisterFactory<ButtonDevice>("sdl");
         UnregisterFactory<AnalogDevice>("sdl");
+        initialized = false;
     }
 }
 
