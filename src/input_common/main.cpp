@@ -2,6 +2,7 @@
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
+#include <future>
 #include <memory>
 #include "common/param_package.h"
 #include "input_common/analog_from_button.h"
@@ -32,6 +33,12 @@ void Init() {
 #endif
 
     udp = CemuhookUDP::Init();
+}
+
+void StartJoystickEventHandler() {
+#ifdef HAVE_SDL2
+    static std::future<void> future = std::async(std::launch::async, SDL::PollLoop);
+#endif
 }
 
 void Shutdown() {

@@ -28,14 +28,21 @@ class VirtualJoystick;
 class SDLButtonFactory;
 class SDLAnalogFactory;
 
+/// Vector of all used VirtualJoystick instances
+/// Every access needs to be locked by the joystick_list_mutex
 static std::mutex joystick_list_mutex;
 static std::vector<std::shared_ptr<VirtualJoystick>> joystick_list;
+
+/// Map of init_id and corresponding SDL_Joystick*
 static std::unordered_map<int, SDL_Joystick*> sdl_joystick_map;
+/// Map of init_id and corresponding SDL_GameController*
 static std::unordered_map<int, SDL_GameController*> sdl_game_controller_map;
 
 static std::shared_ptr<SDLButtonFactory> button_factory;
 static std::shared_ptr<SDLAnalogFactory> analog_factory;
 
+/// Used by the Pollers during config
+static std::atomic<bool> polling;
 static std::atomic<SDL_Event*> last_event;
 
 static std::atomic<bool> initialized = false;
@@ -45,9 +52,6 @@ public:
     VirtualJoystick(const std::string guid_, int port_) : guid(guid_), port(port_) {
         init_id = -1;
         sdl_id = -1;
-        state.axes.clear();
-        state.buttons.clear();
-        state.hats.clear();
     }
 
     VirtualJoystick(SDL_Joystick* joystick) {
@@ -60,10 +64,6 @@ public:
         guid = guid_str;
 
         name = SDL_JoystickName(joystick);
-
-        state.buttons.assign(SDL_JoystickNumButtons(joystick), false);
-        state.axes.assign(SDL_JoystickNumAxes(joystick), 0);
-        state.hats.assign(SDL_JoystickNumHats(joystick), 0);
 
         port = std::count_if(joystick_list.begin(), joystick_list.end(),
                              [this](std::shared_ptr<VirtualJoystick> joystick) {
@@ -78,11 +78,8 @@ public:
         state.buttons[button] = value;
     }
 
-    bool GetButton(int button) const {
+    bool GetButton(int button) {
         std::lock_guard<std::mutex> lock(mutex);
-        if (button >= state.buttons.size()) {
-            return false;
-        }
         return state.buttons[button];
     }
 
@@ -91,15 +88,12 @@ public:
         state.axes[axis] = value;
     }
 
-    float GetAxis(int axis) const {
+    float GetAxis(int axis) {
         std::lock_guard<std::mutex> lock(mutex);
-        if (axis >= state.axes.size()) {
-            return 0;
-        }
         return state.axes[axis] / 32767.0f;
     }
 
-    std::tuple<float, float> GetAnalog(int axis_x, int axis_y) const {
+    std::tuple<float, float> GetAnalog(int axis_x, int axis_y) {
         float x = GetAxis(axis_x);
         float y = GetAxis(axis_y);
         y = -y; // 3DS uses an y-axis inverse from SDL
@@ -121,29 +115,40 @@ public:
         state.hats[hat] = direction;
     }
 
-    bool GetHatDirection(int hat, Uint8 direction) const {
+    bool GetHatDirection(int hat, Uint8 direction) {
         std::lock_guard<std::mutex> lock(mutex);
-        if (hat >= state.hats.size()) {
-            return false;
-        }
         return (state.hats[hat] & direction) != 0;
     }
 
+    /***
+     * The SDL_ID is used by SDL_JOYBUTTONDOWN, SDL_JOYBUTTONUP, SDL_JOYHATMOTION, and
+     * SDL_JOYAXISMOTION It changes when the joystick gets disconnected and reconnected
+     */
     int GetSDLID() const {
         std::lock_guard<std::mutex> lock(mutex);
         return sdl_id;
     }
 
+    /**
+     * The Init_ID is used by SDL_JOYDEVICEADDED
+     * It will always stay the same for each joystick for the runtime of Citra
+     */
     int GetInitID() const {
         std::lock_guard<std::mutex> lock(mutex);
         return init_id;
     }
 
+    /**
+     * The GUID is unique per joystick type
+     */
     const std::string& GetJoystickGUID() const {
         std::lock_guard<std::mutex> lock(mutex);
         return guid;
     }
 
+    /**
+     * The number of joystick from the same type that were connected before this joystick
+     */
     int GetPort() const {
         std::lock_guard<std::mutex> lock(mutex);
         return port;
@@ -153,6 +158,9 @@ public:
         return name + " (" + std::to_string(port + 1) + ")";
     }
 
+    /**
+     * Ties a virtual joystick used by InputDevices to a real joystick
+     */
     void Connect(SDL_Joystick* joystick) {
         std::lock_guard<std::mutex> lock(mutex);
         ASSERT(init_id == -1);
@@ -167,36 +175,23 @@ public:
         ASSERT(guid == guid_);
 
         name = SDL_JoystickName(joystick);
-        state.buttons.assign(SDL_JoystickNumButtons(joystick), false);
-        state.axes.assign(SDL_JoystickNumAxes(joystick), 0);
-        state.hats.assign(SDL_JoystickNumHats(joystick), 0);
     }
 
+    /**
+     * This updates the SDL_ID when the real joystick is reconnected
+     */
     void Reconnect(SDL_Joystick* joystick) {
         std::lock_guard<std::mutex> lock(mutex);
         ASSERT(init_id != -1);
         ASSERT(sdl_id != -1);
         sdl_id = SDL_JoystickInstanceID(joystick);
-
-        SDL_JoystickGUID id = SDL_JoystickGetGUID(joystick);
-        char guid_str[33];
-        SDL_JoystickGetGUIDString(id, guid_str, sizeof(guid_str));
-        std::string guid_ = guid_str;
-        // ASSERT(guid == guid_);
-
-        name = SDL_JoystickName(joystick);
-
-        state.buttons.assign(SDL_JoystickNumButtons(joystick), false);
-        state.axes.assign(SDL_JoystickNumAxes(joystick), 0);
-        state.hats.assign(SDL_JoystickNumHats(joystick), 0);
-        sdl_id = SDL_JoystickInstanceID(joystick);
     }
 
 private:
     struct State {
-        std::vector<bool> buttons;
-        std::vector<Sint16> axes;
-        std::vector<Uint8> hats;
+        std::unordered_map<int, bool> buttons;
+        std::unordered_map<int, Sint16> axes;
+        std::unordered_map<int, Uint8> hats;
     } state;
     std::string guid;
     int port;
@@ -249,73 +244,6 @@ static std::shared_ptr<VirtualJoystick> GetJoystickByGUID(const std::string& gui
     }
     return nullptr;
 }
-
-class SDLButton final : public Input::ButtonDevice {
-public:
-    explicit SDLButton(std::shared_ptr<VirtualJoystick> joystick_, int button_)
-        : joystick(joystick_), button(button_) {}
-
-    bool GetStatus() const override {
-        return joystick->GetButton(button);
-    }
-
-private:
-    std::shared_ptr<VirtualJoystick> joystick;
-    int button;
-};
-
-class SDLDirectionButton final : public Input::ButtonDevice {
-public:
-    explicit SDLDirectionButton(std::shared_ptr<VirtualJoystick> joystick_, int hat_,
-                                Uint8 direction_)
-        : joystick(joystick_), hat(hat_), direction(direction_) {}
-
-    bool GetStatus() const override {
-        return joystick->GetHatDirection(hat, direction);
-    }
-
-private:
-    std::shared_ptr<VirtualJoystick> joystick;
-    int hat;
-    Uint8 direction;
-};
-
-class SDLAxisButton final : public Input::ButtonDevice {
-public:
-    explicit SDLAxisButton(std::shared_ptr<VirtualJoystick> joystick_, int axis_, float threshold_,
-                           bool trigger_if_greater_)
-        : joystick(joystick_), axis(axis_), threshold(threshold_),
-          trigger_if_greater(trigger_if_greater_) {}
-
-    bool GetStatus() const override {
-        float axis_value = joystick->GetAxis(axis);
-        if (trigger_if_greater)
-            return axis_value > threshold;
-        return axis_value < threshold;
-    }
-
-private:
-    std::shared_ptr<VirtualJoystick> joystick;
-    int axis;
-    float threshold;
-    bool trigger_if_greater;
-};
-
-class SDLAnalog final : public Input::AnalogDevice {
-public:
-    SDLAnalog(std::shared_ptr<VirtualJoystick> joystick_, int axis_x_, int axis_y_)
-        : joystick(joystick_), axis_x(axis_x_), axis_y(axis_y_) {}
-
-    std::tuple<float, float> GetStatus() const override {
-        return joystick->GetAnalog(axis_x, axis_y);
-    }
-
-private:
-    std::shared_ptr<VirtualJoystick> joystick;
-    std::string guid;
-    int axis_x;
-    int axis_y;
-};
 
 void InitJoystick(int joystick_id) {
     SDL_Joystick* joystick = nullptr;
@@ -444,13 +372,84 @@ void PollLoop() {
     while (initialized) {
         // Wait for 10 ms or until an event happens
         if (SDL_WaitEventTimeout(&event, 10)) {
-            last_event = &event;
-            HandleGameControllerEvent(event);
+            // Don't handle the event if we are configuring
+            if (!polling) {
+                HandleGameControllerEvent(event);
+            } else {
+                last_event = &event;
+            }
         }
     }
     CloseSDLJoysticks();
     SDL_QuitSubSystem(SDL_INIT_GAMECONTROLLER | SDL_INIT_JOYSTICK);
 }
+
+class SDLButton final : public Input::ButtonDevice {
+public:
+    explicit SDLButton(std::shared_ptr<VirtualJoystick> joystick_, int button_)
+        : joystick(joystick_), button(button_) {}
+
+    bool GetStatus() const override {
+        return joystick->GetButton(button);
+    }
+
+private:
+    std::shared_ptr<VirtualJoystick> joystick;
+    int button;
+};
+
+class SDLDirectionButton final : public Input::ButtonDevice {
+public:
+    explicit SDLDirectionButton(std::shared_ptr<VirtualJoystick> joystick_, int hat_,
+                                Uint8 direction_)
+        : joystick(joystick_), hat(hat_), direction(direction_) {}
+
+    bool GetStatus() const override {
+        return joystick->GetHatDirection(hat, direction);
+    }
+
+private:
+    std::shared_ptr<VirtualJoystick> joystick;
+    int hat;
+    Uint8 direction;
+};
+
+class SDLAxisButton final : public Input::ButtonDevice {
+public:
+    explicit SDLAxisButton(std::shared_ptr<VirtualJoystick> joystick_, int axis_, float threshold_,
+                           bool trigger_if_greater_)
+        : joystick(joystick_), axis(axis_), threshold(threshold_),
+          trigger_if_greater(trigger_if_greater_) {}
+
+    bool GetStatus() const override {
+        float axis_value = joystick->GetAxis(axis);
+        if (trigger_if_greater)
+            return axis_value > threshold;
+        return axis_value < threshold;
+    }
+
+private:
+    std::shared_ptr<VirtualJoystick> joystick;
+    int axis;
+    float threshold;
+    bool trigger_if_greater;
+};
+
+class SDLAnalog final : public Input::AnalogDevice {
+public:
+    SDLAnalog(std::shared_ptr<VirtualJoystick> joystick_, int axis_x_, int axis_y_)
+        : joystick(joystick_), axis_x(axis_x_), axis_y(axis_y_) {}
+
+    std::tuple<float, float> GetStatus() const override {
+        return joystick->GetAnalog(axis_x, axis_y);
+    }
+
+private:
+    std::shared_ptr<VirtualJoystick> joystick;
+    std::string guid;
+    int axis_x;
+    int axis_y;
+};
 
 /// A button device factory that creates button devices from SDL joystick
 class SDLButtonFactory final : public Input::Factory<Input::ButtonDevice> {
@@ -458,7 +457,8 @@ public:
     /**
      * Creates a button device from a joystick button
      * @param params contains parameters for creating the device:
-     *     - "joystick": the index of the joystick to bind
+     *     - "guid": the guid of the joystick to bind
+     *     - "port": the nth joystick of the same type to bind
      *     - "button"(optional): the index of the button to bind
      *     - "hat"(optional): the index of the hat to bind as direction buttons
      *     - "axis"(optional): the index of the axis to bind
@@ -495,6 +495,7 @@ public:
             } else {
                 direction = 0;
             }
+            joystick->SetHat(hat, SDL_HAT_CENTERED);
             return std::make_unique<SDLDirectionButton>(joystick, hat, direction);
         }
 
@@ -511,10 +512,12 @@ public:
                 trigger_if_greater = true;
                 LOG_ERROR(Input, "Unknown direction {}", direction_name);
             }
+            joystick->SetAxis(axis, 0);
             return std::make_unique<SDLAxisButton>(joystick, axis, threshold, trigger_if_greater);
         }
 
         const int button = params.Get("button", 0);
+        joystick->SetButton(button, false);
         return std::make_unique<SDLButton>(joystick, button);
     }
 };
@@ -525,7 +528,8 @@ public:
     /**
      * Creates analog device from joystick axes
      * @param params contains parameters for creating the device:
-     *     - "joystick": the index of the joystick to bind
+     *     - "guid": the guid of the joystick to bind
+     *     - "port": the nth joystick of the same type
      *     - "axis_x": the index of the axis to be bind as x-axis
      *     - "axis_y": the index of the axis to be bind as y-axis
      */
@@ -541,6 +545,8 @@ public:
             joystick_list.push_back(joystick);
         }
 
+        joystick->SetAxis(axis_x, 0);
+        joystick->SetAxis(axis_y, 0);
         return std::make_unique<SDLAnalog>(joystick, axis_x, axis_y);
     }
 };
@@ -549,8 +555,8 @@ void Init() {
     using namespace Input;
     RegisterFactory<ButtonDevice>("sdl", std::make_shared<SDLButtonFactory>());
     RegisterFactory<AnalogDevice>("sdl", std::make_shared<SDLAnalogFactory>());
+    polling = false;
     initialized = true;
-    static std::future<void> future = std::async(std::launch::async, PollLoop);
 }
 
 void Shutdown() {
@@ -633,10 +639,13 @@ namespace Polling {
 class SDLPoller : public InputCommon::Polling::DevicePoller {
 public:
     void Start() override {
+        polling = true;
         last_event = nullptr;
     }
 
-    void Stop() override {}
+    void Stop() override {
+        polling = false;
+    }
 };
 
 class SDLButtonPoller final : public SDLPoller {
