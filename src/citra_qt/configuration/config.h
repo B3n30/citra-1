@@ -7,7 +7,6 @@
 #include <array>
 #include <string>
 #include <QVariant>
-#include "citra_qt/ui_settings.h"
 #include "core/settings.h"
 
 class QSettings;

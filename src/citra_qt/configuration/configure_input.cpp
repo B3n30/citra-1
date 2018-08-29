@@ -206,7 +206,6 @@ QList<QKeySequence> ConfigureInput::GetUsedKeyboardKeys() {
     for (int button = 0; button < Settings::NativeButton::NumButtons; button++) {
 
         auto button_param = buttons_param[button];
-        // QString button_label;
 
         if (button_param.Get("engine", "") == "keyboard") {
             list << QKeySequence(button_param.Get("code", 0));

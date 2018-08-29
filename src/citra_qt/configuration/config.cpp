@@ -2,11 +2,12 @@
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
+#include <array>
 #include <unordered_map>
-#include <vector>
 #include <QKeySequence>
 #include <QSettings>
 #include "citra_qt/configuration/config.h"
+#include "citra_qt/ui_settings.h"
 #include "common/file_util.h"
 #include "core/hle/service/service.h"
 #include "input_common/main.h"

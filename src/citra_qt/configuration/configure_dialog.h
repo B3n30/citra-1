@@ -20,7 +20,7 @@ public:
     explicit ConfigureDialog(QWidget* parent, const HotkeyRegistry& registry);
     ~ConfigureDialog();
 
-    void applyConfiguration();
+    void applyConfiguration(HotkeyRegistry& registry);
 
 private slots:
     void onLanguageChanged(const QString& locale);

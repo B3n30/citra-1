@@ -13,7 +13,7 @@
 
 namespace UISettings {
 
-typedef std::pair<QString, int> ContextualShortcut;
+using ContextualShortcut = std::pair<QString, int>;
 
 class Shortcut {
 public:

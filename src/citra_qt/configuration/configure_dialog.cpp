@@ -29,8 +29,8 @@ ConfigureDialog::~ConfigureDialog() = default;
 
 void ConfigureDialog::setConfiguration() {}
 
-void ConfigureDialog::applyConfiguration() {
-    ui->generalTab->applyConfiguration();
+void ConfigureDialog::applyConfiguration(HotkeyRegistry& registry) {
+    ui->generalTab->applyConfiguration(registry);
     ui->systemTab->applyConfiguration();
     ui->inputTab->applyConfiguration();
     ui->graphicsTab->applyConfiguration();

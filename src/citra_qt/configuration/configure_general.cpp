@@ -63,10 +63,10 @@ void ConfigureGeneral::setConfiguration() {
 }
 
 void ConfigureGeneral::PopulateHotkeyList(const HotkeyRegistry& registry) {
-    ui->hotkeysDialog->Populate(registry);
+    ui->hotkeys->Populate(registry);
 }
 
-void ConfigureGeneral::applyConfiguration() {
+void ConfigureGeneral::applyConfiguration(HotkeyRegistry& registry) {
     UISettings::values.confirm_before_closing = ui->toggle_check_exit->isChecked();
     UISettings::values.theme =
         ui->theme_combobox->itemData(ui->theme_combobox->currentIndex()).toString();
@@ -76,7 +76,7 @@ void ConfigureGeneral::applyConfiguration() {
 
     Settings::values.region_value = ui->region_combobox->currentIndex() - 1;
 
-    ui->hotkeys->applyConfiguration();
+    ui->hotkeys->applyConfiguration(registry);
 }
 
 void ConfigureGeneral::OnLanguageChanged(int index) {

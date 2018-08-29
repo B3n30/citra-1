@@ -13,8 +13,8 @@ HotkeyRegistry::~HotkeyRegistry() = default;
 
 void HotkeyRegistry::SaveHotkeys() {
     UISettings::values.shortcuts.clear();
-    for (auto group : hotkey_groups) {
-        for (auto hotkey : group.second) {
+    for (const auto& group : hotkey_groups) {
+        for (const auto& hotkey : group.second) {
             UISettings::values.shortcuts.emplace_back(
                 UISettings::Shortcut(hotkey.first, group.first,
                                      UISettings::ContextualShortcut(hotkey.second.keyseq.toString(),

@@ -13,7 +13,7 @@ class QShortcut;
 
 class HotkeyRegistry final {
 public:
-    friend class GHotkeysDialog;
+    friend class ConfigureHotkeys;
 
     explicit HotkeyRegistry();
     ~HotkeyRegistry();

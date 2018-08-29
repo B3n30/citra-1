@@ -14,6 +14,8 @@ namespace Ui {
 class ConfigureHotkeys;
 }
 
+class HotkeyRegistry;
+
 class ConfigureHotkeys : public QWidget {
     Q_OBJECT
 
@@ -21,10 +23,12 @@ public:
     explicit ConfigureHotkeys(QWidget* parent = nullptr);
     ~ConfigureHotkeys();
 
-    void applyConfiguration();
+    void applyConfiguration(HotkeyRegistry& registry);
     void retranslateUi();
 
     void EmitHotkeysChanged();
+
+    void Populate(const HotkeyRegistry& registry);
 
 public slots:
     void OnInputKeysChanged(QList<QKeySequence> new_key_list);
