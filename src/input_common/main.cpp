@@ -2,8 +2,8 @@
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
-#include <future>
 #include <memory>
+#include <thread>
 #include "common/param_package.h"
 #include "input_common/analog_from_button.h"
 #include "input_common/keyboard.h"
@@ -19,6 +19,10 @@ namespace InputCommon {
 static std::shared_ptr<Keyboard> keyboard;
 static std::shared_ptr<MotionEmu> motion_emu;
 static std::unique_ptr<CemuhookUDP::State> udp;
+
+#ifdef HAVE_SDL2
+static std::thread poll_thread;
+#endif
 
 void Init() {
     keyboard = std::make_shared<Keyboard>();
@@ -37,7 +41,7 @@ void Init() {
 
 void StartJoystickEventHandler() {
 #ifdef HAVE_SDL2
-    static std::future<void> future = std::async(std::launch::async, SDL::PollLoop);
+    poll_thread = std::thread(SDL::PollLoop);
 #endif
 }
 
@@ -50,6 +54,7 @@ void Shutdown() {
 
 #ifdef HAVE_SDL2
     SDL::Shutdown();
+    poll_thread.join();
 #endif
 }
 

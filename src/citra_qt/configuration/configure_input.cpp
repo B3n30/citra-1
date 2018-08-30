@@ -53,6 +53,7 @@ static QString ButtonToText(const Common::ParamPackage& param) {
         return getKeyName(param.Get("code", 0));
     } else if (param.Get("engine", "") == "sdl") {
         QString text = QString(QObject::tr("%1")).arg(param.Get("name", "").c_str());
+        text += QString(QObject::tr("(%1) - ")).arg(param.Get("port", "0").c_str());
         if (param.Has("hat")) {
             text += QString(QObject::tr(" Hat %1 %2"))
                         .arg(param.Get("hat", "").c_str(), param.Get("direction", "").c_str());
@@ -81,6 +82,7 @@ static QString AnalogToText(const Common::ParamPackage& param, const std::string
         }
 
         QString text = QString(QObject::tr("%1")).arg(param.Get("name", "").c_str());
+        text += QString(QObject::tr("(%1) - ")).arg(param.Get("port", "0").c_str());
         if (dir == "left" || dir == "right") {
             text += QString(QObject::tr(" Axis %1")).arg(param.Get("axis_x", "").c_str());
         } else if (dir == "up" || dir == "down") {

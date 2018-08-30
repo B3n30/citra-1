@@ -28,9 +28,6 @@ void Init();
 /// Unresisters SDL device factories and shut them down.
 void Shutdown();
 
-/// Call after SDL_INIT and before the event poll loop to open all connected joysticks
-void InitSDLJoysticks();
-
 /// Needs to be called before SDL_QuitSubSystem.
 void CloseSDLJoysticks();
 
