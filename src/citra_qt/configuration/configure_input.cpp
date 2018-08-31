@@ -52,20 +52,18 @@ static QString ButtonToText(const Common::ParamPackage& param) {
     } else if (param.Get("engine", "") == "keyboard") {
         return getKeyName(param.Get("code", 0));
     } else if (param.Get("engine", "") == "sdl") {
-        QString text = QString(QObject::tr("%1")).arg(param.Get("name", "").c_str());
-        text += QString(QObject::tr("(%1) - ")).arg(param.Get("port", "0").c_str());
         if (param.Has("hat")) {
-            text += QString(QObject::tr(" Hat %1 %2"))
-                        .arg(param.Get("hat", "").c_str(), param.Get("direction", "").c_str());
+            return QString(QObject::tr(" Hat %1 %2"))
+                .arg(param.Get("hat", "").c_str(), param.Get("direction", "").c_str());
         }
         if (param.Has("axis")) {
-            text += QString(QObject::tr(" Axis %1%2"))
-                        .arg(param.Get("axis", "").c_str(), param.Get("direction", "").c_str());
+            return QString(QObject::tr(" Axis %1%2"))
+                .arg(param.Get("axis", "").c_str(), param.Get("direction", "").c_str());
         }
         if (param.Has("button")) {
-            text += QString(QObject::tr(" Button %1")).arg(param.Get("button", "").c_str());
+            return QString(QObject::tr(" Button %1")).arg(param.Get("button", "").c_str());
         }
-        return text;
+        return QString();
     } else {
         return QObject::tr("[unknown]");
     }
@@ -81,14 +79,12 @@ static QString AnalogToText(const Common::ParamPackage& param, const std::string
             return QString(QObject::tr("[unused]"));
         }
 
-        QString text = QString(QObject::tr("%1")).arg(param.Get("name", "").c_str());
-        text += QString(QObject::tr("(%1) - ")).arg(param.Get("port", "0").c_str());
         if (dir == "left" || dir == "right") {
-            text += QString(QObject::tr(" Axis %1")).arg(param.Get("axis_x", "").c_str());
+            return QString(QObject::tr(" Axis %1")).arg(param.Get("axis_x", "").c_str());
         } else if (dir == "up" || dir == "down") {
-            text += QString(QObject::tr(" Axis %1")).arg(param.Get("axis_y", "").c_str());
+            return QString(QObject::tr(" Axis %1")).arg(param.Get("axis_y", "").c_str());
         }
-        return text;
+        return QString();
     } else {
         return QObject::tr("[unknown]");
     }

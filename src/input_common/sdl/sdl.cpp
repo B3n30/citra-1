@@ -32,12 +32,7 @@ class SDLAnalogFactory;
 static std::mutex joystick_list_mutex;
 static std::vector<std::shared_ptr<VirtualJoystick>> joystick_list;
 
-struct SDLJoystick {
-    SDLJoystick(SDL_Joystick* joystick_, SDL_GameController* game_controller_)
-        : joystick(joystick_), game_controller(game_controller_) {}
-    SDL_Joystick* joystick;
-    SDL_GameController* game_controller;
-};
+typedef std::unique_ptr<SDL_Joystick, decltype(&SDL_JoystickClose)> SDLJoystick;
 
 std::string GetGUID(SDL_Joystick* joystick) {
     SDL_JoystickGUID guid = SDL_JoystickGetGUID(joystick);
@@ -161,34 +156,21 @@ static std::shared_ptr<VirtualJoystick> GetVirtualJoystickByGUID(const std::stri
 static std::shared_ptr<VirtualJoystick> GetVirtualJoystickBySDLID(SDL_JoystickID sdl_id) {
     auto sdl_joystick = SDL_JoystickFromInstanceID(sdl_id);
     const std::string guid = GetGUID(sdl_joystick);
-    auto it = std::find_if(
+    const auto& it = std::find_if(
         sdl_joystick_map[guid].begin(), sdl_joystick_map[guid].end(),
-        [sdl_joystick](const SDLJoystick joystick) { return joystick.joystick == sdl_joystick; });
+        [sdl_joystick](const SDLJoystick& joystick) { return joystick.get() == sdl_joystick; });
     int port = it - sdl_joystick_map[guid].begin();
     return GetVirtualJoystickByGUID(guid, port);
 }
 
 void InitJoystick(int joystick_index) {
-    SDL_Joystick* joystick = nullptr;
-    SDL_GameController* game_controller = nullptr;
-    if (SDL_IsGameController(joystick_index)) {
-        game_controller = SDL_GameControllerOpen(joystick_index);
-        if (!game_controller) {
-            LOG_ERROR(Input, "failed to open gamepad {}", joystick_index);
-            return;
-        }
-        joystick = SDL_GameControllerGetJoystick(game_controller);
-        std::string guid = GetGUID(joystick);
-        sdl_joystick_map[guid].emplace_back(joystick, game_controller);
+    SDL_Joystick* joystick = SDL_JoystickOpen(joystick_index);
+    if (!joystick) {
+        LOG_ERROR(Input, "failed to open joystick {}", joystick_index);
+        return;
     } else {
-        joystick = SDL_JoystickOpen(joystick_index);
-        if (!joystick) {
-            LOG_ERROR(Input, "failed to open joystick {}", joystick_index);
-            return;
-        } else {
-            std::string guid = GetGUID(joystick);
-            sdl_joystick_map[guid].emplace_back(joystick, nullptr);
-        }
+        std::string guid = GetGUID(joystick);
+        sdl_joystick_map[guid].emplace_back(joystick, &SDL_JoystickClose);
     }
 }
 
@@ -196,14 +178,9 @@ void CloseJoystick(SDL_Joystick* joystick) {
     std::string guid = GetGUID(joystick);
     // This call to guid is save since the joystick is guranteed to be in that map
     auto& sdl_joystick_guid_list = sdl_joystick_map[guid];
-    auto sdl_joystick = std::find_if(
+    const auto& sdl_joystick = std::find_if(
         sdl_joystick_guid_list.begin(), sdl_joystick_guid_list.end(),
-        [joystick](SDLJoystick sdl_joystick) { return sdl_joystick.joystick == joystick; });
-    if (sdl_joystick->game_controller != nullptr) {
-        SDL_GameControllerClose(sdl_joystick->game_controller);
-        return;
-    }
-    SDL_JoystickClose(sdl_joystick->joystick);
+        [joystick](const SDLJoystick& sdl_joystick) { return sdl_joystick.get() == joystick; });
     sdl_joystick_guid_list.erase(sdl_joystick);
     return;
 }
@@ -250,21 +227,12 @@ void HandleGameControllerEvent(const SDL_Event& event) {
 }
 
 void CloseSDLJoysticks() {
-    for (auto sdl_joystick_guid_list : sdl_joystick_map) {
-        for (auto sdl_joystick : sdl_joystick_guid_list.second) {
-            if (sdl_joystick.game_controller != nullptr) {
-                SDL_GameControllerClose(sdl_joystick.game_controller);
-            } else {
-                SDL_JoystickClose(sdl_joystick.joystick);
-            }
-        }
-    }
     sdl_joystick_map.clear();
 }
 
 void PollLoop() {
-    if (SDL_Init(SDL_INIT_GAMECONTROLLER | SDL_INIT_JOYSTICK) < 0) {
-        LOG_CRITICAL(Input, "SDL_Init(SDL_INIT_GAMECONTROLLER) failed with: {}", SDL_GetError());
+    if (SDL_Init(SDL_INIT_JOYSTICK) < 0) {
+        LOG_CRITICAL(Input, "SDL_Init(SDL_INIT_JOYSTICK) failed with: {}", SDL_GetError());
         return;
     }
 
@@ -281,7 +249,7 @@ void PollLoop() {
         }
     }
     CloseSDLJoysticks();
-    SDL_QuitSubSystem(SDL_INIT_GAMECONTROLLER | SDL_INIT_JOYSTICK);
+    SDL_QuitSubSystem(SDL_INIT_JOYSTICK);
 }
 
 class SDLButton final : public Input::ButtonDevice {
@@ -470,7 +438,6 @@ Common::ParamPackage SDLEventToButtonParamPackage(const SDL_Event& event) {
         }
         params.Set("port", joystick->GetPort());
         params.Set("guid", joystick->GetGUID());
-        params.Set("name", SDL_JoystickName(SDL_JoystickFromInstanceID(event.jaxis.which)));
         params.Set("axis", event.jaxis.axis);
         if (event.jaxis.value > 0) {
             params.Set("direction", "+");
@@ -489,7 +456,6 @@ Common::ParamPackage SDLEventToButtonParamPackage(const SDL_Event& event) {
         }
         params.Set("port", joystick->GetPort());
         params.Set("guid", joystick->GetGUID());
-        params.Set("name", SDL_JoystickName(SDL_JoystickFromInstanceID(event.jaxis.which)));
         params.Set("button", event.jbutton.button);
         break;
     }
@@ -501,7 +467,6 @@ Common::ParamPackage SDLEventToButtonParamPackage(const SDL_Event& event) {
         }
         params.Set("port", joystick->GetPort());
         params.Set("guid", joystick->GetGUID());
-        params.Set("name", SDL_JoystickName(SDL_JoystickFromInstanceID(event.jaxis.which)));
         params.Set("hat", event.jhat.hat);
         switch (event.jhat.value) {
         case SDL_HAT_UP:
@@ -598,7 +563,6 @@ public:
             params.Set("engine", "sdl");
             params.Set("port", joystick->GetPort());
             params.Set("guid", joystick->GetGUID());
-            params.Set("name", SDL_JoystickName(SDL_JoystickFromInstanceID(event.jaxis.which)));
             params.Set("axis_x", analog_xaxis);
             params.Set("axis_y", analog_yaxis);
             analog_xaxis = -1;
