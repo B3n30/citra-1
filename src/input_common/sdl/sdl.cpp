@@ -16,6 +16,7 @@
 #include "common/logging/log.h"
 #include "common/math_util.h"
 #include "common/param_package.h"
+#include "common/threadsafe_queue.h"
 #include "input_common/main.h"
 #include "input_common/sdl/sdl.h"
 
@@ -34,7 +35,7 @@ static std::vector<std::shared_ptr<VirtualJoystick>> joystick_list;
 
 typedef std::unique_ptr<SDL_Joystick, decltype(&SDL_JoystickClose)> SDLJoystick;
 
-std::string GetGUID(SDL_Joystick* joystick) {
+static std::string GetGUID(SDL_Joystick* joystick) {
     SDL_JoystickGUID guid = SDL_JoystickGetGUID(joystick);
     char guid_str[33];
     SDL_JoystickGetGUIDString(guid, guid_str, sizeof(guid_str));
@@ -49,7 +50,7 @@ static std::shared_ptr<SDLAnalogFactory> analog_factory;
 
 /// Used by the Pollers during config
 static std::atomic<bool> polling;
-static std::atomic<SDL_Event*> last_event;
+static Common::SPSCQueue<SDL_Event> event_queue;
 
 static std::atomic<bool> initialized = false;
 
@@ -244,7 +245,7 @@ void PollLoop() {
             if (!polling) {
                 HandleGameControllerEvent(event);
             } else {
-                last_event = &event;
+                event_queue.Push(event);
             }
         }
     }
@@ -432,10 +433,6 @@ Common::ParamPackage SDLEventToButtonParamPackage(const SDL_Event& event) {
     switch (event.type) {
     case SDL_JOYAXISMOTION: {
         auto joystick = GetVirtualJoystickBySDLID(event.jaxis.which);
-        if (joystick == nullptr) {
-            LOG_ERROR(Input, "Registered Event from unkown joystick");
-            break;
-        }
         params.Set("port", joystick->GetPort());
         params.Set("guid", joystick->GetGUID());
         params.Set("axis", event.jaxis.axis);
@@ -449,22 +446,14 @@ Common::ParamPackage SDLEventToButtonParamPackage(const SDL_Event& event) {
         break;
     }
     case SDL_JOYBUTTONUP: {
-        auto joystick = GetVirtualJoystickBySDLID(event.jaxis.which);
-        if (joystick == nullptr) {
-            LOG_ERROR(Input, "Registered event from unkown joystick");
-            break;
-        }
+        auto joystick = GetVirtualJoystickBySDLID(event.jbutton.which);
         params.Set("port", joystick->GetPort());
         params.Set("guid", joystick->GetGUID());
         params.Set("button", event.jbutton.button);
         break;
     }
     case SDL_JOYHATMOTION: {
-        auto joystick = GetVirtualJoystickBySDLID(event.jaxis.which);
-        if (joystick == nullptr) {
-            LOG_ERROR(Input, "Registered event from unkown joystick");
-            break;
-        }
+        auto joystick = GetVirtualJoystickBySDLID(event.jhat.which);
         params.Set("port", joystick->GetPort());
         params.Set("guid", joystick->GetGUID());
         params.Set("hat", event.jhat.hat);
@@ -495,8 +484,8 @@ namespace Polling {
 class SDLPoller : public InputCommon::Polling::DevicePoller {
 public:
     void Start() override {
+        event_queue.Clear();
         polling = true;
-        last_event = nullptr;
     }
 
     void Stop() override {
@@ -507,18 +496,17 @@ public:
 class SDLButtonPoller final : public SDLPoller {
 public:
     Common::ParamPackage GetNextInput() override {
-        if (!last_event) {
-            return {};
-        }
-        SDL_Event event = *last_event;
-        switch (event.type) {
-        case SDL_JOYAXISMOTION:
-            if (std::abs(event.jaxis.value / 32767.0) < 0.5) {
-                break;
+        SDL_Event event;
+        while (event_queue.Pop(event)) {
+            switch (event.type) {
+            case SDL_JOYAXISMOTION:
+                if (std::abs(event.jaxis.value / 32767.0) < 0.5) {
+                    break;
+                }
+            case SDL_JOYBUTTONUP:
+            case SDL_JOYHATMOTION:
+                return SDLEventToButtonParamPackage(event);
             }
-        case SDL_JOYBUTTONUP:
-        case SDL_JOYHATMOTION:
-            return SDLEventToButtonParamPackage(event);
         }
         return {};
     }
@@ -536,30 +524,25 @@ public:
     }
 
     Common::ParamPackage GetNextInput() override {
-        if (!last_event) {
-            return {};
-        }
-        SDL_Event event = *last_event;
-        if (event.type != SDL_JOYAXISMOTION || std::abs(event.jaxis.value / 32767.0) < 0.5) {
-            return {};
-        }
-        // An analog device needs two axes, so we need to store the axis for later and wait for
-        // a second SDL event. The axes also must be from the same joystick.
-        int axis = event.jaxis.axis;
-        if (analog_xaxis == -1) {
-            analog_xaxis = axis;
-            analog_axes_joystick = event.jaxis.which;
-        } else if (analog_yaxis == -1 && analog_xaxis != axis &&
-                   analog_axes_joystick == event.jaxis.which) {
-            analog_yaxis = axis;
+        SDL_Event event;
+        while (event_queue.Pop(event)) {
+            if (event.type != SDL_JOYAXISMOTION || std::abs(event.jaxis.value / 32767.0) < 0.5) {
+                continue;
+            }
+            // An analog device needs two axes, so we need to store the axis for later and wait for
+            // a second SDL event. The axes also must be from the same joystick.
+            int axis = event.jaxis.axis;
+            if (analog_xaxis == -1) {
+                analog_xaxis = axis;
+                analog_axes_joystick = event.jaxis.which;
+            } else if (analog_yaxis == -1 && analog_xaxis != axis &&
+                       analog_axes_joystick == event.jaxis.which) {
+                analog_yaxis = axis;
+            }
         }
         Common::ParamPackage params;
         if (analog_xaxis != -1 && analog_yaxis != -1) {
             auto joystick = GetVirtualJoystickBySDLID(event.jaxis.which);
-            if (joystick == nullptr) {
-                LOG_ERROR(Input, "Registered event from unkown joystick");
-                return params;
-            }
             params.Set("engine", "sdl");
             params.Set("port", joystick->GetPort());
             params.Set("guid", joystick->GetGUID());
@@ -568,10 +551,8 @@ public:
             analog_xaxis = -1;
             analog_yaxis = -1;
             analog_axes_joystick = -1;
-
             return params;
         }
-
         return params;
     }
 
