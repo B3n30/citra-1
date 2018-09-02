@@ -53,15 +53,15 @@ static QString ButtonToText(const Common::ParamPackage& param) {
         return getKeyName(param.Get("code", 0));
     } else if (param.Get("engine", "") == "sdl") {
         if (param.Has("hat")) {
-            return QString(QObject::tr(" Hat %1 %2"))
+            return QString(QObject::tr("Hat %1 %2"))
                 .arg(param.Get("hat", "").c_str(), param.Get("direction", "").c_str());
         }
         if (param.Has("axis")) {
-            return QString(QObject::tr(" Axis %1%2"))
+            return QString(QObject::tr("Axis %1%2"))
                 .arg(param.Get("axis", "").c_str(), param.Get("direction", "").c_str());
         }
         if (param.Has("button")) {
-            return QString(QObject::tr(" Button %1")).arg(param.Get("button", "").c_str());
+            return QString(QObject::tr("Button %1")).arg(param.Get("button", "").c_str());
         }
         return QString();
     } else {
@@ -80,9 +80,9 @@ static QString AnalogToText(const Common::ParamPackage& param, const std::string
         }
 
         if (dir == "left" || dir == "right") {
-            return QString(QObject::tr(" Axis %1")).arg(param.Get("axis_x", "").c_str());
+            return QString(QObject::tr("Axis %1")).arg(param.Get("axis_x", "").c_str());
         } else if (dir == "up" || dir == "down") {
-            return QString(QObject::tr(" Axis %1")).arg(param.Get("axis_y", "").c_str());
+            return QString(QObject::tr("Axis %1")).arg(param.Get("axis_y", "").c_str());
         }
         return QString();
     } else {

@@ -4,6 +4,8 @@
 
 #include <atomic>
 #include <cmath>
+#include <functional>
+#include <iterator>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -31,18 +33,23 @@ class SDLAnalogFactory;
 /// Vector of all used VirtualJoystick instances
 /// Every access needs to be locked by the joystick_list_mutex
 static std::mutex joystick_list_mutex;
-static std::vector<std::shared_ptr<VirtualJoystick>> joystick_list;
+
+struct pair_hash {
+    template <class T1, class T2>
+    std::size_t operator()(const std::pair<T1, T2>& p) const {
+        auto h1 = std::hash<T1>{}(p.first);
+        auto h2 = std::hash<T2>{}(p.second);
+
+        return h1 ^ h2;
+    }
+};
+
+static std::unordered_map<std::pair<std::string, int>, std::shared_ptr<VirtualJoystick>, pair_hash>
+    virtual_joystick_map;
 
 typedef std::unique_ptr<SDL_Joystick, decltype(&SDL_JoystickClose)> SDLJoystick;
 
-static std::string GetGUID(SDL_Joystick* joystick) {
-    SDL_JoystickGUID guid = SDL_JoystickGetGUID(joystick);
-    char guid_str[33];
-    SDL_JoystickGetGUIDString(guid, guid_str, sizeof(guid_str));
-    return guid_str;
-}
-
-/// Map of init_id and corresponding SDLJoystick*
+/// Map of GUID of a list of corresponding SDLJoystick
 static std::unordered_map<std::string, std::vector<SDLJoystick>> sdl_joystick_map;
 
 static std::shared_ptr<SDLButtonFactory> button_factory;
@@ -53,6 +60,13 @@ static std::atomic<bool> polling;
 static Common::SPSCQueue<SDL_Event> event_queue;
 
 static std::atomic<bool> initialized = false;
+
+static std::string GetGUID(SDL_Joystick* joystick) {
+    SDL_JoystickGUID guid = SDL_JoystickGetGUID(joystick);
+    char guid_str[33];
+    SDL_JoystickGetGUIDString(guid, guid_str, sizeof(guid_str));
+    return guid_str;
+}
 
 class VirtualJoystick {
 public:
@@ -111,7 +125,6 @@ public:
      * The guid of the joystick
      */
     const std::string& GetGUID() const {
-        std::lock_guard<std::mutex> lock(mutex);
         return guid;
     }
 
@@ -119,7 +132,6 @@ public:
      * The number of joystick from the same type that were connected before this joystick
      */
     int GetPort() const {
-        std::lock_guard<std::mutex> lock(mutex);
         return port;
     }
 
@@ -129,8 +141,8 @@ private:
         std::unordered_map<int, Sint16> axes;
         std::unordered_map<int, Uint8> hats;
     } state;
-    std::string guid;
-    int port;
+    const std::string guid;
+    const int port;
     mutable std::mutex mutex;
 };
 
@@ -138,15 +150,14 @@ private:
  * Get the nth joystick with the corresponding GUID
  */
 static std::shared_ptr<VirtualJoystick> GetVirtualJoystickByGUID(const std::string& guid,
-                                                                 const int port) {
+                                                                 int port) {
     std::lock_guard<std::mutex> lock(joystick_list_mutex);
-    for (auto joystick : joystick_list) {
-        if (joystick->GetGUID() == guid && joystick->GetPort() == port) {
-            return joystick;
-        }
+    auto it = virtual_joystick_map.find(std::make_pair(guid, port));
+    if (it != virtual_joystick_map.end()) {
+        return it->second;
     }
     auto joystick = std::make_shared<VirtualJoystick>(guid, port);
-    joystick_list.push_back(joystick);
+    virtual_joystick_map[std::make_pair(guid, port)] = joystick;
     return joystick;
 }
 
@@ -171,7 +182,20 @@ void InitJoystick(int joystick_index) {
         return;
     } else {
         std::string guid = GetGUID(joystick);
-        sdl_joystick_map[guid].emplace_back(joystick, &SDL_JoystickClose);
+        if (sdl_joystick_map.find(guid) == sdl_joystick_map.end()) {
+            sdl_joystick_map[guid].emplace_back(joystick, &SDL_JoystickClose);
+        } else {
+            auto& sdl_joystick_guid_list = sdl_joystick_map[guid];
+            const auto& it =
+                std::find_if(sdl_joystick_guid_list.begin(), sdl_joystick_guid_list.end(),
+                             [](const SDLJoystick& sdl_joystick) { return !sdl_joystick; });
+            if (it != sdl_joystick_guid_list.end()) {
+                sdl_joystick_guid_list[std::distance(sdl_joystick_guid_list.begin(), it)] =
+                    SDLJoystick(joystick, &SDL_JoystickClose);
+            } else {
+                sdl_joystick_guid_list.emplace_back(joystick, &SDL_JoystickClose);
+            }
+        }
     }
 }
 
@@ -182,7 +206,8 @@ void CloseJoystick(SDL_Joystick* joystick) {
     const auto& sdl_joystick = std::find_if(
         sdl_joystick_guid_list.begin(), sdl_joystick_guid_list.end(),
         [joystick](const SDLJoystick& sdl_joystick) { return sdl_joystick.get() == joystick; });
-    sdl_joystick_guid_list.erase(sdl_joystick);
+    sdl_joystick_guid_list[std::distance(sdl_joystick_guid_list.begin(), sdl_joystick)] =
+        SDLJoystick(nullptr, [](SDL_Joystick*) {});
     return;
 }
 
