@@ -63,9 +63,9 @@ public:
         state.buttons[button] = value;
     }
 
-    bool GetButton(int button) {
+    bool GetButton(int button) const {
         std::lock_guard<std::mutex> lock(mutex);
-        return state.buttons[button];
+        return state.buttons.at(button);
     }
 
     void SetAxis(int axis, Sint16 value) {
@@ -73,12 +73,12 @@ public:
         state.axes[axis] = value;
     }
 
-    float GetAxis(int axis) {
+    float GetAxis(int axis) const {
         std::lock_guard<std::mutex> lock(mutex);
-        return state.axes[axis] / 32767.0f;
+        return state.axes.at(axis) / 32767.0f;
     }
 
-    std::tuple<float, float> GetAnalog(int axis_x, int axis_y) {
+    std::tuple<float, float> GetAnalog(int axis_x, int axis_y) const {
         float x = GetAxis(axis_x);
         float y = GetAxis(axis_y);
         y = -y; // 3DS uses an y-axis inverse from SDL
@@ -100,9 +100,9 @@ public:
         state.hats[hat] = direction;
     }
 
-    bool GetHatDirection(int hat, Uint8 direction) {
+    bool GetHatDirection(int hat, Uint8 direction) const {
         std::lock_guard<std::mutex> lock(mutex);
-        return (state.hats[hat] & direction) != 0;
+        return (state.hats.at(hat) & direction) != 0;
     }
     /**
      * The guid of the joystick
@@ -220,8 +220,7 @@ void InitJoystick(int joystick_index) {
                                       return !joystick->GetSDLJoystick();
                                   });
     if (it != joystick_guid_list.end()) {
-        joystick_guid_list[std::distance(joystick_guid_list.begin(), it)]->SetSDLJoystick(
-            sdl_joystick);
+        (*it)->SetSDLJoystick(sdl_joystick);
         return;
     }
     auto joystick =
@@ -239,8 +238,7 @@ void CloseJoystick(SDL_Joystick* sdl_joystick) {
                      [&sdl_joystick](const std::shared_ptr<VirtualJoystick>& joystick) {
                          return joystick->GetSDLJoystick() == sdl_joystick;
                      });
-    joystick_guid_list[std::distance(joystick_guid_list.begin(), joystick_it)]->SetSDLJoystick(
-        nullptr, [](SDL_Joystick*) {});
+    (*joystick_it)->SetSDLJoystick(nullptr, [](SDL_Joystick*) {});
     return;
 }
 
