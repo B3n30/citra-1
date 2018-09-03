@@ -30,11 +30,8 @@ class VirtualJoystick;
 class SDLButtonFactory;
 class SDLAnalogFactory;
 
-typedef std::unique_ptr<SDL_Joystick, decltype(&SDL_JoystickClose)> SDLJoystick;
-
-/// Map of GUID of a list of corresponding SDLJoystick
-typedef std::pair<SDLJoystick, std::shared_ptr<VirtualJoystick>> SDLVirtualPair;
-static std::unordered_map<std::string, std::vector<SDLVirtualPair>> joystick_map;
+/// Map of GUID of a list of corresponding vurtual Joysticks
+static std::unordered_map<std::string, std::vector<std::shared_ptr<VirtualJoystick>>> joystick_map;
 static std::mutex joystick_map_mutex;
 
 static std::shared_ptr<SDLButtonFactory> button_factory;
@@ -55,7 +52,9 @@ static std::string GetGUID(SDL_Joystick* joystick) {
 
 class VirtualJoystick {
 public:
-    VirtualJoystick(const std::string& guid_, int port_) : guid(guid_), port(port_) {}
+    VirtualJoystick(const std::string& guid_, int port_, SDL_Joystick* joystick,
+                    decltype(&SDL_JoystickClose) deleter = &SDL_JoystickClose)
+        : guid{guid_}, port{port_}, sdl_joystick{joystick, deleter} {}
 
     ~VirtualJoystick() = default;
 
@@ -105,7 +104,6 @@ public:
         std::lock_guard<std::mutex> lock(mutex);
         return (state.hats[hat] & direction) != 0;
     }
-
     /**
      * The guid of the joystick
      */
@@ -120,6 +118,16 @@ public:
         return port;
     }
 
+    SDL_Joystick* GetSDLJoystick() const {
+        return sdl_joystick.get();
+    }
+
+    void SetSDLJoystick(SDL_Joystick* joystick,
+                        decltype(&SDL_JoystickClose) deleter = &SDL_JoystickClose) {
+        sdl_joystick =
+            std::unique_ptr<SDL_Joystick, decltype(&SDL_JoystickClose)>(joystick, deleter);
+    }
+
 private:
     struct State {
         std::unordered_map<int, bool> buttons;
@@ -128,6 +136,7 @@ private:
     } state;
     const std::string guid;
     const int port;
+    std::unique_ptr<SDL_Joystick, decltype(&SDL_JoystickClose)> sdl_joystick;
     mutable std::mutex mutex;
 };
 
@@ -140,15 +149,14 @@ static std::shared_ptr<VirtualJoystick> GetVirtualJoystickByGUID(const std::stri
     const auto& it = joystick_map.find(guid);
     if (it != joystick_map.end()) {
         while (it->second.size() <= port) {
-            auto joystick = std::make_shared<VirtualJoystick>(guid, port);
-            it->second.emplace_back(
-                std::make_pair(SDLJoystick(nullptr, [](SDL_Joystick*) {}), joystick));
+            auto joystick = std::make_shared<VirtualJoystick>(guid, it->second.size(), nullptr,
+                                                              [](SDL_Joystick*) {});
+            it->second.emplace_back(joystick);
         }
-        return it->second[port].second;
+        return it->second[port];
     }
-    auto joystick = std::make_shared<VirtualJoystick>(guid, port);
-    joystick_map[guid].emplace_back(
-        std::make_pair(SDLJoystick(nullptr, [](SDL_Joystick*) {}), joystick));
+    auto joystick = std::make_shared<VirtualJoystick>(guid, 0, nullptr, [](SDL_Joystick*) {});
+    joystick_map[guid].emplace_back(joystick);
     return joystick;
 }
 
@@ -162,33 +170,34 @@ static std::shared_ptr<VirtualJoystick> GetVirtualJoystickBySDLID(SDL_JoystickID
     const std::string guid = GetGUID(sdl_joystick);
     auto map_it = joystick_map.find(guid);
     if (map_it != joystick_map.end()) {
-        auto vec_it = std::find_if(map_it->second.begin(), map_it->second.end(),
-                                   [&sdl_joystick](const SDLVirtualPair& pair) {
-                                       return sdl_joystick == pair.first.get();
-                                   });
+        auto vec_it =
+            std::find_if(map_it->second.begin(), map_it->second.end(),
+                         [&sdl_joystick](const std::shared_ptr<VirtualJoystick>& joystick) {
+                             return sdl_joystick == joystick->GetSDLJoystick();
+                         });
         if (vec_it != map_it->second.end()) {
-            // This is the common case: There is already an existing pair of SDLJoystick and
+            // This is the common case: There is already an existing SDLJoystick maped to a
             // VirtualJoystick. return the virtual Joystick
-            return vec_it->second;
+            return *vec_it;
         }
         // Search for a VirtualJoystick without a mapped SDLJoystick...
-        auto nullptr_it =
-            std::find_if(map_it->second.begin(), map_it->second.end(),
-                         [](const SDLVirtualPair& pair) { return !pair.first.get(); });
+        auto nullptr_it = std::find_if(map_it->second.begin(), map_it->second.end(),
+                                       [](const std::shared_ptr<VirtualJoystick>& joystick) {
+                                           return !joystick->GetSDLJoystick();
+                                       });
         if (nullptr_it != map_it->second.end()) {
             // ... and map it
-            nullptr_it->first = SDLJoystick(sdl_joystick, &SDL_JoystickClose);
-            return nullptr_it->second;
+            (*nullptr_it)->SetSDLJoystick(sdl_joystick);
+            return *nullptr_it;
         }
         // There is no VirtualJoystick without a mapped SDLJoystick
-        auto joystick = std::make_shared<VirtualJoystick>(guid, map_it->second.size());
-        map_it->second.emplace_back(
-            std::make_pair(SDLJoystick(sdl_joystick, &SDL_JoystickClose), joystick));
+        auto joystick =
+            std::make_shared<VirtualJoystick>(guid, map_it->second.size(), sdl_joystick);
+        map_it->second.emplace_back(joystick);
         return joystick;
     }
-    auto joystick = std::make_shared<VirtualJoystick>(guid, 0);
-    joystick_map[guid].emplace_back(
-        std::make_pair(SDLJoystick(sdl_joystick, &SDL_JoystickClose), joystick));
+    auto joystick = std::make_shared<VirtualJoystick>(guid, 0, sdl_joystick);
+    joystick_map[guid].emplace_back(joystick);
     return joystick;
 }
 
@@ -201,34 +210,37 @@ void InitJoystick(int joystick_index) {
     }
     std::string guid = GetGUID(sdl_joystick);
     if (joystick_map.find(guid) == joystick_map.end()) {
-        auto joystick = std::make_shared<VirtualJoystick>(guid, 0);
-        joystick_map[guid].emplace_back(
-            std::make_pair(SDLJoystick(sdl_joystick, &SDL_JoystickClose), joystick));
+        auto joystick = std::make_shared<VirtualJoystick>(guid, 0, sdl_joystick);
+        joystick_map[guid].emplace_back(joystick);
         return;
     }
     auto& joystick_guid_list = joystick_map[guid];
     const auto& it = std::find_if(joystick_guid_list.begin(), joystick_guid_list.end(),
-                                  [](const SDLVirtualPair& pair) { return !pair.first; });
+                                  [](const std::shared_ptr<VirtualJoystick>& joystick) {
+                                      return !joystick->GetSDLJoystick();
+                                  });
     if (it != joystick_guid_list.end()) {
-        joystick_guid_list[std::distance(joystick_guid_list.begin(), it)].first =
-            SDLJoystick(sdl_joystick, &SDL_JoystickClose);
+        joystick_guid_list[std::distance(joystick_guid_list.begin(), it)]->SetSDLJoystick(
+            sdl_joystick);
         return;
     }
-    auto joystick = std::make_shared<VirtualJoystick>(guid, joystick_guid_list.size());
-    joystick_guid_list.emplace_back(
-        std::make_pair(SDLJoystick(sdl_joystick, &SDL_JoystickClose), joystick));
+    auto joystick =
+        std::make_shared<VirtualJoystick>(guid, joystick_guid_list.size(), sdl_joystick);
+    joystick_guid_list.emplace_back(joystick);
 }
 
-void CloseJoystick(SDL_Joystick* joystick) {
+void CloseJoystick(SDL_Joystick* sdl_joystick) {
     std::lock_guard<std::mutex> lock(joystick_map_mutex);
-    std::string guid = GetGUID(joystick);
+    std::string guid = GetGUID(sdl_joystick);
     // This call to guid is save since the joystick is guranteed to be in that map
     auto& joystick_guid_list = joystick_map[guid];
-    const auto& joystick_pair = std::find_if(
-        joystick_guid_list.begin(), joystick_guid_list.end(),
-        [&joystick](const SDLVirtualPair& pair) { return pair.first.get() == joystick; });
-    joystick_guid_list[std::distance(joystick_guid_list.begin(), joystick_pair)].first =
-        SDLJoystick(nullptr, [](SDL_Joystick*) {});
+    const auto& joystick_it =
+        std::find_if(joystick_guid_list.begin(), joystick_guid_list.end(),
+                     [&sdl_joystick](const std::shared_ptr<VirtualJoystick>& joystick) {
+                         return joystick->GetSDLJoystick() == sdl_joystick;
+                     });
+    joystick_guid_list[std::distance(joystick_guid_list.begin(), joystick_it)]->SetSDLJoystick(
+        nullptr, [](SDL_Joystick*) {});
     return;
 }
 
