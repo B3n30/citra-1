@@ -17,8 +17,9 @@ void HotkeyRegistry::SaveHotkeys() {
         for (const auto& hotkey : group.second) {
             UISettings::values.shortcuts.emplace_back(
                 UISettings::Shortcut(hotkey.first, group.first,
-                                     UISettings::ContextualShortcut(hotkey.second.keyseq.toString(),
-                                                                    hotkey.second.context)));
+                                     UISettings::ContextualShortcut(
+                                         hotkey.second.keyseq.toString(QKeySequence::NativeText),
+                                         hotkey.second.context)));
         }
     }
 }
@@ -29,7 +30,7 @@ void HotkeyRegistry::LoadHotkeys() {
     for (auto shortcut : UISettings::values.shortcuts) {
         Hotkey& hk = hotkey_groups[shortcut.group][shortcut.name];
         if (!shortcut.shortcut.first.isEmpty()) {
-            hk.keyseq = QKeySequence::fromString(shortcut.shortcut.first);
+            hk.keyseq = QKeySequence::fromString(shortcut.shortcut.first, QKeySequence::NativeText);
             hk.context = (Qt::ShortcutContext)shortcut.shortcut.second;
         }
         if (hk.shortcut)

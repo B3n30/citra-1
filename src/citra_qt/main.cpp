@@ -1239,6 +1239,8 @@ void GMainWindow::OnConfigure() {
     ConfigureDialog configureDialog(this, hotkey_registry);
     connect(&configureDialog, &ConfigureDialog::languageChanged, this,
             &GMainWindow::OnLanguageChanged);
+    connect(&configureDialog, &ConfigureDialog::updateHotkeys, this,
+            [this]() { InitializeHotkeys(); });
     auto old_theme = UISettings::values.theme;
     const bool old_discord_presence = UISettings::values.enable_discord_presence;
     auto result = configureDialog.exec();

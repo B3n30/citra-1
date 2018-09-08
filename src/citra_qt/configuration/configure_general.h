@@ -27,11 +27,13 @@ public:
 
 public slots:
     void OnInputKeysChanged(QList<QKeySequence> new_key_list);
+    void OnHotkeysChanged(QList<QKeySequence> new_key_list);
 
 signals:
     void languageChanged(const QString& locale);
     void HotkeysChanged(QList<QKeySequence> new_key_list);
     void InputKeysChanged(QList<QKeySequence> new_key_list);
+    void updateHotkeys();
 
 private slots:
     void OnLanguageChanged(int index);
@@ -40,4 +42,5 @@ private:
     void setConfiguration();
 
     std::unique_ptr<Ui::ConfigureGeneral> ui;
+    bool update_hotkeys;
 };

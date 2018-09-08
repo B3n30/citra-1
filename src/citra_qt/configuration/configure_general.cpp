@@ -32,7 +32,10 @@ ConfigureGeneral::ConfigureGeneral(QWidget* parent)
             &ConfigureGeneral::OnLanguageChanged);
 
     connect(ui->hotkeys, &ConfigureHotkeys::HotkeysChanged, this,
-            [this](QList<QKeySequence> new_key_list) { emit HotkeysChanged(new_key_list); });
+            [this](QList<QKeySequence> new_key_list) {
+                update_hotkeys = true;
+                emit HotkeysChanged(new_key_list);
+            });
 
     connect(this, &ConfigureGeneral::InputKeysChanged, ui->hotkeys,
             &ConfigureHotkeys::OnInputKeysChanged);
@@ -40,6 +43,8 @@ ConfigureGeneral::ConfigureGeneral(QWidget* parent)
     for (auto theme : UISettings::themes) {
         ui->theme_combobox->addItem(theme.first, theme.second);
     }
+
+    update_hotkeys = false;
 
     this->setConfiguration();
 
@@ -77,6 +82,10 @@ void ConfigureGeneral::applyConfiguration(HotkeyRegistry& registry) {
     Settings::values.region_value = ui->region_combobox->currentIndex() - 1;
 
     ui->hotkeys->applyConfiguration(registry);
+    if (update_hotkeys) {
+        update_hotkeys = false;
+        emit updateHotkeys();
+    }
 }
 
 void ConfigureGeneral::OnLanguageChanged(int index) {
@@ -88,6 +97,10 @@ void ConfigureGeneral::OnLanguageChanged(int index) {
 
 void ConfigureGeneral::OnInputKeysChanged(QList<QKeySequence> new_key_list) {
     emit InputKeysChanged(new_key_list);
+}
+
+void ConfigureGeneral::OnHotkeysChanged(QList<QKeySequence> new_key_list) {
+    emit HotkeysChanged(new_key_list);
 }
 
 void ConfigureGeneral::EmitHotkeysChanged() {

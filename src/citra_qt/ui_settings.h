@@ -17,7 +17,6 @@ using ContextualShortcut = std::pair<QString, int>;
 
 class Shortcut {
 public:
-    Shortcut(const char* name, const char* group, ContextualShortcut shortcut);
     Shortcut(const QString name, const QString group, ContextualShortcut shortcut);
     QString name;
     QString group;

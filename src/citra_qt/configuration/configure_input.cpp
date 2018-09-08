@@ -1,4 +1,4 @@
-﻿// Copyright 2016 Citra Emulator Project
+// Copyright 2016 Citra Emulator Project
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
@@ -204,7 +204,6 @@ void ConfigureInput::OnHotkeysChanged(QList<QKeySequence> new_key_list) {
 QList<QKeySequence> ConfigureInput::GetUsedKeyboardKeys() {
     QList<QKeySequence> list;
     for (int button = 0; button < Settings::NativeButton::NumButtons; button++) {
-
         auto button_param = buttons_param[button];
 
         if (button_param.Get("engine", "") == "keyboard") {

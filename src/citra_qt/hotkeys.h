@@ -64,21 +64,6 @@ public:
      */
     Qt::ShortcutContext GetShortcutContext(const QString& group, const QString& action);
 
-    /**
-     * Register a hotkey.
-     *
-     * @param group General group this hotkey belongs to (e.g. "Main Window", "Debugger")
-     * @param action Name of the action (e.g. "Start Emulation", "Load Image")
-     * @param default_keyseq Default key sequence to assign if the hotkey wasn't present in the
-     *                       settings file before
-     * @param default_context Default context to assign if the hotkey wasn't present in the settings
-     *                        file before
-     * @warning Both the group and action strings will be displayed in the hotkey settings dialog
-     */
-    void RegisterHotkey(const QString& group, const QString& action,
-                        const QKeySequence& default_keyseq = {},
-                        Qt::ShortcutContext default_context = Qt::WindowShortcut);
-
 private:
     struct Hotkey {
         Hotkey() : shortcut(nullptr), context(Qt::WindowShortcut) {}

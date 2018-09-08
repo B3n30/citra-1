@@ -42,7 +42,7 @@ QList<QKeySequence> ConfigureHotkeys::GetUsedKeyList() {
         QStandardItem* parent = model->item(r, 0);
         for (int r2 = 0; r2 < parent->rowCount(); r2++) {
             QStandardItem* keyseq = parent->child(r2, 1);
-            list << QKeySequence::fromString(keyseq->text());
+            list << QKeySequence::fromString(keyseq->text(), QKeySequence::NativeText);
         }
     }
     return list;
@@ -54,7 +54,8 @@ void ConfigureHotkeys::Populate(const HotkeyRegistry& registry) {
         parent_item->setEditable(false);
         for (const auto& hotkey : group.second) {
             QStandardItem* action = new QStandardItem(hotkey.first);
-            QStandardItem* keyseq = new QStandardItem(hotkey.second.keyseq.toString());
+            QStandardItem* keyseq =
+                new QStandardItem(hotkey.second.keyseq.toString(QKeySequence::NativeText));
             action->setEditable(false);
             keyseq->setEditable(false);
             parent_item->appendRow({action, keyseq});
@@ -70,9 +71,10 @@ void ConfigureHotkeys::OnInputKeysChanged(QList<QKeySequence> new_key_list) {
 }
 
 void ConfigureHotkeys::Configure(QModelIndex index) {
-    if (index.column() != 1 || index.parent() == QModelIndex())
+    if (index.parent() == QModelIndex())
         return;
 
+    index = index.siblingAtColumn(1);
     auto* model = ui->hotkey_list->model();
     auto previous_key = model->data(index);
 
@@ -84,12 +86,13 @@ void ConfigureHotkeys::Configure(QModelIndex index) {
     if (return_code == QDialog::Rejected || key_sequence.isEmpty())
         return;
 
-    if (IsUsedKey(key_sequence) && key_sequence != QKeySequence(previous_key.toString())) {
+    if (IsUsedKey(key_sequence) &&
+        key_sequence != QKeySequence(previous_key.toString(), QKeySequence::NativeText)) {
         model->setData(index, previous_key);
         QMessageBox::critical(this, tr("Error in inputted key"),
                               tr("You're using a key that's already bound."));
     } else {
-        model->setData(index, key_sequence.toString());
+        model->setData(index, key_sequence.toString(QKeySequence::NativeText));
         EmitHotkeysChanged();
     }
 }

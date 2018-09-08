@@ -24,9 +24,11 @@ public:
 
 private slots:
     void onLanguageChanged(const QString& locale);
+    void onUpdateHotkeys();
 
 signals:
     void languageChanged(const QString& locale);
+    void updateHotkeys();
 
 private:
     void setConfiguration();

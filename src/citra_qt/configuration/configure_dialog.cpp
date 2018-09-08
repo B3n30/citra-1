@@ -15,6 +15,8 @@ ConfigureDialog::ConfigureDialog(QWidget* parent, const HotkeyRegistry& registry
     this->setConfiguration();
     connect(ui->generalTab, &ConfigureGeneral::languageChanged, this,
             &ConfigureDialog::onLanguageChanged);
+    connect(ui->generalTab, &ConfigureGeneral::updateHotkeys, this,
+            &ConfigureDialog::onUpdateHotkeys);
     connect(ui->inputTab, &ConfigureInput::InputKeysChanged, ui->generalTab,
             &ConfigureGeneral::OnInputKeysChanged);
     connect(ui->generalTab, &ConfigureGeneral::HotkeysChanged, ui->inputTab,
@@ -53,4 +55,8 @@ void ConfigureDialog::onLanguageChanged(const QString& locale) {
     ui->cameraTab->retranslateUi();
     ui->debugTab->retranslateUi();
     ui->webTab->retranslateUi();
+}
+
+void ConfigureDialog::onUpdateHotkeys() {
+    emit updateHotkeys();
 }
