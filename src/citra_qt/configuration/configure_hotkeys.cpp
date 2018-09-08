@@ -74,7 +74,7 @@ void ConfigureHotkeys::Configure(QModelIndex index) {
     if (index.parent() == QModelIndex())
         return;
 
-    index = index.siblingAtColumn(1);
+    index = index.sibling(index.row(), 1);
     auto* model = ui->hotkey_list->model();
     auto previous_key = model->data(index);
 
