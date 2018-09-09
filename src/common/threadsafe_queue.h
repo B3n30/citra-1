@@ -80,19 +80,19 @@ public:
         return true;
     }
 
+    bool PopWait(T& t) {
+        if (Empty()) {
+            std::unique_lock<std::mutex> lock(cv_mutex);
+            cv.wait(lock, [this]() { return should_end || !Empty(); });
+        }
+        return Pop(t);
+    }
+
     // not thread-safe
     void Clear() {
         size.store(0);
         delete read_ptr;
         write_ptr = read_ptr = new ElementPtr();
-    }
-
-    void WaitIfEmpty() {
-        if (!Empty()) {
-            return;
-        }
-        std::unique_lock<std::mutex> lock(cv_mutex);
-        cv.wait(lock, [this]() { return should_end || !Empty(); });
     }
 
     void EndWait() {
@@ -157,13 +157,13 @@ public:
         return spsc_queue.Pop(t);
     }
 
+    bool PopWait(T& t) {
+        return spsc_queue.PopWait(t);
+    }
+
     // not thread-safe
     void Clear() {
         spsc_queue.Clear();
-    }
-
-    void WaitIfEmpty() {
-        spsc_queue.WaitIfEmpty();
     }
 
     void EndWait() {

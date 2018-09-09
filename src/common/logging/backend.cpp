@@ -81,12 +81,7 @@ private:
                     backend->Write(e);
                 }
             };
-            while (true) {
-                message_queue.WaitIfEmpty();
-                if (!running) {
-                    break;
-                }
-                message_queue.Pop(entry);
+            while (message_queue.PopWait(entry)) {
                 write_logs(entry);
             }
             // Drain the logging queue. Only writes out up to MAX_LOGS_TO_WRITE to prevent a case
@@ -100,12 +95,10 @@ private:
     }
 
     ~Impl() {
-        running = false;
         message_queue.EndWait();
         backend_thread.join();
     }
 
-    std::atomic_bool running{true};
     std::mutex writing_mutex;
     std::thread backend_thread;
     std::vector<std::unique_ptr<Backend>> backends;
