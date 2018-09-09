@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <condition_variable>
 #include <cstddef>
 #include <mutex>
 #include "common/common_types.h"
@@ -17,12 +18,13 @@ namespace Common {
 template <typename T, bool NeedSize = true>
 class SPSCQueue {
 public:
-    SPSCQueue() : size(0) {
+    SPSCQueue() : size(0), should_end(false) {
         write_ptr = read_ptr = new ElementPtr();
     }
     ~SPSCQueue() {
         // this will empty out the whole queue
         delete read_ptr;
+        EndWait();
     }
 
     u32 Size() const {
@@ -49,6 +51,7 @@ public:
         write_ptr = new_ptr;
         if (NeedSize)
             size++;
+        cv.notify_one();
     }
 
     void Pop() {
@@ -84,6 +87,19 @@ public:
         write_ptr = read_ptr = new ElementPtr();
     }
 
+    void WaitIfEmpty() {
+        if (!Empty()) {
+            return;
+        }
+        std::unique_lock<std::mutex> lock(cv_mutex);
+        cv.wait(lock, [this]() { return should_end || !Empty(); });
+    }
+
+    void EndWait() {
+        should_end = true;
+        cv.notify_one();
+    }
+
 private:
     // stores a pointer to element
     // and a pointer to the next ElementPtr
@@ -104,6 +120,9 @@ private:
     ElementPtr* write_ptr;
     ElementPtr* read_ptr;
     std::atomic<u32> size;
+    std::atomic_bool should_end;
+    std::mutex cv_mutex;
+    std::condition_variable cv;
 };
 
 // a simple thread-safe,
@@ -141,6 +160,14 @@ public:
     // not thread-safe
     void Clear() {
         spsc_queue.Clear();
+    }
+
+    void WaitIfEmpty() {
+        spsc_queue.WaitIfEmpty();
+    }
+
+    void EndWait() {
+        spsc_queue.EndWait();
     }
 
 private:
