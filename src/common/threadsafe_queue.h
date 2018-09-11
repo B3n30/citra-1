@@ -12,19 +12,19 @@
 #include <condition_variable>
 #include <cstddef>
 #include <mutex>
+#include <boost/optional.hpp>
 #include "common/common_types.h"
 
 namespace Common {
 template <typename T, bool NeedSize = true>
 class SPSCQueue {
 public:
-    SPSCQueue() : size(0), should_end(false) {
+    SPSCQueue() : size(0) {
         write_ptr = read_ptr = new ElementPtr();
     }
     ~SPSCQueue() {
         // this will empty out the whole queue
         delete read_ptr;
-        EndWait();
     }
 
     u32 Size() const {
@@ -43,7 +43,7 @@ public:
     template <typename Arg>
     void Push(Arg&& t) {
         // create the element, add it to the queue
-        write_ptr->current = std::forward<Arg>(t);
+        write_ptr->current = std::move(t);
         // set the next pointer to a new element ptr
         // then advance the write pointer
         ElementPtr* new_ptr = new ElementPtr();
@@ -52,6 +52,17 @@ public:
         if (NeedSize)
             size++;
         cv.notify_one();
+    }
+
+    void Finalize() {
+        // Create a new next, the queue wont be empty but the optional will contain no value
+        ElementPtr* new_ptr = new ElementPtr();
+        write_ptr->next.store(new_ptr, std::memory_order_release);
+        write_ptr = new_ptr;
+        if (NeedSize)
+            size++;
+        cv.notify_one();
+
     }
 
     void Pop() {
@@ -69,12 +80,17 @@ public:
         if (Empty())
             return false;
 
+        ElementPtr* tmpptr = read_ptr;
+
+        // If the finialize msg was pushed return false
+        if (!tmpptr->current)
+            return false;
+
         if (NeedSize)
             size--;
 
-        ElementPtr* tmpptr = read_ptr;
         read_ptr = tmpptr->next.load(std::memory_order_acquire);
-        t = std::move(tmpptr->current);
+        t = std::move(tmpptr->current.value());
         tmpptr->next.store(nullptr);
         delete tmpptr;
         return true;
@@ -83,7 +99,7 @@ public:
     bool PopWait(T& t) {
         if (Empty()) {
             std::unique_lock<std::mutex> lock(cv_mutex);
-            cv.wait(lock, [this]() { return should_end || !Empty(); });
+            cv.wait(lock, [this]() { return !Empty(); });
         }
         return Pop(t);
     }
@@ -93,11 +109,6 @@ public:
         size.store(0);
         delete read_ptr;
         write_ptr = read_ptr = new ElementPtr();
-    }
-
-    void EndWait() {
-        should_end = true;
-        cv.notify_one();
     }
 
 private:
@@ -113,14 +124,13 @@ private:
                 delete next_ptr;
         }
 
-        T current;
+        boost::optional<T> current;
         std::atomic<ElementPtr*> next;
     };
 
     ElementPtr* write_ptr;
     ElementPtr* read_ptr;
     std::atomic<u32> size;
-    std::atomic_bool should_end;
     std::mutex cv_mutex;
     std::condition_variable cv;
 };
@@ -149,6 +159,10 @@ public:
         spsc_queue.Push(t);
     }
 
+    void Finalize() {
+        spsc_queue.Finalize();
+    }
+
     void Pop() {
         return spsc_queue.Pop();
     }
@@ -164,10 +178,6 @@ public:
     // not thread-safe
     void Clear() {
         spsc_queue.Clear();
-    }
-
-    void EndWait() {
-        spsc_queue.EndWait();
     }
 
 private:
