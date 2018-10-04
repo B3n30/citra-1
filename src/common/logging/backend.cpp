@@ -15,6 +15,7 @@
 #else
 #define _SH_DENYWR 0
 #endif
+#include <boost/optional.hpp>
 #include "common/assert.h"
 #include "common/logging/backend.h"
 #include "common/logging/log.h"
@@ -23,7 +24,6 @@
 #include "common/threadsafe_queue.h"
 
 namespace Log {
-
 /**
  * Static state as a singleton.
  */
@@ -72,9 +72,9 @@ public:
     }
 
 private:
-    Impl() {
+    Impl() : message_queue(boost::optional<Log::Entry>()) {
         backend_thread = std::thread([&] {
-            Entry entry;
+            boost::optional<Entry> entry;
             auto write_logs = [&](Entry& e) {
                 std::lock_guard<std::mutex> lock(writing_mutex);
                 for (const auto& backend : backends) {
@@ -82,20 +82,20 @@ private:
                 }
             };
             while (message_queue.PopWait(entry)) {
-                write_logs(entry);
+                write_logs(*entry);
             }
         });
     }
 
     ~Impl() {
-        message_queue.Finalize();
+        message_queue.Push(boost::optional<Entry>());
         backend_thread.join();
     }
 
     std::mutex writing_mutex;
     std::thread backend_thread;
     std::vector<std::unique_ptr<Backend>> backends;
-    Common::MPSCQueue<Log::Entry> message_queue;
+    Common::MPSCQueue<boost::optional<Log::Entry>> message_queue;
     Filter filter;
 };
 

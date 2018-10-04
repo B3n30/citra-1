@@ -12,14 +12,13 @@
 #include <condition_variable>
 #include <cstddef>
 #include <mutex>
-#include <boost/optional.hpp>
 #include "common/common_types.h"
 
 namespace Common {
 template <typename T, bool NeedSize = true>
 class SPSCQueue {
 public:
-    SPSCQueue() : size(0) {
+    SPSCQueue(const T& final_value_) : size(0), final_value(final_value_) {
         write_ptr = read_ptr = new ElementPtr();
     }
     ~SPSCQueue() {
@@ -54,17 +53,6 @@ public:
         cv.notify_one();
     }
 
-    void Finalize() {
-        // Create a new next, the queue wont be empty but the optional will contain no value
-        ElementPtr* new_ptr = new ElementPtr();
-        write_ptr->next.store(new_ptr, std::memory_order_release);
-        write_ptr = new_ptr;
-        if (NeedSize)
-            size++;
-        cv.notify_one();
-
-    }
-
     void Pop() {
         if (NeedSize)
             size--;
@@ -83,14 +71,14 @@ public:
         ElementPtr* tmpptr = read_ptr;
 
         // If the finialize msg was pushed return false
-        if (!tmpptr->current)
+        if (tmpptr->current == final_value)
             return false;
 
         if (NeedSize)
             size--;
 
         read_ptr = tmpptr->next.load(std::memory_order_acquire);
-        t = std::move(tmpptr->current.value());
+        t = std::move(tmpptr->current);
         tmpptr->next.store(nullptr);
         delete tmpptr;
         return true;
@@ -124,13 +112,14 @@ private:
                 delete next_ptr;
         }
 
-        boost::optional<T> current;
+        T current;
         std::atomic<ElementPtr*> next;
     };
 
     ElementPtr* write_ptr;
     ElementPtr* read_ptr;
     std::atomic<u32> size;
+    const T final_value;
     std::mutex cv_mutex;
     std::condition_variable cv;
 };
@@ -141,6 +130,8 @@ private:
 template <typename T, bool NeedSize = true>
 class MPSCQueue {
 public:
+    MPSCQueue(const T& final_value) : spsc_queue(final_value) {}
+
     u32 Size() const {
         return spsc_queue.Size();
     }
@@ -157,10 +148,6 @@ public:
     void Push(Arg&& t) {
         std::lock_guard<std::mutex> lock(write_lock);
         spsc_queue.Push(t);
-    }
-
-    void Finalize() {
-        spsc_queue.Finalize();
     }
 
     void Pop() {
