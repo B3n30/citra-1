@@ -114,16 +114,12 @@ static ResultCode ControlMemory(u32* out_addr, u32 operation, u32 addr0, u32 add
     }
 
     case MEMOP_MAP: {
-        // TODO: This is just a hack to avoid regressions until memory aliasing is implemented
-        CASCADE_RESULT(*out_addr, process.HeapAllocate(addr0, size, vma_permissions));
+        CASCADE_CODE(process.Map(addr0, addr1, size, vma_permissions));
         break;
     }
 
     case MEMOP_UNMAP: {
-        // TODO: This is just a hack to avoid regressions until memory aliasing is implemented
-        ResultCode result = process.HeapFree(addr0, size);
-        if (result.IsError())
-            return result;
+        CASCADE_CODE(process.Unmap(addr0, addr1, size, vma_permissions));
         break;
     }
 
