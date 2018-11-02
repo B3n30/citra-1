@@ -47,7 +47,7 @@ SharedPtr<SharedMemory> KernelSystem::CreateSharedMemory(Process* owner_process,
 
         // Increase the amount of used linear heap memory for the owner process.
         if (shared_memory->owner_process != nullptr) {
-            shared_memory->owner_process->linear_heap_used += size;
+            shared_memory->owner_process->memory_used += size;
         }
     } else {
         auto& vm_manager = shared_memory->owner_process->vm_manager;

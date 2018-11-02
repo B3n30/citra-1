@@ -341,7 +341,7 @@ ResultVal<SharedPtr<Thread>> KernelSystem::CreateThread(std::string name, VAddr 
                       "Not enough space in region to allocate a new TLS page for thread");
             return ERR_OUT_OF_MEMORY;
         }
-        owner_process.linear_heap_used += Memory::PAGE_SIZE;
+        owner_process.memory_used += Memory::PAGE_SIZE;
 
         tls_slots.emplace_back(0); // The page is completely available at the start
         available_page = tls_slots.size() - 1;
