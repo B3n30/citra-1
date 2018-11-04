@@ -158,7 +158,9 @@ ResultCode SharedMemory::Map(Process* target_process, VAddr address, MemoryPermi
     auto vma = target_process->vm_manager.FindVMA(target_address);
     if (vma->second.type != VMAType::Free ||
         vma->second.base + vma->second.size < target_address + size) {
-        LOG_ERROR(Kernel, "Trying to map to already allocated memory");
+        LOG_ERROR(Kernel,
+                  "cannot map id={}, address=0x{:08X} name={}, mapping to already allocated memory",
+                  GetObjectId(), address, name);
         return ERR_INVALID_ADDRESS_STATE;
     }
 
