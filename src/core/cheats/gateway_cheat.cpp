@@ -50,12 +50,15 @@ void GatewayCheat::Execute(Core::System& system) {
     int if_flag = 0;
     int loop_count = 0;
     s32 loopbackline = 0;
+    u32 counter = 0;
     bool loop_flag = false;
 
     for (std::size_t i = 0; i < cheat_lines.size(); i++) {
         auto line = cheat_lines[i];
         if (line.type == CheatType::Null)
             continue;
+        addr = line.address;
+        val = line.value;
         if (if_flag > 0) {
             if (line.type == CheatType::Patch)
                 i += (line.value + 7) / 8;
@@ -69,8 +72,9 @@ void GatewayCheat::Execute(Core::System& system) {
                     offset = 0;
                     reg = 0;
                     loop_count = 0;
+                    counter = 0;
                     if_flag = 0;
-                    loop_flag = false;
+                    loop_flag = 0;
                 }
             }
             continue;
@@ -78,26 +82,27 @@ void GatewayCheat::Execute(Core::System& system) {
         switch (line.type) {
         case CheatType::Write32: { // 0XXXXXXX YYYYYYYY   word[XXXXXXX+offset] = YYYYYYYY
             addr = line.address + offset;
-            Memory::Write32(addr, line.value);
+            Memory::Write32(addr, val);
             system.CPU().InvalidateCacheRange(addr, sizeof(u32));
             break;
         }
         case CheatType::Write16: { // 1XXXXXXX 0000YYYY   half[XXXXXXX+offset] = YYYY
             addr = line.address + offset;
-            Memory::Write16(addr, static_cast<u16>(line.value));
+            Memory::Write16(addr, static_cast<u16>(val));
             system.CPU().InvalidateCacheRange(addr, sizeof(u16));
             break;
         }
         case CheatType::Write8: { // 2XXXXXXX 000000YY   byte[XXXXXXX+offset] = YY
             addr = line.address + offset;
-            Memory::Write8(addr, static_cast<u8>(line.value));
+            Memory::Write8(addr, static_cast<u8>(val));
             system.CPU().InvalidateCacheRange(addr, sizeof(u8));
             break;
         }
         case CheatType::GreaterThan32: { // 3XXXXXXX YYYYYYYY   IF YYYYYYYY > word[XXXXXXX]
             // ;unsigned
-            addr = line.address + offset;
-            val = Memory::Read32(addr);
+            if (line.address == 0)
+                line.address = offset;
+            val = Memory::Read32(line.address);
             if (line.value > val) {
                 if (if_flag > 0)
                     if_flag--;
@@ -107,8 +112,9 @@ void GatewayCheat::Execute(Core::System& system) {
             break;
         }
         case CheatType::LessThan32: { // 4XXXXXXX YYYYYYYY   IF YYYYYYYY < word[XXXXXXX]   ;unsigned
-            addr = line.address + offset;
-            val = Memory::Read32(addr);
+            if (line.address == 0)
+                line.address = offset;
+            val = Memory::Read32(line.address);
             if (line.value < val) {
                 if (if_flag > 0)
                     if_flag--;
@@ -118,8 +124,9 @@ void GatewayCheat::Execute(Core::System& system) {
             break;
         }
         case CheatType::EqualTo32: { // 5XXXXXXX YYYYYYYY   IF YYYYYYYY = word[XXXXXXX]
-            addr = line.address + offset;
-            val = Memory::Read32(addr);
+            if (line.address == 0)
+                line.address = offset;
+            val = Memory::Read32(line.address);
             if (line.value == val) {
                 if (if_flag > 0)
                     if_flag--;
@@ -129,8 +136,9 @@ void GatewayCheat::Execute(Core::System& system) {
             break;
         }
         case CheatType::NotEqualTo32: { // 6XXXXXXX YYYYYYYY   IF YYYYYYYY <> word[XXXXXXX]
-            addr = line.address + offset;
-            val = Memory::Read32(addr);
+            if (line.address == 0)
+                line.address = offset;
+            val = Memory::Read32(line.address);
             if (line.value != val) {
                 if (if_flag > 0)
                     if_flag--;
@@ -139,10 +147,12 @@ void GatewayCheat::Execute(Core::System& system) {
             }
             break;
         }
-        case CheatType::GreaterThan16: { // 7XXXXXXX 0000YYYY   IF YYYY > half[XXXXXXX]
-            addr = line.address + offset;
-            val = Memory::Read16(addr);
-            if (static_cast<u16>(line.value) > val) {
+        case CheatType::GreaterThan16: { // 7XXXXXXX ZZZZYYYY   IF YYYY > ((not ZZZZ) AND
+            // half[XXXXXXX])
+            if (line.address == 0)
+                line.address = offset;
+            val = Memory::Read16(line.address);
+            if (line.value > val) {
                 if (if_flag > 0)
                     if_flag--;
             } else {
@@ -150,9 +160,11 @@ void GatewayCheat::Execute(Core::System& system) {
             }
             break;
         }
-        case CheatType::LessThan16: { // 8XXXXXXX 0000YYYY   IF YYYY <  half[XXXXXXX]
-            addr = line.address + offset;
-            val = Memory::Read16(addr);
+        case CheatType::LessThan16: { // 8XXXXXXX ZZZZYYYY   IF YYYY < ((not ZZZZ) AND
+            // half[XXXXXXX])
+            if (line.address == 0)
+                line.address = offset;
+            val = Memory::Read16(line.address);
             if (static_cast<u16>(line.value) < val) {
                 if (if_flag > 0)
                     if_flag--;
@@ -161,8 +173,9 @@ void GatewayCheat::Execute(Core::System& system) {
             }
             break;
         }
-        case CheatType::EqualTo16: { // 9XXXXXXX 0000YYYY   IF YYYY = half[XXXXXXX]
-            addr = line.address + offset;
+        case CheatType::EqualTo16: { // 9XXXXXXX ZZZZYYYY   IF YYYY = ((not ZZZZ) AND half[XXXXXXX])
+            if (line.address == 0)
+                line.address = offset;
             val = Memory::Read16(line.address);
             if (static_cast<u16>(line.value) == val) {
                 if (if_flag > 0)
@@ -172,8 +185,10 @@ void GatewayCheat::Execute(Core::System& system) {
             }
             break;
         }
-        case CheatType::NotEqualTo16: { // AXXXXXXX 0000YYYY   IF YYYY <> half[XXXXXXX]
-            addr = line.address + offset;
+        case CheatType::NotEqualTo16: { // AXXXXXXX ZZZZYYYY   IF YYYY <> ((not ZZZZ) AND
+            // half[XXXXXXX])
+            if (line.address == 0)
+                line.address = offset;
             val = Memory::Read16(line.address);
             if (static_cast<u16>(line.value) != val) {
                 if (if_flag > 0)
@@ -190,9 +205,9 @@ void GatewayCheat::Execute(Core::System& system) {
         }
         case CheatType::Loop: {
             if (loop_count < (line.value + 1))
-                loop_flag = true;
+                loop_flag = 1;
             else
-                loop_flag = false;
+                loop_flag = 0;
             loop_count++;
             loopbackline = i;
             break;
@@ -212,8 +227,9 @@ void GatewayCheat::Execute(Core::System& system) {
                 offset = 0;
                 reg = 0;
                 loop_count = 0;
+                counter = 0;
                 if_flag = 0;
-                loop_flag = false;
+                loop_flag = 0;
             }
             break;
         }
@@ -232,21 +248,18 @@ void GatewayCheat::Execute(Core::System& system) {
         case CheatType::IncrementiveWrite32: {
             addr = line.value + offset;
             Memory::Write32(addr, reg);
-            system.CPU().InvalidateCacheRange(addr, sizeof(u32));
             offset += 4;
             break;
         }
         case CheatType::IncrementiveWrite16: {
             addr = line.value + offset;
             Memory::Write16(addr, static_cast<u16>(reg));
-            system.CPU().InvalidateCacheRange(addr, sizeof(u16));
             offset += 2;
             break;
         }
         case CheatType::IncrementiveWrite8: {
             addr = line.value + offset;
             Memory::Write8(addr, static_cast<u8>(reg));
-            system.CPU().InvalidateCacheRange(addr, sizeof(u8));
             offset += 1;
             break;
         }
@@ -270,17 +283,48 @@ void GatewayCheat::Execute(Core::System& system) {
             break;
         }
         case CheatType::Joker: {
-            auto pad_state = system.ServiceManager()
+            bool pressed = system.ServiceManager()
                                .GetService<Service::HID::Module::Interface>("hid:USER")
                                ->GetModule()
-                               ->GetState().hex;
-            bool pressed = ((pad_state & line.value) == line.value);
+                               ->GetState()
+                               .hex &
+                           line.value; // TODO replace after input overhaul
             if (pressed) {
                 if (if_flag > 0) {
                     if_flag--;
                 }
             } else
                 if_flag++;
+            break;
+        }
+        case CheatType::Patch: {
+            // Patch Code (Miscellaneous Memory Manipulation Codes)
+            // EXXXXXXX YYYYYYYY
+            // Copies YYYYYYYY bytes from (current code location + 8) to [XXXXXXXX + offset].
+            auto x = line.address & 0x0FFFFFFF;
+            auto y = line.value;
+            addr = x + offset;
+            {
+                u32 j = 0, t = 0, b = 0;
+                if (y > 0)
+                    i++; // skip over the current code
+                while (y >= 4) {
+                    u32 tmp = (t == 0) ? cheat_lines[i].address : cheat_lines[i].value;
+                    if (t == 1)
+                        i++;
+                    t ^= 1;
+                    Memory::Write32(addr, tmp);
+                    addr += 4;
+                    y -= 4;
+                }
+                while (y > 0) {
+                    u32 tmp = ((t == 0) ? cheat_lines[i].address : cheat_lines[i].value) >> b;
+                    Memory::Write8(addr, tmp);
+                    addr += 1;
+                    y -= 1;
+                    b += 4;
+                }
+            }
             break;
         }
         }

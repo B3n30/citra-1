@@ -65,7 +65,9 @@ public:
     /// during creation.
     PAddr linear_heap_phys_address;
     /// Backing memory for this shared memory block.
-    std::vector<std::pair<u8*, u32>> backing_blocks;
+    std::shared_ptr<std::vector<u8>> backing_block;
+    /// Offset into the backing block for this shared memory.
+    std::size_t backing_block_offset;
     /// Size of the memory block. Page-aligned.
     u32 size;
     /// Permission restrictions applied to the process which created the block.
@@ -75,14 +77,11 @@ public:
     /// Name of shared memory object.
     std::string name;
 
-    MemoryRegionInfo::IntervalSet holding_memory;
-
 private:
     explicit SharedMemory(KernelSystem& kernel);
     ~SharedMemory() override;
 
     friend class KernelSystem;
-    KernelSystem& kernel;
 };
 
 } // namespace Kernel

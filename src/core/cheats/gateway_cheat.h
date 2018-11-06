@@ -43,6 +43,7 @@ public:
         Load8 = 0xDB,
         AddOffset = 0xDC,
         Joker = 0xDD,
+        Patch = 0xE,
     };
 
     struct CheatLine {
