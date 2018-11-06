@@ -143,6 +143,7 @@ System::ResultStatus System::Load(EmuWindow& emu_window, const std::string& file
         }
     }
     Memory::SetCurrentPageTable(&kernel->GetCurrentProcess()->vm_manager.page_table);
+    cheat_engine = std::make_unique<Cheats::CheatEngine>(*this);
     status = ResultStatus::Success;
     m_emu_window = &emu_window;
     m_filepath = filepath;
@@ -239,6 +240,10 @@ const Kernel::KernelSystem& System::Kernel() const {
     return *kernel;
 }
 
+Cheats::CheatEngine& System::CheatEngine() {
+    return *cheat_engine;
+}
+
 void System::RegisterSoftwareKeyboard(std::shared_ptr<Frontend::SoftwareKeyboard> swkbd) {
     registered_swkbd = std::move(swkbd);
 }
@@ -262,6 +267,7 @@ void System::Shutdown() {
 #ifdef ENABLE_SCRIPTING
     rpc_server.reset();
 #endif
+    cheat_engine.reset();
     service_manager.reset();
     dsp_core.reset();
     cpu_core.reset();

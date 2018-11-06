@@ -20,6 +20,7 @@
 #include "citra_qt/bootmanager.h"
 #include "citra_qt/camera/qt_multimedia_camera.h"
 #include "citra_qt/camera/still_image_camera.h"
+#include "citra_qt/cheats.h"
 #include "citra_qt/compatdb.h"
 #include "citra_qt/compatibility_list.h"
 #include "citra_qt/configuration/config.h"
@@ -449,6 +450,7 @@ void GMainWindow::RestoreUIState() {
     microProfileDialog->restoreGeometry(UISettings::values.microprofile_geometry);
     microProfileDialog->setVisible(UISettings::values.microprofile_visible);
 #endif
+    ui.action_Cheats->setEnabled(false);
 
     game_list->LoadInterfaceLayout();
 
@@ -509,6 +511,7 @@ void GMainWindow::ConnectMenuEvents() {
     connect(ui.action_Report_Compatibility, &QAction::triggered, this,
             &GMainWindow::OnMenuReportCompatibility);
     connect(ui.action_Configure, &QAction::triggered, this, &GMainWindow::OnConfigure);
+    connect(ui.action_Cheats, &QAction::triggered, this, &GMainWindow::OnCheats);
 
     // View
     connect(ui.action_Single_Window_Mode, &QAction::triggered, this,
@@ -852,6 +855,7 @@ void GMainWindow::ShutdownGame() {
     ui.action_Pause->setEnabled(false);
     ui.action_Stop->setEnabled(false);
     ui.action_Restart->setEnabled(false);
+    ui.action_Cheats->setEnabled(false);
     ui.action_Load_Amiibo->setEnabled(false);
     ui.action_Remove_Amiibo->setEnabled(false);
     ui.action_Report_Compatibility->setEnabled(false);
@@ -1141,6 +1145,7 @@ void GMainWindow::OnStartGame() {
     ui.action_Pause->setEnabled(true);
     ui.action_Stop->setEnabled(true);
     ui.action_Restart->setEnabled(true);
+    ui.action_Cheats->setEnabled(true);
     ui.action_Load_Amiibo->setEnabled(true);
     ui.action_Report_Compatibility->setEnabled(true);
     ui.action_Enable_Frame_Advancing->setEnabled(true);
@@ -1274,6 +1279,11 @@ void GMainWindow::ToggleScreenLayout() {
 void GMainWindow::OnSwapScreens() {
     Settings::values.swap_screen = ui.action_Screen_Layout_Swap_Screens->isChecked();
     Settings::Apply();
+}
+
+void GMainWindow::OnCheats() {
+    CheatDialog cheat_dialog(this);
+    cheat_dialog.exec();
 }
 
 void GMainWindow::OnConfigure() {
