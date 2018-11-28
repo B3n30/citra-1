@@ -1302,8 +1302,11 @@ void GMainWindow::OnSwapScreens() {
 }
 
 void GMainWindow::OnCheats() {
-    CheatDialog cheat_dialog(this);
-    cheat_dialog.exec();
+    if (!cheat_dialog)
+        cheat_dialog = new CheatDialog(this);
+    cheat_dialog->show();
+    cheat_dialog->activateWindow();
+    cheat_dialog->raise();
 }
 
 void GMainWindow::OnConfigure() {

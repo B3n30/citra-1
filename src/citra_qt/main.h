@@ -17,6 +17,7 @@
 #include "ui_main.h"
 
 class AboutDialog;
+class CheatDialog;
 class Config;
 class ClickableLabel;
 class EmuThread;
@@ -227,6 +228,9 @@ private:
     // Movie
     bool movie_record_on_start = false;
     QString movie_record_path;
+
+    // Cheats
+    CheatDialog* cheat_dialog = nullptr;
 
     // Debugger panes
     ProfilerWidget* profilerWidget;
