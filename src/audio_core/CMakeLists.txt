@@ -27,7 +27,7 @@ add_library(audio_core STATIC
 
     $<$<BOOL:${SDL2_FOUND}>:sdl2_sink.cpp sdl2_sink.h>
     $<$<BOOL:${ENABLE_CUBEB}>:cubeb_sink.cpp cubeb_sink.h>
-    $<$<BOOL:${FFMPEG_FOUND}>:hle/aac_decoder.cpp hle/aac_decoder.h hle/ffmpeg_dl.cpp hle/ffmpeg_dl.h>
+    hle/aac_decoder.cpp hle/aac_decoder.h hle/wmf_decoder.cpp hle/wmf_decoder.h
 )
 
 create_target_directory_groups(audio_core)
@@ -35,14 +35,8 @@ create_target_directory_groups(audio_core)
 target_link_libraries(audio_core PUBLIC common core)
 target_link_libraries(audio_core PRIVATE SoundTouch)
 
-if(FFMPEG_FOUND)
-    if(UNIX)
-        target_link_libraries(audio_core PRIVATE FFmpeg::avcodec)
-    else()
-        target_include_directories(audio_core PRIVATE ${FFMPEG_DIR}/include)
-    endif()
-    target_compile_definitions(audio_core PRIVATE HAVE_FFMPEG)
-endif()
+target_link_libraries(audio_core PRIVATE  dxva2.lib evr.lib mf.lib mfplat.lib mfplay.lib mfreadwrite.lib mfuuid.lib)
+target_compile_definitions(audio_core PRIVATE HAVE_FFMPEG)
 
 if(SDL2_FOUND)
     target_link_libraries(audio_core PRIVATE SDL2)
