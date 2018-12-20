@@ -126,10 +126,12 @@ std::optional<BinaryResponse> AACDecoder::Impl::Decode(const BinaryRequest& requ
     IMFSample* sample = NULL;
     IMFSample* output = NULL;
     int status = 0;
+    DWORD flags;
     sample = create_sample((void*)data, request.size, 1, 0);
     send_sample(transform, in_stream_id, sample);
-    // transform->GetOutputStatus(&flags);
-    receive_sample(transform, out_stream_id, &output);
+    transform->GetOutputStatus(&flags);
+    LOG_CRITICAL(Audio_DSP, "{:08x}", flags);
+    if (receive_sample(transform, out_stream_id, &output) == 0) {
 
     IMFMediaBuffer* buf = NULL;
     output->ConvertToContiguousBuffer(&buf);
@@ -143,6 +145,7 @@ std::optional<BinaryResponse> AACDecoder::Impl::Decode(const BinaryRequest& requ
     // TODO: Check if the result is s16
     memcpy(out_streams[0].data(), buffer, current_length);
     buf->Unlock();
+    }
 
     if (out_streams[0].size() != 0) {
         if (request.dst_addr_ch0 < Memory::FCRAM_PADDR ||
