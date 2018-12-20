@@ -24,6 +24,7 @@ void ReportError(std::string msg, HRESULT hr) {
     if (err != NULL) {
         LOG_CRITICAL(Audio_DSP, "{}: {}", msg, err);
     }
+    LOG_CRITICAL(Audio_DSP, "{}: {:08x}", msg, hr);
 }
 
 bool drain = false;
@@ -31,12 +32,6 @@ bool drain_complete = false;
 
 int mf_coinit() {
     HRESULT hr = S_OK;
-
-    hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
-    if (hr != RPC_S_OK) {
-        LOG_CRITICAL(Audio_DSP, "Failed to initialize COM");
-        return -1;
-    }
 
     // lite startup is faster and all what we need is included
     hr = MFStartup(MF_VERSION, MFSTARTUP_LITE);
@@ -266,7 +261,7 @@ int receive_sample(IMFTransform* transform, DWORD out_stream_id, IMFSample** out
     hr = transform->GetOutputStreamInfo(out_stream_id, &out_info);
 
     if (FAILED(hr)) {
-        std::cout << "MFT: Failed to get stream info" << std::endl;
+        LOG_CRITICAL(Audio_DSP, "MFT: Failed to get stream info");
         return -1;
     }
     mft_create_sample = (out_info.dwFlags & MFT_OUTPUT_STREAM_PROVIDES_SAMPLES) ||
@@ -280,7 +275,7 @@ int receive_sample(IMFTransform* transform, DWORD out_stream_id, IMFSample** out
         if (!mft_create_sample) {
             sample = create_sample(NULL, out_info.cbSize, out_info.cbAlignment);
             if (!sample) {
-                std::cout << "MFT: Unable to allocate memory for samples" << std::endl;
+                LOG_CRITICAL(Audio_DSP, "MFT: Unable to allocate memory for samples");
                 return -1;
             }
         }
@@ -304,12 +299,12 @@ int receive_sample(IMFTransform* transform, DWORD out_stream_id, IMFSample** out
         break;
     }
 
-    if (out_sample != NULL) {
+    if (*out_sample != NULL) {
         return 0;
     }
 
     // TODO: handle try again and EOF cases using drain value
-    if (!out_sample) {
+    if (*out_sample== NULL) {
         ReportError("MFT: decoding failure", hr);
         return 1;
     }
