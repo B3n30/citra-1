@@ -28,6 +28,8 @@ option(ENABLE_SCRIPTING "Enables scripting support" OFF)
 
 CMAKE_DEPENDENT_OPTION(CITRA_USE_BUNDLED_FFMPEG "Download bundled FFmpeg binaries" ON "MSVC" OFF)
 
+CMAKE_DEPENDENT_OPTION(ENABLE_MF "Use Media Foundation decoder" ON "WIN32;NOT ENABLE_FFMPEG" OFF)
+
 if(NOT EXISTS ${PROJECT_SOURCE_DIR}/.git/hooks/pre-commit)
     message(STATUS "Copying pre-commit hook")
     file(COPY hooks/pre-commit

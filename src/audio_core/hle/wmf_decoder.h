@@ -1,37 +1,22 @@
+// Copyright 2018 Citra Emulator Project
+// Licensed under GPLv2 or any later version
+// Refer to the license.txt file included.
+
 #pragma once
 
-#ifndef MF_DECODER
-#define MF_DECODER
+#include "audio_core/hle/decoder.h"
 
-#define WINVER _WIN32_WINNT_WIN7
+namespace AudioCore::HLE {
 
-#include <assert.h>
-#include <comdef.h>
-#include <mfapi.h>
-#include <mferror.h>
-#include <mfidl.h>
-#include <mftransform.h>
-#include <stdio.h>
+class WMFDecoder final : public DecoderBase {
+public:
+    explicit WMFDecoder(Memory::MemorySystem& memory);
+    ~WMFDecoder() override;
+    std::optional<BinaryResponse> ProcessRequest(const BinaryRequest& request) override;
 
-#include <iostream>
-#include <string>
+private:
+    class Impl;
+    std::unique_ptr<Impl> impl;
+};
 
-template <class T>
-void SafeRelease(T** ppT);
-void ReportError(std::string msg, HRESULT hr);
-
-// exported functions
-int mf_coinit();
-int mf_decoder_init(IMFTransform** transform, GUID audio_format = MFAudioFormat_AAC);
-void mf_deinit(IMFTransform** transform);
-IMFSample* create_sample(void* data, DWORD len, DWORD alignment = 1, LONGLONG duration = 0);
-int select_input_mediatype(IMFTransform* transform, int in_stream_id,
-                           GUID audio_format = MFAudioFormat_AAC);
-int select_output_mediatype(IMFTransform* transform, int out_stream_id,
-                            GUID audio_format = MFAudioFormat_PCM);
-int mf_flush(IMFTransform** transform);
-int send_sample(IMFTransform* transform, DWORD in_stream_id, IMFSample* in_sample);
-int receive_sample(IMFTransform* transform, DWORD out_stream_id, IMFSample** out_sample);
-int copy_sample_to_buffer(IMFSample* sample, void** output, DWORD* len);
-
-#endif // MF_DECODER
+} // namespace AudioCore::HLE

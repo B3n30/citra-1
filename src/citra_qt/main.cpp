@@ -79,7 +79,6 @@ extern "C" {
 // tells Nvidia drivers to use the dedicated GPU by default on laptops with switchable graphics
 __declspec(dllexport) unsigned long NvOptimusEnablement = 0x00000001;
 }
-#include <Objbase.h >
 #endif
 
 /**
@@ -1852,12 +1851,6 @@ void GMainWindow::SetDiscordEnabled([[maybe_unused]] bool state) {
 #endif
 
 int main(int argc, char* argv[]) {
-    HRESULT hr = S_OK;
-
-    hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
-    if (hr != RPC_S_OK) {
-        return -1;
-    }
     Common::DetachedTasks detached_tasks;
     MicroProfileOnThreadCreate("Frontend");
     SCOPE_EXIT({ MicroProfileShutdown(); });
