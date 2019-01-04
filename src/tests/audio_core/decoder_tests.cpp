@@ -11,8 +11,8 @@
 #include "core/hle/kernel/shared_page.h"
 #include "core/memory.h"
 
-#include "audio_core/hle/wmf_decoder.h"
 #include "audio_core/hle/decoder.h"
+#include "audio_core/hle/wmf_decoder.h"
 #include "audio_fixures.h"
 
 TEST_CASE("DSP HLE Audio Decoder", "[audio_core]") {
