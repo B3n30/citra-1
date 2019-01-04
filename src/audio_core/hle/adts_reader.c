@@ -10,7 +10,7 @@ uint32_t parse_adts(char* buffer, struct ADTSData* out) {
 
     // sync word 0xfff
     tmp = (buffer[0] << 8) | (buffer[1] & 0xf0);
-    if (tmp != 0xfffffff0)
+    if ((tmp & 0xffff) != 0xfff0)
         return 0;
     out->MPEG2 = (buffer[1] >> 3) & 0x1;
     // bit 17 to 18
