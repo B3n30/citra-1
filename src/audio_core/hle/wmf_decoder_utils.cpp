@@ -79,7 +79,8 @@ void MFDeInit(IMFTransform* transform) {
 
 IMFSample* CreateSample(void* data, DWORD len, DWORD alignment, LONGLONG duration) {
     HRESULT hr = S_OK;
-    IMFMediaBuffer* buf = nullptr;
+    IMFMediaBuffer* buf_tmp = nullptr;
+    std::unique_ptr<IMFMediaBuffer, MFRelease<IMFMediaBuffer>> buf;
     IMFSample* sample = nullptr;
 
     hr = MFCreateSample(&sample);
@@ -88,11 +89,12 @@ IMFSample* CreateSample(void* data, DWORD len, DWORD alignment, LONGLONG duratio
         return nullptr;
     }
     // Yes, the argument for alignment is the actual alignment - 1
-    hr = MFCreateAlignedMemoryBuffer(len, alignment - 1, &buf);
+    hr = MFCreateAlignedMemoryBuffer(len, alignment - 1, &buf_tmp);
     if (FAILED(hr)) {
         ReportError("Unable to allocate a memory buffer for sample", hr);
         return nullptr;
     }
+    buf.reset(buf_tmp);
     if (data) {
         BYTE* buffer;
         // lock the MediaBuffer
@@ -100,7 +102,7 @@ IMFSample* CreateSample(void* data, DWORD len, DWORD alignment, LONGLONG duratio
         hr = buf->Lock(&buffer, nullptr, nullptr);
         if (FAILED(hr)) {
             SafeRelease(&sample);
-            SafeRelease(&buf);
+            buf.reset();
             return nullptr;
         }
 
@@ -110,9 +112,8 @@ IMFSample* CreateSample(void* data, DWORD len, DWORD alignment, LONGLONG duratio
         buf->Unlock();
     }
 
-    sample->AddBuffer(buf);
+    sample->AddBuffer(buf.get());
     hr = sample->SetSampleDuration(duration);
-    SafeRelease(&buf);
     return sample;
 }
 
