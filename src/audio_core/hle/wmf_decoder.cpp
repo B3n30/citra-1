@@ -27,7 +27,7 @@ private:
 
     Memory::MemorySystem& memory;
 
-    std::unique_ptr<IMFTransform, MFRelease<IMFTransform>> transform;
+    unique_mfptr<IMFTransform> transform;
     DWORD in_stream_id = 0;
     DWORD out_stream_id = 0;
 };
@@ -111,7 +111,7 @@ int WMFDecoder::Impl::DecodingLoop(ADTSData adts_header,
     DWORD tmp = 0;
     IMFSample* output_tmp = nullptr;
     IMFMediaBuffer* mdbuf = nullptr;
-    std::unique_ptr<IMFSample, MFRelease<IMFSample>> output;
+    unique_mfptr<IMFSample> output;
 
     while (true) {
         output_status = ReceiveSample(transform.get(), out_stream_id, &output_tmp);
@@ -182,7 +182,7 @@ std::optional<BinaryResponse> WMFDecoder::Impl::Decode(const BinaryRequest& requ
     u8* data = memory.GetFCRAMPointer(request.src_addr - Memory::FCRAM_PADDR);
 
     std::array<std::vector<u8>, 2> out_streams;
-    std::unique_ptr<IMFSample, MFRelease<IMFSample>> sample;
+    unique_mfptr<IMFSample> sample;
     ADTSData adts_header;
     char* aac_tag = (char*)calloc(1, 14);
     int input_status = 0;

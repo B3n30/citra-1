@@ -80,7 +80,7 @@ void MFDeInit(IMFTransform* transform) {
 IMFSample* CreateSample(void* data, DWORD len, DWORD alignment, LONGLONG duration) {
     HRESULT hr = S_OK;
     IMFMediaBuffer* buf_tmp = nullptr;
-    std::unique_ptr<IMFMediaBuffer, MFRelease<IMFMediaBuffer>> buf;
+    unique_mfptr<IMFMediaBuffer> buf;
     IMFSample* sample = nullptr;
 
     hr = MFCreateSample(&sample);
@@ -267,6 +267,7 @@ MFOutputState ReceiveSample(IMFTransform* transform, DWORD out_stream_id, IMFSam
     IMFSample* sample = nullptr;
     MFT_OUTPUT_STREAM_INFO out_info;
     DWORD status = 0;
+    std::tuple<MFOutputState, unique_mfptr<IMFSample>> ret;
     bool mft_create_sample = false;
 
     if (!out_sample) {
@@ -308,11 +309,13 @@ MFOutputState ReceiveSample(IMFTransform* transform, DWORD out_stream_id, IMFSam
 
         if (hr == MF_E_TRANSFORM_NEED_MORE_INPUT) {
             // Most likely reasons: data corrupted; your actions not expected by MFT
+            SafeRelease(&sample);
             return NEED_MORE_INPUT;
         }
 
         if (hr == MF_E_TRANSFORM_STREAM_CHANGE) {
             ReportError("MFT: stream format changed, re-configuration required", hr);
+            SafeRelease(&sample);
             return NEED_RECONFIG;
         }
 
@@ -333,7 +336,7 @@ MFOutputState ReceiveSample(IMFTransform* transform, DWORD out_stream_id, IMFSam
 }
 
 int CopySampleToBuffer(IMFSample* sample, void** output, DWORD* len) {
-    std::unique_ptr<IMFMediaBuffer, MFRelease<IMFMediaBuffer>> buffer;
+    unique_mfptr<IMFMediaBuffer> buffer;
     IMFMediaBuffer* tmp;
     HRESULT hr = S_OK;
     BYTE* data;

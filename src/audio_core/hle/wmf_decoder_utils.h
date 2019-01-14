@@ -16,6 +16,7 @@
 
 #include <iostream>
 #include <string>
+#include <tuple>
 
 #include "adts.h"
 
@@ -36,6 +37,9 @@ struct MFRelease {
         pointer->Release();
     };
 };
+
+template<typename T>
+using unique_mfptr = std::unique_ptr<T, MFRelease<T>>;
 
 void ReportError(std::string msg, HRESULT hr);
 
