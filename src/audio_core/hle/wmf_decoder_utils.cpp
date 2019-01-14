@@ -261,62 +261,55 @@ int SendSample(IMFTransform* transform, DWORD in_stream_id, IMFSample* in_sample
     return 0;
 }
 
-MFOutputState ReceiveSample(IMFTransform* transform, DWORD out_stream_id, IMFSample** out_sample) {
+std::tuple<MFOutputState, unique_mfptr<IMFSample>> ReceiveSample(IMFTransform* transform,
+                                                                 DWORD out_stream_id) {
     HRESULT hr;
     MFT_OUTPUT_DATA_BUFFER out_buffers;
-    IMFSample* sample = nullptr;
+    IMFSample* sample_tmp = nullptr;
     MFT_OUTPUT_STREAM_INFO out_info;
     DWORD status = 0;
-    std::tuple<MFOutputState, unique_mfptr<IMFSample>> ret;
+    unique_mfptr<IMFSample> sample;
     bool mft_create_sample = false;
-
-    if (!out_sample) {
-        ReportError("nullptr pointer passed to receive_sample()", MF_E_SAMPLE_NOT_WRITABLE);
-        return FATAL_ERROR;
-    }
 
     hr = transform->GetOutputStreamInfo(out_stream_id, &out_info);
 
     if (FAILED(hr)) {
         ReportError("MFT: Failed to get stream info", hr);
-        return FATAL_ERROR;
+        return std::make_tuple(FATAL_ERROR, std::move(sample));
     }
     mft_create_sample = (out_info.dwFlags & MFT_OUTPUT_STREAM_PROVIDES_SAMPLES) ||
                         (out_info.dwFlags & MFT_OUTPUT_STREAM_CAN_PROVIDE_SAMPLES);
 
     while (true) {
         sample = nullptr;
-        *out_sample = nullptr;
         status = 0;
 
         if (!mft_create_sample) {
-            sample = CreateSample(nullptr, out_info.cbSize, out_info.cbAlignment);
-            if (!sample) {
+            sample_tmp = CreateSample(nullptr, out_info.cbSize, out_info.cbAlignment);
+            if (!sample_tmp) {
                 ReportError("MFT: Unable to allocate memory for samples", hr);
-                return FATAL_ERROR;
+                return std::make_tuple(FATAL_ERROR, std::move(sample));
             }
+            sample.reset(sample_tmp);
         }
 
         out_buffers.dwStreamID = out_stream_id;
-        out_buffers.pSample = sample;
+        out_buffers.pSample = sample.get();
 
         hr = transform->ProcessOutput(0, 1, &out_buffers, &status);
 
         if (!FAILED(hr)) {
-            *out_sample = out_buffers.pSample;
             break;
         }
 
         if (hr == MF_E_TRANSFORM_NEED_MORE_INPUT) {
             // Most likely reasons: data corrupted; your actions not expected by MFT
-            SafeRelease(&sample);
-            return NEED_MORE_INPUT;
+            return std::make_tuple(NEED_MORE_INPUT, std::move(sample));
         }
 
         if (hr == MF_E_TRANSFORM_STREAM_CHANGE) {
             ReportError("MFT: stream format changed, re-configuration required", hr);
-            SafeRelease(&sample);
-            return NEED_RECONFIG;
+            return std::make_tuple(NEED_RECONFIG, std::move(sample));
         }
 
         break;
@@ -324,15 +317,15 @@ MFOutputState ReceiveSample(IMFTransform* transform, DWORD out_stream_id, IMFSam
 
     if (out_buffers.dwStatus & MFT_OUTPUT_DATA_BUFFER_INCOMPLETE) {
         // this status is also unreliable but whatever
-        return HAVE_MORE_DATA;
+        return std::make_tuple(HAVE_MORE_DATA, std::move(sample));
     }
 
-    if (*out_sample == nullptr) {
+    if (out_buffers.pSample == nullptr) {
         ReportError("MFT: decoding failure", hr);
-        return FATAL_ERROR;
+        return std::make_tuple(FATAL_ERROR, std::move(sample));
     }
 
-    return OK;
+    return std::make_tuple(OK, std::move(sample));
 }
 
 int CopySampleToBuffer(IMFSample* sample, void** output, DWORD* len) {
@@ -347,14 +340,14 @@ int CopySampleToBuffer(IMFSample* sample, void** output, DWORD* len) {
         return -1;
     }
 
-    sample->ConvertToContiguousBuffer(&tmp);
+    hr = sample->ConvertToContiguousBuffer(&tmp);
     if (FAILED(hr)) {
         ReportError("Failed to get sample buffer", hr);
         return -1;
     }
     buffer.reset(tmp);
 
-    hr = buffer->Lock(&data, nullptr, nullptr);
+    hr = tmp->Lock(&data, nullptr, nullptr);
     if (FAILED(hr)) {
         ReportError("Failed to lock the buffer", hr);
         return -1;

@@ -38,7 +38,7 @@ struct MFRelease {
     };
 };
 
-template<typename T>
+template <typename T>
 using unique_mfptr = std::unique_ptr<T, MFRelease<T>>;
 
 void ReportError(std::string msg, HRESULT hr);
@@ -56,5 +56,6 @@ bool SelectOutputMediaType(IMFTransform* transform, int out_stream_id,
                            GUID audio_format = MFAudioFormat_PCM);
 void MFFlush(IMFTransform* transform);
 int SendSample(IMFTransform* transform, DWORD in_stream_id, IMFSample* in_sample);
-MFOutputState ReceiveSample(IMFTransform* transform, DWORD out_stream_id, IMFSample** out_sample);
+std::tuple<MFOutputState, unique_mfptr<IMFSample>> ReceiveSample(IMFTransform* transform,
+                                                                 DWORD out_stream_id);
 int CopySampleToBuffer(IMFSample* sample, void** output, DWORD* len);

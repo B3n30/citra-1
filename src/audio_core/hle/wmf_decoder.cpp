@@ -109,13 +109,12 @@ int WMFDecoder::Impl::DecodingLoop(ADTSData adts_header,
     char* output_buffer = nullptr;
     DWORD output_len = 0;
     DWORD tmp = 0;
-    IMFSample* output_tmp = nullptr;
+    // IMFSample* output_tmp = nullptr;
     IMFMediaBuffer* mdbuf = nullptr;
     unique_mfptr<IMFSample> output;
 
     while (true) {
-        output_status = ReceiveSample(transform.get(), out_stream_id, &output_tmp);
-        output.reset(output_tmp);
+        auto [output_status, output] = ReceiveSample(transform.get(), out_stream_id);
 
         // 0 -> okay; 3 -> okay but more data available (buffer too small)
         if (output_status == OK || output_status == HAVE_MORE_DATA) {
