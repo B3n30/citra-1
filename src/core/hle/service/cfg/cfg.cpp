@@ -89,6 +89,7 @@ struct ConsoleCountryInfo {
 static_assert(sizeof(ConsoleCountryInfo) == 4, "ConsoleCountryInfo must be exactly 4 bytes");
 } // namespace
 
+static const u32 MAX_EULA_VERSION = 0x7F7F;
 static const ConsoleModelInfo CONSOLE_MODEL = {NINTENDO_3DS_XL, {0, 0, 0}};
 static const u8 CONSOLE_LANGUAGE = LANGUAGE_EN;
 static const UsernameBlock CONSOLE_USERNAME_BLOCK = {u"CITRA", 0, 0};
@@ -505,7 +506,7 @@ ResultCode Module::FormatConfig() {
         return res;
 
     // 0x000D0000 - Accepted EULA version
-    res = CreateConfigInfoBlk(EULAVersionBlockID, 0x4, 0xE, zero_buffer);
+    res = CreateConfigInfoBlk(EULAVersionBlockID, sizeof(MAX_EULA_VERSION), 0xE, &MAX_EULA_VERSION);
     if (!res.IsSuccess())
         return res;
 
@@ -564,6 +565,13 @@ ResultCode Module::LoadConfigNANDSaveFile() {
 
 Module::Module() {
     LoadConfigNANDSaveFile();
+    // Check the config savegame EULA Version and update it to 0xFFFF if necessary
+    // so users will never get a promt to accept EULA
+    if (GetEULAVersion() != MAX_EULA_VERSION) {
+        LOG_INFO(Service_CFG, "Updating accepted EULA version to {}", MAX_EULA_VERSION);
+        SetEULAVersion(Service::CFG::MAX_EULA_VERSION);
+        UpdateConfigNANDSavegame();
+    }
 }
 
 Module::~Module() = default;
@@ -716,6 +724,16 @@ u64 Module::GetConsoleUniqueId() {
     u64_le console_id_le;
     GetConfigInfoBlock(ConsoleUniqueID2BlockID, sizeof(console_id_le), 0xE, &console_id_le);
     return console_id_le;
+}
+
+u32 Module::GetEULAVersion() {
+    u32 version;
+    GetConfigInfoBlock(EULAVersionBlockID, sizeof(version), 0xE, &version);
+    return version;
+}
+
+void Module::SetEULAVersion(u32 version) {
+    SetConfigInfoBlock(EULAVersionBlockID, sizeof(version), 0xE, &version);
 }
 
 std::shared_ptr<Module> GetModule(Core::System& system) {

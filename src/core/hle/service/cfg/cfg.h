@@ -399,6 +399,18 @@ public:
     u64 GetConsoleUniqueId();
 
     /**
+     * Sets the accepted EULA version in the config savegame.
+     * @param version the version to set
+     */
+    void SetEULAVersion(u32 version);
+
+    /**
+     * Gets the accepted EULA version from config savegame.
+     * @returns the EULA version
+     */
+    u32 GetEULAVersion();
+
+    /**
      * Writes the config savegame memory buffer to the config savegame file in the filesystem
      * @returns ResultCode indicating the result of the operation, 0 on success
      */
