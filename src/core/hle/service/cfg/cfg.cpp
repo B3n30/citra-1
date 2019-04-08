@@ -565,10 +565,10 @@ ResultCode Module::LoadConfigNANDSaveFile() {
 
 Module::Module() {
     LoadConfigNANDSaveFile();
-    // Check the config savegame EULA Version and update it to 0xFFFF if necessary
+    // Check the config savegame EULA Version and update it to 0x7F7F if necessary
     // so users will never get a promt to accept EULA
     if (GetEULAVersion() != MAX_EULA_VERSION) {
-        LOG_INFO(Service_CFG, "Updating accepted EULA version to {}", MAX_EULA_VERSION);
+        LOG_INFO(Service_CFG, "Updating accepted EULA version to {:X}", MAX_EULA_VERSION);
         SetEULAVersion(Service::CFG::MAX_EULA_VERSION);
         UpdateConfigNANDSavegame();
     }
