@@ -615,9 +615,8 @@ void Module::Interface::ReadData(Kernel::HLERequestContext& ctx) {
     switch (info_type) {
     case CecSystemInfoType::EulaVersion: {
         auto cfg = Service::CFG::GetModule(cecd->system);
-        u32 version = cfg->GetEULAVersion();
-        // only the first two bytes contain the version
-        dest_buffer.Write(&version, 0, 2);
+        Service::CFG::EULAVersion version = cfg->GetEULAVersion();
+        dest_buffer.Write(&version, 0, sizeof(version));
         break;
     }
     case CecSystemInfoType::Eula:

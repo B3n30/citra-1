@@ -47,6 +47,11 @@ enum SystemLanguage {
 
 enum SoundOutputMode { SOUND_MONO = 0, SOUND_STEREO = 1, SOUND_SURROUND = 2 };
 
+struct EULAVersion {
+    u8 minor;
+    u8 major;
+};
+
 /// Block header in the config savedata file
 struct SaveConfigBlockEntry {
     u32 block_id;       ///< The id of the current block
@@ -402,13 +407,13 @@ public:
      * Sets the accepted EULA version in the config savegame.
      * @param version the version to set
      */
-    void SetEULAVersion(u32 version);
+    void SetEULAVersion(const EULAVersion& version);
 
     /**
      * Gets the accepted EULA version from config savegame.
      * @returns the EULA version
      */
-    u32 GetEULAVersion();
+    EULAVersion GetEULAVersion();
 
     /**
      * Writes the config savegame memory buffer to the config savegame file in the filesystem
