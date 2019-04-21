@@ -83,6 +83,8 @@ void HTTP_C::InitializeConnectionSession(Kernel::HLERequestContext& ctx) {
     const Context::Handle context_handle = rp.Pop<u32>();
     u32 pid = rp.PopPID();
 
+    LOG_DEBUG(Service_HTTP, "called, context_id={} pid={}", context_handle, pid);
+
     auto* session_data = GetSessionData(ctx.Session());
     ASSERT(session_data);
 
@@ -109,13 +111,14 @@ void HTTP_C::InitializeConnectionSession(Kernel::HLERequestContext& ctx) {
 
     IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
     rb.Push(RESULT_SUCCESS);
-    LOG_DEBUG(Service_HTTP, "called, context_id={} pid={}", context_handle, pid);
 }
 
 void HTTP_C::BeginRequest(Kernel::HLERequestContext& ctx) {
     IPC::RequestParser rp(ctx, 0x9, 1, 0);
     const Context::Handle context_handle = rp.Pop<u32>();
 
+    LOG_WARNING(Service_HTTP, "(stubbed) called, context_id={}", context_handle);
+
     auto* session_data = GetSessionData(ctx.Session());
     ASSERT(session_data);
 
@@ -153,13 +156,14 @@ void HTTP_C::BeginRequest(Kernel::HLERequestContext& ctx) {
 
     IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
     rb.Push(RESULT_SUCCESS);
-    LOG_WARNING(Service_HTTP, "(stubbed) called, context_id={}", context_handle);
 }
 
 void HTTP_C::BeginRequestAsync(Kernel::HLERequestContext& ctx) {
     IPC::RequestParser rp(ctx, 0xA, 1, 0);
     const Context::Handle context_handle = rp.Pop<u32>();
 
+    LOG_WARNING(Service_HTTP, "(stubbed) called, context_id={}", context_handle);
+
     auto* session_data = GetSessionData(ctx.Session());
     ASSERT(session_data);
 
@@ -197,7 +201,6 @@ void HTTP_C::BeginRequestAsync(Kernel::HLERequestContext& ctx) {
 
     IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
     rb.Push(RESULT_SUCCESS);
-    LOG_WARNING(Service_HTTP, "(stubbed) called, context_id={}", context_handle);
 }
 
 void HTTP_C::CreateContext(Kernel::HLERequestContext& ctx) {
@@ -330,6 +333,9 @@ void HTTP_C::AddRequestHeader(Kernel::HLERequestContext& ctx) {
     std::string value(value_size - 1, '\0');
     value_buffer.Read(&value[0], 0, value_size - 1);
 
+    LOG_DEBUG(Service_HTTP, "called, name={}, value={}, context_handle={}", name, value,
+              context_handle);
+
     auto* session_data = GetSessionData(ctx.Session());
     ASSERT(session_data);
 
@@ -386,9 +392,6 @@ void HTTP_C::AddRequestHeader(Kernel::HLERequestContext& ctx) {
     IPC::RequestBuilder rb = rp.MakeBuilder(1, 2);
     rb.Push(RESULT_SUCCESS);
     rb.PushMappedBuffer(value_buffer);
-
-    LOG_DEBUG(Service_HTTP, "called, name={}, value={}, context_handle={}", name, value,
-              context_handle);
 }
 
 void HTTP_C::AddPostDataAscii(Kernel::HLERequestContext& ctx) {
@@ -405,6 +408,9 @@ void HTTP_C::AddPostDataAscii(Kernel::HLERequestContext& ctx) {
     // Copy the value_buffer into a string without the \0 at the end
     std::string value(value_size - 1, '\0');
     value_buffer.Read(&value[0], 0, value_size - 1);
+
+    LOG_DEBUG(Service_HTTP, "called, name={}, value={}, context_handle={}", name, value,
+              context_handle);
 
     auto* session_data = GetSessionData(ctx.Session());
     ASSERT(session_data);
@@ -461,15 +467,15 @@ void HTTP_C::AddPostDataAscii(Kernel::HLERequestContext& ctx) {
     IPC::RequestBuilder rb = rp.MakeBuilder(1, 2);
     rb.Push(RESULT_SUCCESS);
     rb.PushMappedBuffer(value_buffer);
-
-    LOG_DEBUG(Service_HTTP, "called, name={}, value={}, context_handle={}", name, value,
-              context_handle);
 }
 
 void HTTP_C::SetClientCertContext(Kernel::HLERequestContext& ctx) {
     IPC::RequestParser rp(ctx, 0x29, 2, 0);
     const u32 context_handle = rp.Pop<u32>();
     const u32 client_cert_handle = rp.Pop<u32>();
+
+    LOG_DEBUG(Service_HTTP, "called with context_handle={} client_cert_handle={}", context_handle,
+              client_cert_handle);
 
     auto* session_data = GetSessionData(ctx.Session());
     ASSERT(session_data);
@@ -530,8 +536,6 @@ void HTTP_C::SetClientCertContext(Kernel::HLERequestContext& ctx) {
 
     http_context_itr->second.ssl_config.client_cert_ctx = cert_context_itr->second;
     IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
-    LOG_DEBUG(Service_HTTP, "called with context_handle={} client_cert_handle={}", context_handle,
-              client_cert_handle);
     rb.Push(RESULT_SUCCESS);
 }
 
@@ -539,6 +543,8 @@ void HTTP_C::GetSSLError(Kernel::HLERequestContext& ctx) {
     IPC::RequestParser rp(ctx, 0x2a, 2, 0);
     const u32 context_handle = rp.Pop<u32>();
     const u32 unk = rp.Pop<u32>();
+
+    LOG_WARNING(Service_HTTP, "(stubbed) called, context_handle={}, unk={}", context_handle, unk);
 
     auto http_context_itr = contexts.find(context_handle);
     ASSERT(http_context_itr != contexts.end());
@@ -548,7 +554,6 @@ void HTTP_C::GetSSLError(Kernel::HLERequestContext& ctx) {
     // Since we create the actual http/ssl context only when the request is submitted we can't check
     // for SSL Errors here. Just submit no error.
     rb.Push<u32>(0);
-    LOG_WARNING(Service_HTTP, "(stubbed) called, context_handle={}, unk={}", context_handle, unk);
 }
 
 void HTTP_C::OpenClientCertContext(Kernel::HLERequestContext& ctx) {
@@ -557,6 +562,8 @@ void HTTP_C::OpenClientCertContext(Kernel::HLERequestContext& ctx) {
     u32 key_size = rp.Pop<u32>();
     Kernel::MappedBuffer& cert_buffer = rp.PopMappedBuffer();
     Kernel::MappedBuffer& key_buffer = rp.PopMappedBuffer();
+
+    LOG_DEBUG(Service_HTTP, "called, cert_size {}, key_size {}", cert_size, key_size);
 
     auto* session_data = GetSessionData(ctx.Session());
     ASSERT(session_data);
@@ -584,7 +591,6 @@ void HTTP_C::OpenClientCertContext(Kernel::HLERequestContext& ctx) {
         ++session_data->num_client_certs;
     }
 
-    LOG_DEBUG(Service_HTTP, "called, cert_size {}, key_size {}", cert_size, key_size);
     IPC::RequestBuilder rb = rp.MakeBuilder(1, 4);
     rb.Push(result);
     rb.PushMappedBuffer(cert_buffer);
@@ -594,6 +600,8 @@ void HTTP_C::OpenClientCertContext(Kernel::HLERequestContext& ctx) {
 void HTTP_C::OpenDefaultClientCertContext(Kernel::HLERequestContext& ctx) {
     IPC::RequestParser rp(ctx, 0x33, 1, 0);
     u8 cert_id = rp.Pop<u8>();
+
+    LOG_DEBUG(Service_HTTP, "called, cert_id={} cert_handle={}", cert_id, client_certs_counter);
 
     auto* session_data = GetSessionData(ctx.Session());
     ASSERT(session_data);
@@ -659,13 +667,13 @@ void HTTP_C::OpenDefaultClientCertContext(Kernel::HLERequestContext& ctx) {
     IPC::RequestBuilder rb = rp.MakeBuilder(2, 0);
     rb.Push(RESULT_SUCCESS);
     rb.Push<u32>(client_certs_counter);
-
-    LOG_DEBUG(Service_HTTP, "called, cert_id={} cert_handle={}", cert_id, client_certs_counter);
 }
 
 void HTTP_C::CloseClientCertContext(Kernel::HLERequestContext& ctx) {
     IPC::RequestParser rp(ctx, 0x34, 1, 0);
     ClientCertContext::Handle cert_handle = rp.Pop<u32>();
+
+    LOG_DEBUG(Service_HTTP, "called, cert_handle={}", cert_handle);
 
     auto* session_data = GetSessionData(ctx.Session());
     ASSERT(session_data);
@@ -691,8 +699,6 @@ void HTTP_C::CloseClientCertContext(Kernel::HLERequestContext& ctx) {
 
     IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
     rb.Push(RESULT_SUCCESS);
-
-    LOG_DEBUG(Service_HTTP, "called, cert_handle={}", cert_handle);
 }
 
 void HTTP_C::Finalize(Kernel::HLERequestContext& ctx) {
