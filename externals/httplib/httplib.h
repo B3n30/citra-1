@@ -100,6 +100,15 @@ struct ci {
 
 enum class HttpVersion { v1_0 = 0, v1_1 };
 
+enum class SSLVerifyMode {
+#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+    None = SSL_VERIFY_NONE,
+    Peer = SSL_VERIFY_PEER,
+    FailNoPeerCert = SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+    VerifyOnce =  SSL_VERIFY_CLIENT_ONCE
+#endif
+};
+
 typedef std::multimap<std::string, std::string, detail::ci>  Headers;
 
 template<typename uint64_t, typename... Args>
@@ -265,6 +274,10 @@ public:
 
     virtual bool is_valid() const;
 
+    virtual bool set_verify(SSLVerifyMode mode);
+
+    virtual bool add_client_cert_ASN1(std::vector<unsigned char> cert, std::vector<unsigned char> key);
+
     std::shared_ptr<Response> Get(const char* path, Progress progress = nullptr);
     std::shared_ptr<Response> Get(const char* path, const Headers& headers, Progress progress = nullptr);
 
@@ -346,6 +359,10 @@ public:
     virtual ~SSLClient();
 
     virtual bool is_valid() const;
+
+    virtual bool set_verify(SSLVerifyMode mode);
+
+    virtual bool add_client_cert_ASN1(std::vector<unsigned char> cert, std::vector<unsigned char> key);
 
 private:
     virtual bool read_and_close_socket(socket_t sock, Request& req, Response& res);
@@ -909,7 +926,7 @@ inline std::string encode_url(const std::string& s)
             case ' ':  result += "+"; break;
             case '\'': result += "%27"; break;
             case ',':  result += "%2C"; break;
-            case ':':  result += "%3A"; break;
+            //case ':':  result += "%3A"; break;
             case ';':  result += "%3B"; break;
             default:
                 if (s[i] < 0) {
@@ -1838,6 +1855,16 @@ inline bool Server::is_valid() const
     return true;
 }
 
+inline bool Client::set_verify(SSLVerifyMode mode)
+{
+    return false;
+}
+
+inline bool Client::add_client_cert_ASN1(std::vector<unsigned char> cert, std::vector<unsigned char> key)
+{
+    return false;
+}
+
 inline bool Server::read_and_close_socket(socket_t sock)
 {
     return detail::read_and_close_socket(
@@ -2320,6 +2347,25 @@ inline SSLClient::~SSLClient()
 inline bool SSLClient::is_valid() const
 {
     return ctx_;
+}
+
+inline bool SSLClient::set_verify(SSLVerifyMode mode)
+{
+    if (!is_valid()) {
+        return false;
+    }
+    SSL_CTX_set_verify(ctx_, static_cast<int>(mode), NULL);
+    return true;
+}
+
+inline bool SSLClient::add_client_cert_ASN1(std::vector<unsigned char> cert, std::vector<unsigned char> key)
+{
+    if (!is_valid()) {
+        return false;
+    }
+
+    return (SSL_CTX_use_certificate_ASN1(ctx_, cert.size(), cert.data()) == 1 &&
+        SSL_CTX_use_PrivateKey_ASN1(EVP_PKEY_RSA, ctx_, key.data(), key.size()) == 1);
 }
 
 inline bool SSLClient::read_and_close_socket(socket_t sock, Request& req, Response& res)
