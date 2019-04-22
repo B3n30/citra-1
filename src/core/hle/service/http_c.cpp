@@ -2,6 +2,9 @@
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
+#include <functional>
+#include <httplib.h>
+#include <LUrlParser.h>
 #include <cryptopp/aes.h>
 #include <cryptopp/modes.h>
 #include "core/core.h"
@@ -47,6 +50,80 @@ const ResultCode ERROR_WRONG_CERT_HANDLE = // 0xD8A0A0C9
     ResultCode(201, ErrorModule::HTTP, ErrorSummary::InvalidState, ErrorLevel::Permanent);
 const ResultCode ERROR_CERT_ALREADY_SET = // 0xD8A0A03D
     ResultCode(61, ErrorModule::HTTP, ErrorSummary::InvalidState, ErrorLevel::Permanent);
+
+void Context::MakeRequest() {
+    assert(state == RequestState::NotStarted);
+
+    LUrlParser::clParseURL parsedUrl = LUrlParser::clParseURL::ParseURL(url);
+    int port;
+    std::unique_ptr<httplib::Client> client;
+    if (parsedUrl.m_Scheme == "http") {
+        if (!parsedUrl.GetPort(&port)) {
+            port = 80;
+        }
+        // TODO(B3N30): Impelemt support for setting timeout
+        client =  std::make_unique<httplib::Client>(parsedUrl.m_Host.c_str(), port);
+    } else {
+        if (!parsedUrl.GetPort(&port)) {
+            port = 443;
+        }
+        // TODO(B3N30): Impelemt support for setting timeout
+        client = std::make_unique<httplib::SSLClient>(parsedUrl.m_Host.c_str(), port);
+    }
+
+    state = RequestState::InProgress;
+
+    static const std::unordered_map<RequestMethod, std::string> request_method_strings{
+        {RequestMethod::Get,"Get"},
+        {RequestMethod::Post,"Post"},
+        {RequestMethod::Head,"Head"},
+        {RequestMethod::Put,"Put"},
+        {RequestMethod::Delete,"Delete"},
+        {RequestMethod::PostEmpty,"Post"},
+        {RequestMethod::PutEmpty,"Put"},
+    };
+
+    httplib::Request request;
+    request.method = request_method_strings.at(method);
+    request.path = url;
+    // TODO(B3N30): Add post data body
+    request.progress = [this](u64 current, u64 total)->void{
+        // TODO(B3N30): Verify this state on HW
+        state = RequestState::ReadyToDownloadContent;
+        current_download_size_bytes = current;
+        total_download_size_bytes = total;
+    };
+
+    for (const auto& header : headers) {
+        request.headers.emplace(header.name, header.value);
+    }
+
+    // TODO(B3N30): Check for SSLOptions-Bits and set the verify method accordingly
+    // https://www.3dbrew.org/wiki/SSL_Services#SSLOpt
+    // Hack: Since for now no RootCerts are implemented we set the VerifyMode to None.
+    if (!client->set_verify(httplib::SSLVerifyMode::None)) {
+        LOG_ERROR(Service_HTTP, "Failed to set SSL verification mode to None");
+    }
+
+    if (auto client_cert = ssl_config.client_cert_ctx.lock()) {
+        if (!client->add_client_cert_ASN1(client_cert->certificate, client_cert->private_key)) {
+            LOG_ERROR(Service_HTTP, "Failed to set client certificate");
+        }
+    }
+
+    // TODO(B3N30): Pass response.header and response.body references to context members
+    httplib::Response response;
+
+    if (!client->send(request, response)) {
+        LOG_ERROR(Service_HTTP, "Request failed");
+        state = RequestState::TimedOut;
+    } else {
+        // TODO(B3N30): Verify this state on HW
+        state = RequestState::ReadyToDownload;
+        // TODO(B3N30): Remove this log
+        LOG_ERROR(Service_HTTP, "{}", response.body);
+    }
+}
 
 void HTTP_C::Initialize(Kernel::HLERequestContext& ctx) {
     IPC::RequestParser rp(ctx, 0x1, 1, 4);
@@ -152,7 +229,7 @@ void HTTP_C::BeginRequest(Kernel::HLERequestContext& ctx) {
     auto itr = contexts.find(context_handle);
     ASSERT(itr != contexts.end());
 
-    // TODO(B3N30): Make the request
+    itr->second.request_future = std::async(std::launch::async, &Context::MakeRequest, std::ref(itr->second));
 
     IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
     rb.Push(RESULT_SUCCESS);
@@ -197,7 +274,7 @@ void HTTP_C::BeginRequestAsync(Kernel::HLERequestContext& ctx) {
     auto itr = contexts.find(context_handle);
     ASSERT(itr != contexts.end());
 
-    // TODO(B3N30): Make the request
+    itr->second.request_future = std::async(std::launch::async, &Context::MakeRequest, std::ref(itr->second));
 
     IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
     rb.Push(RESULT_SUCCESS);
@@ -260,7 +337,7 @@ void HTTP_C::CreateContext(Kernel::HLERequestContext& ctx) {
         return;
     }
 
-    contexts.emplace(++context_counter, Context());
+    contexts.try_emplace(++context_counter);
     contexts[context_counter].url = std::move(url);
     contexts[context_counter].method = method;
     contexts[context_counter].state = RequestState::NotStarted;
@@ -307,7 +384,7 @@ void HTTP_C::CloseContext(Kernel::HLERequestContext& ctx) {
     }
 
     // TODO(Subv): What happens if you try to close a context that's currently being used?
-    ASSERT(itr->second.state == RequestState::NotStarted);
+    ASSERT(itr->second.state != RequestState::ReadyToDownloadContent);
 
     // TODO(Subv): Make sure that only the session that created the context can close it.
 

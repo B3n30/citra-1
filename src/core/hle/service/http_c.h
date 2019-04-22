@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <future>
 #include <memory>
 #include <optional>
 #include <string>
@@ -81,6 +82,8 @@ public:
     Context(Context&& other) = default;
     Context& operator=(Context&&) = default;
 
+    void MakeRequest();
+
     struct Proxy {
         std::string url;
         std::string username;
@@ -116,13 +119,17 @@ public:
     u32 session_id;
     std::string url;
     RequestMethod method;
-    RequestState state = RequestState::NotStarted;
+    std::atomic<RequestState> state = RequestState::NotStarted;
     std::optional<Proxy> proxy;
     std::optional<BasicAuth> basic_auth;
     SSLConfig ssl_config{};
     u32 socket_buffer_size;
     std::vector<RequestHeader> headers;
     std::vector<PostData> post_data;
+
+    std::future<void> request_future;
+    std::atomic<u64> current_download_size_bytes;
+    std::atomic<u64> total_download_size_bytes;
 };
 
 struct SessionData : public Kernel::SessionRequestHandler::SessionDataBase {
