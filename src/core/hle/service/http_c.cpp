@@ -117,7 +117,7 @@ void HTTP_C::BeginRequest(Kernel::HLERequestContext& ctx) {
     IPC::RequestParser rp(ctx, 0x9, 1, 0);
     const Context::Handle context_handle = rp.Pop<u32>();
 
-    LOG_WARNING(Service_HTTP, "(stubbed) called, context_id={}", context_handle);
+    LOG_WARNING(Service_HTTP, "(STUBBED) called, context_id={}", context_handle);
 
     auto* session_data = GetSessionData(ctx.Session());
     ASSERT(session_data);
@@ -162,7 +162,7 @@ void HTTP_C::BeginRequestAsync(Kernel::HLERequestContext& ctx) {
     IPC::RequestParser rp(ctx, 0xA, 1, 0);
     const Context::Handle context_handle = rp.Pop<u32>();
 
-    LOG_WARNING(Service_HTTP, "(stubbed) called, context_id={}", context_handle);
+    LOG_WARNING(Service_HTTP, "(STUBBED) called, context_id={}", context_handle);
 
     auto* session_data = GetSessionData(ctx.Session());
     ASSERT(session_data);
@@ -544,7 +544,7 @@ void HTTP_C::GetSSLError(Kernel::HLERequestContext& ctx) {
     const u32 context_handle = rp.Pop<u32>();
     const u32 unk = rp.Pop<u32>();
 
-    LOG_WARNING(Service_HTTP, "(stubbed) called, context_handle={}, unk={}", context_handle, unk);
+    LOG_WARNING(Service_HTTP, "(STUBBED) called, context_handle={}, unk={}", context_handle, unk);
 
     auto http_context_itr = contexts.find(context_handle);
     ASSERT(http_context_itr != contexts.end());
