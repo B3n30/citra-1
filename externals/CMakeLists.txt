@@ -78,16 +78,11 @@ if (USE_DISCORD_PRESENCE)
     target_include_directories(discord-rpc INTERFACE ./discord-rpc/include)
 endif()
 
-if (ENABLE_WEB_SERVICE)
     # LibreSSL
     set(LIBRESSL_SKIP_INSTALL ON CACHE BOOL "")
     add_subdirectory(libressl EXCLUDE_FROM_ALL)
     target_include_directories(ssl INTERFACE ./libressl/include)
     target_compile_definitions(ssl PRIVATE -DHAVE_INET_NTOP)
-
-    # JSON
-    add_library(json-headers INTERFACE)
-    target_include_directories(json-headers INTERFACE ./json)
 
     # lurlparser
     add_subdirectory(lurlparser EXCLUDE_FROM_ALL)
@@ -95,6 +90,11 @@ if (ENABLE_WEB_SERVICE)
     # httplib
     add_library(httplib INTERFACE)
     target_include_directories(httplib INTERFACE ./httplib)
+
+if (ENABLE_WEB_SERVICE)
+    # JSON
+    add_library(json-headers INTERFACE)
+    target_include_directories(json-headers INTERFACE ./json)
 
     # cpp-jwt
     add_library(cpp-jwt INTERFACE)
