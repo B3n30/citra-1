@@ -62,25 +62,27 @@ void Context::MakeRequest() {
             port = 80;
         }
         // TODO(B3N30): Impelemt support for setting timeout
+        // Figure out what the default timeout on 3DS is
         client =  std::make_unique<httplib::Client>(parsedUrl.m_Host.c_str(), port);
     } else {
         if (!parsedUrl.GetPort(&port)) {
             port = 443;
         }
         // TODO(B3N30): Impelemt support for setting timeout
+        // Figure out what the default timeout on 3DS is
         client = std::make_unique<httplib::SSLClient>(parsedUrl.m_Host.c_str(), port);
     }
 
     state = RequestState::InProgress;
 
     static const std::unordered_map<RequestMethod, std::string> request_method_strings{
-        {RequestMethod::Get,"Get"},
-        {RequestMethod::Post,"Post"},
-        {RequestMethod::Head,"Head"},
-        {RequestMethod::Put,"Put"},
-        {RequestMethod::Delete,"Delete"},
-        {RequestMethod::PostEmpty,"Post"},
-        {RequestMethod::PutEmpty,"Put"},
+        {RequestMethod::Get,"GET"},
+        {RequestMethod::Post,"POST"},
+        {RequestMethod::Head,"HEAD"},
+        {RequestMethod::Put,"PUT"},
+        {RequestMethod::Delete,"DELETE"},
+        {RequestMethod::PostEmpty,"POST"},
+        {RequestMethod::PutEmpty,"PUT"},
     };
 
     httplib::Request request;
@@ -88,8 +90,7 @@ void Context::MakeRequest() {
     request.path = url;
     // TODO(B3N30): Add post data body
     request.progress = [this](u64 current, u64 total)->void{
-        // TODO(B3N30): Verify this state on HW
-        state = RequestState::ReadyToDownloadContent;
+        // TODO(B3N30): Is there a state that signals that response header are available
         current_download_size_bytes = current;
         total_download_size_bytes = total;
     };
@@ -119,7 +120,7 @@ void Context::MakeRequest() {
         state = RequestState::TimedOut;
     } else {
         // TODO(B3N30): Verify this state on HW
-        state = RequestState::ReadyToDownload;
+        state = RequestState::ReadyToDownloadContent;
         // TODO(B3N30): Remove this log
         LOG_ERROR(Service_HTTP, "{}", response.body);
     }
@@ -384,10 +385,9 @@ void HTTP_C::CloseContext(Kernel::HLERequestContext& ctx) {
     }
 
     // TODO(Subv): What happens if you try to close a context that's currently being used?
-    ASSERT(itr->second.state != RequestState::ReadyToDownloadContent);
-
     // TODO(Subv): Make sure that only the session that created the context can close it.
 
+    // Note that this will block if a request is still in progress
     contexts.erase(itr);
     session_data->num_http_contexts--;
 
