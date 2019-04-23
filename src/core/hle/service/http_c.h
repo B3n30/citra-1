@@ -10,6 +10,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <httplib.h>
 #include "core/hle/kernel/shared_memory.h"
 #include "core/hle/service/service.h"
 
@@ -130,6 +131,7 @@ public:
     std::future<void> request_future;
     std::atomic<u64> current_download_size_bytes;
     std::atomic<u64> total_download_size_bytes;
+    httplib::Response response;
 };
 
 struct SessionData : public Kernel::SessionRequestHandler::SessionDataBase {

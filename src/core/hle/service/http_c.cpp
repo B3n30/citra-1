@@ -3,7 +3,6 @@
 // Refer to the license.txt file included.
 
 #include <functional>
-#include <httplib.h>
 #include <LUrlParser.h>
 #include <cryptopp/aes.h>
 #include <cryptopp/modes.h>
@@ -61,14 +60,14 @@ void Context::MakeRequest() {
         if (!parsedUrl.GetPort(&port)) {
             port = 80;
         }
-        // TODO(B3N30): Impelemt support for setting timeout
+        // TODO(B3N30): Support for setting timeout
         // Figure out what the default timeout on 3DS is
-        client =  std::make_unique<httplib::Client>(parsedUrl.m_Host.c_str(), port);
+        client = std::make_unique<httplib::Client>(parsedUrl.m_Host.c_str(), port);
     } else {
         if (!parsedUrl.GetPort(&port)) {
             port = 443;
         }
-        // TODO(B3N30): Impelemt support for setting timeout
+        // TODO(B3N30): Support for setting timeout
         // Figure out what the default timeout on 3DS is
         client = std::make_unique<httplib::SSLClient>(parsedUrl.m_Host.c_str(), port);
     }
@@ -76,21 +75,18 @@ void Context::MakeRequest() {
     state = RequestState::InProgress;
 
     static const std::unordered_map<RequestMethod, std::string> request_method_strings{
-        {RequestMethod::Get,"GET"},
-        {RequestMethod::Post,"POST"},
-        {RequestMethod::Head,"HEAD"},
-        {RequestMethod::Put,"PUT"},
-        {RequestMethod::Delete,"DELETE"},
-        {RequestMethod::PostEmpty,"POST"},
-        {RequestMethod::PutEmpty,"PUT"},
+        {RequestMethod::Get, "GET"},       {RequestMethod::Post, "POST"},
+        {RequestMethod::Head, "HEAD"},     {RequestMethod::Put, "PUT"},
+        {RequestMethod::Delete, "DELETE"}, {RequestMethod::PostEmpty, "POST"},
+        {RequestMethod::PutEmpty, "PUT"},
     };
 
     httplib::Request request;
     request.method = request_method_strings.at(method);
     request.path = url;
     // TODO(B3N30): Add post data body
-    request.progress = [this](u64 current, u64 total)->void{
-        // TODO(B3N30): Is there a state that signals that response header are available
+    request.progress = [this](u64 current, u64 total) -> void {
+        // TODO(B3N30): Is there a state that shows response header are available
         current_download_size_bytes = current;
         total_download_size_bytes = total;
     };
@@ -101,7 +97,7 @@ void Context::MakeRequest() {
 
     // TODO(B3N30): Check for SSLOptions-Bits and set the verify method accordingly
     // https://www.3dbrew.org/wiki/SSL_Services#SSLOpt
-    // Hack: Since for now no RootCerts are implemented we set the VerifyMode to None.
+    // Hack: Since for now no RootCerts are not implemented we set the VerifyMode to None.
     if (!client->set_verify(httplib::SSLVerifyMode::None)) {
         LOG_ERROR(Service_HTTP, "Failed to set SSL verification mode to None");
     }
@@ -112,17 +108,13 @@ void Context::MakeRequest() {
         }
     }
 
-    // TODO(B3N30): Pass response.header and response.body references to context members
-    httplib::Response response;
-
     if (!client->send(request, response)) {
         LOG_ERROR(Service_HTTP, "Request failed");
         state = RequestState::TimedOut;
     } else {
+        LOG_DEBUG(Service_HTTP, "Request successful");
         // TODO(B3N30): Verify this state on HW
         state = RequestState::ReadyToDownloadContent;
-        // TODO(B3N30): Remove this log
-        LOG_ERROR(Service_HTTP, "{}", response.body);
     }
 }
 
@@ -230,7 +222,8 @@ void HTTP_C::BeginRequest(Kernel::HLERequestContext& ctx) {
     auto itr = contexts.find(context_handle);
     ASSERT(itr != contexts.end());
 
-    itr->second.request_future = std::async(std::launch::async, &Context::MakeRequest, std::ref(itr->second));
+    itr->second.request_future =
+        std::async(std::launch::async, &Context::MakeRequest, std::ref(itr->second));
 
     IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
     rb.Push(RESULT_SUCCESS);
@@ -275,7 +268,8 @@ void HTTP_C::BeginRequestAsync(Kernel::HLERequestContext& ctx) {
     auto itr = contexts.find(context_handle);
     ASSERT(itr != contexts.end());
 
-    itr->second.request_future = std::async(std::launch::async, &Context::MakeRequest, std::ref(itr->second));
+    itr->second.request_future =
+        std::async(std::launch::async, &Context::MakeRequest, std::ref(itr->second));
 
     IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
     rb.Push(RESULT_SUCCESS);
