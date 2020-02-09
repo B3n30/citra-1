@@ -10,7 +10,12 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#ifdef ENABLE_WEB_SERVICE
+#if defined(__ANDROID__)
+#include <ifaddrs.h>
+#endif
 #include <httplib.h>
+#endif
 #include "core/hle/kernel/shared_memory.h"
 #include "core/hle/service/service.h"
 
@@ -128,7 +133,9 @@ public:
     std::future<void> request_future;
     std::atomic<u64> current_download_size_bytes;
     std::atomic<u64> total_download_size_bytes;
+#ifdef ENABLE_WEB_SERVICE
     httplib::Response response;
+#endif
 };
 
 struct SessionData : public Kernel::SessionRequestHandler::SessionDataBase {

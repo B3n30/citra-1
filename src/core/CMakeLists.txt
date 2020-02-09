@@ -446,16 +446,19 @@ add_library(core STATIC
 
 create_target_directory_groups(core)
 
-get_directory_property(OPENSSL_LIBS
+target_link_libraries(core PUBLIC common PRIVATE audio_core network video_core)
+target_link_libraries(core PUBLIC Boost::boost PRIVATE cryptopp fmt open_source_archives)
+
+if (ENABLE_WEB_SERVICE)
+    get_directory_property(OPENSSL_LIBS
         DIRECTORY ${PROJECT_SOURCE_DIR}/externals/libressl
         DEFINITION OPENSSL_LIBS)
-target_compile_options(core PRIVATE -DCPPHTTPLIB_OPENSSL_SUPPORT)
 
-target_link_libraries(core PUBLIC common PRIVATE audio_core network video_core)
-target_link_libraries(core PUBLIC Boost::boost PRIVATE cryptopp fmt open_source_archives ${OPENSSL_LIBS} httplib lurlparser)
-if (ENABLE_WEB_SERVICE)
-    target_compile_definitions(core PRIVATE -DENABLE_WEB_SERVICE)
-    target_link_libraries(core PRIVATE web_service)
+    target_compile_definitions(core PRIVATE -DENABLE_WEB_SERVICE -DCPPHTTPLIB_OPENSSL_SUPPORT)
+    target_link_libraries(core PRIVATE web_service ${OPENSSL_LIBS} httplib lurlparser)
+    if (ANDROID)
+        target_link_libraries(core PRIVATE ifaddrs)
+    endif()
 endif()
 
 if (ARCHITECTURE_x86_64)

@@ -3,7 +3,9 @@
 // Refer to the license.txt file included.
 
 #include <atomic>
+#ifdef ENABLE_WEB_SERVICE
 #include <LUrlParser.h>
+#endif
 #include <cryptopp/aes.h>
 #include <cryptopp/modes.h>
 #include "common/assert.h"
@@ -54,6 +56,7 @@ const ResultCode ERROR_CERT_ALREADY_SET = // 0xD8A0A03D
 void Context::MakeRequest() {
     ASSERT(state == RequestState::NotStarted);
 
+#ifdef ENABLE_WEB_SERVICE
     LUrlParser::clParseURL parsedUrl = LUrlParser::clParseURL::ParseURL(url);
     int port;
     std::unique_ptr<httplib::Client> client;
@@ -120,6 +123,10 @@ void Context::MakeRequest() {
         // TODO(B3N30): Verify this state on HW
         state = RequestState::ReadyToDownloadContent;
     }
+#else
+    LOG_ERROR(Service_HTTP, "Tried to make request but WebServices is not enabled in this build");
+    state = RequestState::TimedOut;
+#endif
 }
 
 void HTTP_C::Initialize(Kernel::HLERequestContext& ctx) {
