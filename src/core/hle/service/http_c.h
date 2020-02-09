@@ -80,9 +80,6 @@ public:
     Context(const Context&) = delete;
     Context& operator=(const Context&) = delete;
 
-    Context(Context&& other) = default;
-    Context& operator=(Context&&) = default;
-
     void MakeRequest();
 
     struct Proxy {

@@ -90,6 +90,7 @@ endif()
     # httplib
     add_library(httplib INTERFACE)
     target_include_directories(httplib INTERFACE ./httplib)
+    target_compile_options(httplib INTERFACE -DCPPHTTPLIB_OPENSSL_SUPPORT)
 
 if (ENABLE_WEB_SERVICE)
     # JSON

@@ -73,14 +73,14 @@ struct Client::Impl {
                 if (!parsedUrl.GetPort(&port)) {
                     port = HTTP_PORT;
                 }
-                cli = std::make_unique<httplib::Client>(parsedUrl.m_Host.c_str(), port,
-                                                        TIMEOUT_SECONDS);
+                cli = std::make_unique<httplib::Client>(parsedUrl.m_Host.c_str(), port);
+                cli->set_timeout_sec(TIMEOUT_SECONDS);
             } else if (parsedUrl.m_Scheme == "https") {
                 if (!parsedUrl.GetPort(&port)) {
                     port = HTTPS_PORT;
                 }
-                cli = std::make_unique<httplib::SSLClient>(parsedUrl.m_Host.c_str(), port,
-                                                           TIMEOUT_SECONDS);
+                cli = std::make_unique<httplib::SSLClient>(parsedUrl.m_Host.c_str(), port);
+                cli->set_timeout_sec(TIMEOUT_SECONDS);
             } else {
                 LOG_ERROR(WebService, "Bad URL scheme {}", parsedUrl.m_Scheme);
                 return Common::WebResult{Common::WebResult::Code::InvalidURL, "Bad URL scheme"};
