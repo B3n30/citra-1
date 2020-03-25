@@ -1,6 +1,8 @@
 add_library(web_service STATIC
     announce_room_json.cpp
     announce_room_json.h
+    nus_download.cpp
+    nus_download.h
     telemetry_json.cpp
     telemetry_json.h
     verify_login.cpp

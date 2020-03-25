@@ -37,6 +37,8 @@ private:
     void UpdateInitTime(int init_clock);
     void RefreshConsoleID();
 
+    void DownloadFromNUS();
+
     std::unique_ptr<Ui::ConfigureSystem> ui;
     bool enabled = false;
 
