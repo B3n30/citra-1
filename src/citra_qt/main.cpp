@@ -10,6 +10,7 @@
 #include <QFutureWatcher>
 #include <QMessageBox>
 #include <QOpenGLFunctions_3_3_Core>
+#include <QSplashScreen>
 #include <QSysInfo>
 #include <QtConcurrent/QtConcurrentRun>
 #include <QtGui>
@@ -1203,7 +1204,7 @@ void GMainWindow::OnGameListDumpRomFS(QString game_path, u64 program_id) {
                 const auto& [base, update] = future_watcher->result();
                 if (base != Loader::ResultStatus::Success) {
                     QMessageBox::critical(
-                        this, tr("Citra"),
+                        this, tr("New Citra XL"),
                         tr("Could not dump base RomFS.\nRefer to the log for details."));
                     return;
                 }
@@ -1335,7 +1336,7 @@ void GMainWindow::OnCIAInstallReport(Service::AM::InstallStatus status, QString 
     case Service::AM::InstallStatus::ErrorEncrypted:
         QMessageBox::critical(this, tr("Encrypted File"),
                               tr("%1 must be decrypted "
-                                 "before being used with Citra. A real 3DS is required.")
+                                 "before being used with New Citra XL. A real 3DS is required.")
                                   .arg(filename));
         break;
     }
@@ -1421,8 +1422,8 @@ void GMainWindow::OnMenuReportCompatibility() {
         CompatDB compatdb{this};
         compatdb.exec();
     } else {
-        QMessageBox::critical(this, tr("Missing Citra Account"),
-                              tr("You must link your Citra account to submit test cases."
+        QMessageBox::critical(this, tr("Missing New Citra XL Account"),
+                              tr("You must link your New Citra XL account to submit test cases."
                                  "<br/>Go to Emulation &gt; Configure... &gt; Web to do so."));
     }
 }
@@ -1659,7 +1660,7 @@ void GMainWindow::OnRecordMovie() {
     }
     const QString path =
         QFileDialog::getSaveFileName(this, tr("Record Movie"), UISettings::values.movie_record_path,
-                                     tr("Citra TAS Movie (*.ctm)"));
+                                     tr("New Citra XL TAS Movie (*.ctm)"));
     if (path.isEmpty())
         return;
     UISettings::values.movie_record_path = QFileInfo(path).path();
@@ -1681,8 +1682,8 @@ bool GMainWindow::ValidateMovie(const QString& path, u64 program_id) {
     Movie::ValidationResult result =
         Core::Movie::GetInstance().ValidateMovie(path.toStdString(), program_id);
     const QString revision_dismatch_text =
-        tr("The movie file you are trying to load was created on a different revision of Citra."
-           "<br/>Citra has had some changes during the time, and the playback may desync or not "
+        tr("The movie file you are trying to load was created on a different revision of New Citra XL."
+           "<br/>New Citra XL has had some changes during the time, and the playback may desync or not "
            "work as expected."
            "<br/><br/>Are you sure you still want to load the movie file?");
     const QString game_dismatch_text =
@@ -1691,7 +1692,7 @@ bool GMainWindow::ValidateMovie(const QString& path, u64 program_id) {
            "<br/><br/>Are you sure you still want to load the movie file?");
     const QString invalid_movie_text =
         tr("The movie file you are trying to load is invalid."
-           "<br/>Either the file is corrupted, or Citra has had made some major changes to the "
+           "<br/>Either the file is corrupted, or New Citra XL has had made some major changes to the "
            "Movie module."
            "<br/>Please choose a different movie file and try again.");
     int answer;
@@ -1730,7 +1731,7 @@ void GMainWindow::OnPlayMovie() {
 
     const QString path =
         QFileDialog::getOpenFileName(this, tr("Play Movie"), UISettings::values.movie_playback_path,
-                                     tr("Citra TAS Movie (*.ctm)"));
+                                     tr("New Citra XL TAS Movie (*.ctm)"));
     if (path.isEmpty())
         return;
     UISettings::values.movie_playback_path = QFileInfo(path).path();
@@ -1741,7 +1742,7 @@ void GMainWindow::OnPlayMovie() {
     } else {
         const QString invalid_movie_text =
             tr("The movie file you are trying to load is invalid."
-               "<br/>Either the file is corrupted, or Citra has had made some major changes to the "
+               "<br/>Either the file is corrupted, or New Citra XL has had made some major changes to the "
                "Movie module."
                "<br/>Please choose a different movie file and try again.");
         u64 program_id = Core::Movie::GetInstance().GetMovieProgramID(path.toStdString());
@@ -1935,7 +1936,7 @@ bool GMainWindow::ConfirmClose() {
         return true;
 
     QMessageBox::StandardButton answer =
-        QMessageBox::question(this, tr("Citra"), tr("Would you like to exit now?"),
+        QMessageBox::question(this, tr("New Citra XL"), tr("Would you like to exit now?"),
                               QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
     return answer != QMessageBox::No;
 }
@@ -2035,7 +2036,7 @@ bool GMainWindow::ConfirmChangeGame() {
         return true;
 
     auto answer = QMessageBox::question(
-        this, tr("Citra"), tr("The game is still running. Would you like to stop emulation?"),
+        this, tr("New Citra XL"), tr("The game is still running. Would you like to stop emulation?"),
         QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
     return answer != QMessageBox::No;
 }
@@ -2124,9 +2125,9 @@ void GMainWindow::UpdateWindowTitle() {
     const QString full_name = QString::fromUtf8(Common::g_build_fullname);
 
     if (game_title.isEmpty()) {
-        setWindowTitle(tr("Citra %1").arg(full_name));
+        setWindowTitle(tr("New Citra XL"));
     } else {
-        setWindowTitle(tr("Citra %1| %2").arg(full_name, game_title));
+        setWindowTitle(tr("New Citra XL | %1").arg(game_title));
     }
 }
 
@@ -2220,6 +2221,14 @@ int main(int argc, char* argv[]) {
     Core::System::GetInstance().RegisterImageInterface(std::make_shared<QtImageInterface>());
 
     main_window.show();
+
+    QPixmap pixmap = QIcon::fromTheme(QStringLiteral("splash")).pixmap(800);
+    QSplashScreen splash(pixmap, Qt::WindowStaysOnTopHint);
+    splash.show();
+
+    QTimer *timer = new QTimer();
+    QObject::connect(timer, &QTimer::timeout, [&splash](){splash.close();});
+    timer->start(5000);
 
     QObject::connect(&app, &QGuiApplication::applicationStateChanged, &main_window,
                      &GMainWindow::OnAppFocusStateChanged);

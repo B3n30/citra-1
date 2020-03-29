@@ -27,6 +27,8 @@
         <file alias="48x48/sd_card.png">icons/48x48/sd_card.png</file>
       
         <file alias="256x256/citra.png">icons/256x256/citra.png</file>
+      
+        <file alias="256x256/splash.png">icons/256x256/splash.png</file>
 
         <file alias="256x256/plus_folder.png">icons/256x256/plus_folder.png</file>
     </qresource>
