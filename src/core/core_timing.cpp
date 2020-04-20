@@ -111,9 +111,10 @@ s64 Timing::GetTicks() const {
 }
 
 s64 Timing::GetGlobalTicks() const {
-    const auto& timer = std::max_element(timers.cbegin(), timers.cend(), [](const auto& a, const auto& b) {
-        return a->GetTicks() > b->GetTicks();
-    });
+    const auto& timer =
+        std::max_element(timers.cbegin(), timers.cend(), [](const auto& a, const auto& b) {
+            return a->GetTicks() > b->GetTicks();
+        });
     return (*timer)->GetTicks();
 }
 
@@ -173,11 +174,16 @@ s64 Timing::Timer::GetMaxSliceLength() const {
 }
 
 void Timing::Timer::RunEvents() {
+    MoveEvents();
+
     s64 cycles_executed = slice_length - downcount;
+    idled_cycles = 0;
+    executed_ticks += cycles_executed;
+    slice_length = 0;
 
     is_timer_sane = true;
 
-    while (!event_queue.empty() && event_queue.front().time <= executed_ticks + cycles_executed) {
+    while (!event_queue.empty() && event_queue.front().time <= executed_ticks) {
         Event evt = std::move(event_queue.front());
         std::pop_heap(event_queue.begin(), event_queue.end(), std::greater<>());
         event_queue.pop_back();
@@ -192,11 +198,6 @@ void Timing::Timer::RunEvents() {
 }
 
 void Timing::Timer::Advance(s64 max_slice_length) {
-    MoveEvents();
-
-    s64 cycles_executed = slice_length - downcount;
-    idled_cycles = 0;
-    executed_ticks += cycles_executed;
     slice_length = max_slice_length;
 
     // Still events left (scheduled in the future)

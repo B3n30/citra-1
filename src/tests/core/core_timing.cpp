@@ -36,6 +36,8 @@ static void AdvanceAndCheck(Core::Timing& timing, u32 idx, int downcount, int ex
 
     timing.GetTimer(0)->AddTicks(timing.GetTimer(0)->GetDowncount() -
                                  cpu_downcount); // Pretend we executed X cycles of instructions.
+
+    timing.GetTimer(0)->RunEvents();
     timing.GetTimer(0)->Advance();
 
     REQUIRE(decltype(callbacks_ran_flags)().set(idx) == callbacks_ran_flags);
@@ -52,6 +54,7 @@ TEST_CASE("CoreTiming[BasicOrder]", "[core]") {
     Core::TimingEventType* cb_e = timing.RegisterEvent("callbackE", CallbackTemplate<4>);
 
     // Enter slice 0
+    timing.GetTimer(0)->RunEvents();
     timing.GetTimer(0)->Advance();
 
     // D -> B -> C -> A -> E
@@ -105,6 +108,7 @@ TEST_CASE("CoreTiming[SharedSlot]", "[core]") {
     timing.ScheduleEvent(1000, cb_e, CB_IDS[4], 0);
 
     // Enter slice 0
+    timing.GetTimer(0)->RunEvents();
     timing.GetTimer(0)->Advance();
     REQUIRE(1000 == timing.GetTimer(0)->GetDowncount());
 
@@ -112,6 +116,7 @@ TEST_CASE("CoreTiming[SharedSlot]", "[core]") {
     counter = 0;
     lateness = 0;
     timing.GetTimer(0)->AddTicks(timing.GetTimer(0)->GetDowncount());
+    timing.GetTimer(0)->RunEvents();
     timing.GetTimer(0)->Advance();
     REQUIRE(MAX_SLICE_LENGTH == timing.GetTimer(0)->GetDowncount());
     REQUIRE(0x1FULL == callbacks_ran_flags.to_ullong());
@@ -124,6 +129,7 @@ TEST_CASE("CoreTiming[PredictableLateness]", "[core]") {
     Core::TimingEventType* cb_b = timing.RegisterEvent("callbackB", CallbackTemplate<1>);
 
     // Enter slice 0
+    timing.GetTimer(0)->RunEvents();
     timing.GetTimer(0)->Advance();
 
     timing.ScheduleEvent(100, cb_a, CB_IDS[0], 0);
@@ -160,6 +166,7 @@ TEST_CASE("CoreTiming[ChainScheduling]", "[core]") {
         });
 
     // Enter slice 0
+    timing.GetTimer(0)->RunEvents();
     timing.GetTimer(0)->Advance();
 
     timing.ScheduleEvent(800, cb_a, CB_IDS[0], 0);
@@ -174,6 +181,7 @@ TEST_CASE("CoreTiming[ChainScheduling]", "[core]") {
     REQUIRE(2 == reschedules);
 
     timing.GetTimer(0)->AddTicks(timing.GetTimer(0)->GetDowncount());
+    timing.GetTimer(0)->RunEvents();
     timing.GetTimer(0)->Advance(); // cb_rs
     REQUIRE(1 == reschedules);
     REQUIRE(200 == timing.GetTimer(0)->GetDowncount());
@@ -181,6 +189,7 @@ TEST_CASE("CoreTiming[ChainScheduling]", "[core]") {
     AdvanceAndCheck(timing, 2, 800); // cb_c
 
     timing.GetTimer(0)->AddTicks(timing.GetTimer(0)->GetDowncount());
+    timing.GetTimer(0)->RunEvents();
     timing.GetTimer(0)->Advance(); // cb_rs
     REQUIRE(0 == reschedules);
     REQUIRE(MAX_SLICE_LENGTH == timing.GetTimer(0)->GetDowncount());

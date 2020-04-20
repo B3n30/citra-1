@@ -272,7 +272,6 @@ public:
     std::shared_ptr<Timer> GetTimer(std::size_t cpu_id);
 
 private:
-
     // unordered_map stores each element separately as a linked list node so pointers to
     // elements remain stable regardless of rehashes/resizing.
     std::unordered_map<std::string, TimingEventType> event_types = {};
