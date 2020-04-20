@@ -174,6 +174,10 @@ System::ResultStatus System::RunLoop(bool tight_loop) {
             } else {
                 current_core_to_execute->Step();
             }
+            if (current_core_to_execute->GetTimer()->GetTicks() > timing->GetGlobalTicks()) {
+                timing->AddToGlobalTicks(timing->GetGlobalTicks() -
+                                         current_core_to_execute->GetTimer()->GetTicks());
+            }
         }
     } else {
         // Now all cores are at the same global time. So we will run them one after the other
@@ -203,9 +207,12 @@ System::ResultStatus System::RunLoop(bool tight_loop) {
                 } else {
                     cpu_core->Step();
                 }
+                if (cpu_core->GetTimer()->GetTicks() > timing->GetGlobalTicks()) {
+                    timing->AddToGlobalTicks(timing->GetGlobalTicks() -
+                                             cpu_core->GetTimer()->GetTicks());
+                }
             }
         }
-        timing->AddToGlobalTicks(max_slice);
     }
 
     if (GDBStub::IsServerEnabled()) {
