@@ -148,6 +148,7 @@ System::ResultStatus System::RunLoop(bool tight_loop) {
     for (auto& cpu_core : cpu_cores) {
         if (cpu_core->GetTimer().GetTicks() < global_ticks) {
             s64 delay = global_ticks - cpu_core->GetTimer().GetTicks();
+            cpu_core->GetTimer().RunEvents();
             cpu_core->GetTimer().Advance(delay);
             if (max_delay < delay) {
                 max_delay = delay;
@@ -174,10 +175,6 @@ System::ResultStatus System::RunLoop(bool tight_loop) {
             } else {
                 current_core_to_execute->Step();
             }
-            if (current_core_to_execute->GetTimer()->GetTicks() > timing->GetGlobalTicks()) {
-                timing->AddToGlobalTicks(timing->GetGlobalTicks() -
-                                         current_core_to_execute->GetTimer()->GetTicks());
-            }
         }
     } else {
         // Now all cores are at the same global time. So we will run them one after the other
@@ -185,6 +182,7 @@ System::ResultStatus System::RunLoop(bool tight_loop) {
         // TODO: Make special check for idle since we can easily revert the time of idle cores
         s64 max_slice = Timing::MAX_SLICE_LENGTH;
         for (const auto& cpu_core : cpu_cores) {
+            cpu_core->GetTimer().RunEvents();
             max_slice = std::min(max_slice, cpu_core->GetTimer().GetMaxSliceLength());
         }
         for (auto& cpu_core : cpu_cores) {
@@ -206,10 +204,6 @@ System::ResultStatus System::RunLoop(bool tight_loop) {
                     cpu_core->Run();
                 } else {
                     cpu_core->Step();
-                }
-                if (cpu_core->GetTimer()->GetTicks() > timing->GetGlobalTicks()) {
-                    timing->AddToGlobalTicks(timing->GetGlobalTicks() -
-                                             cpu_core->GetTimer()->GetTicks());
                 }
             }
         }

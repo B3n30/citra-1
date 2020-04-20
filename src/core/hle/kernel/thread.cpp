@@ -111,7 +111,7 @@ void ThreadManager::SwitchContext(Thread* new_thread) {
     // Save context for previous thread
     if (previous_thread) {
         previous_process = previous_thread->owner_process;
-        previous_thread->last_running_ticks = cpu->GetTimer()->GetTicks();
+        previous_thread->last_running_ticks = cpu->GetTimer().GetTicks();
         cpu->SaveContext(previous_thread->context);
 
         if (previous_thread->status == ThreadStatus::Running) {

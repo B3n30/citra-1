@@ -180,6 +180,8 @@ public:
 
         s64 GetMaxSliceLength() const;
 
+        void RunEvents();
+
         void Advance(s64 max_slice_length = MAX_SLICE_LENGTH);
 
         void Idle();
@@ -260,10 +262,6 @@ public:
 
     s64 GetGlobalTicks() const;
 
-    void AddToGlobalTicks(s64 ticks) {
-        global_timer += ticks;
-    }
-
     /**
      * Updates the value of the cpu clock scaling to the new percentage.
      */
@@ -274,7 +272,6 @@ public:
     std::shared_ptr<Timer> GetTimer(std::size_t cpu_id);
 
 private:
-    s64 global_timer = 0;
 
     // unordered_map stores each element separately as a linked list node so pointers to
     // elements remain stable regardless of rehashes/resizing.
@@ -290,7 +287,6 @@ private:
     template <class Archive>
     void serialize(Archive& ar, const unsigned int file_version) {
         // event_types set during initialization of other things
-        ar& global_timer;
         ar& timers;
         if (file_version == 0) {
             std::shared_ptr<Timer> x;
