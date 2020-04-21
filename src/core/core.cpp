@@ -148,8 +148,11 @@ System::ResultStatus System::RunLoop(bool tight_loop) {
     for (auto& cpu_core : cpu_cores) {
         if (cpu_core->GetTimer().GetTicks() < global_ticks) {
             s64 delay = global_ticks - cpu_core->GetTimer().GetTicks();
-            cpu_core->GetTimer().RunEvents();
-            cpu_core->GetTimer().Advance(delay);
+            kernel->SetRunningCPU(cpu_core);
+            cpu_core->GetTimer().Advance();
+            cpu_core->PrepareReschedule();
+            kernel->GetThreadManager(cpu_core->GetID()).Reschedule();
+            cpu_core->GetTimer().SetNextSlice(delay);
             if (max_delay < delay) {
                 max_delay = delay;
                 current_core_to_execute = cpu_core.get();
@@ -157,8 +160,8 @@ System::ResultStatus System::RunLoop(bool tight_loop) {
         }
     }
 
-    if (max_delay > 0) {
-        LOG_TRACE(Core_ARM11, "Core {} running (delayed) for {} ticks",
+    if (max_delay > 100) {
+        LOG_CRITICAL(Core_ARM11, "Core {} running (delayed) for {} ticks",
                   current_core_to_execute->GetID(),
                   current_core_to_execute->GetTimer().GetDowncount());
         if (running_core != current_core_to_execute) {
@@ -182,13 +185,15 @@ System::ResultStatus System::RunLoop(bool tight_loop) {
         // TODO: Make special check for idle since we can easily revert the time of idle cores
         s64 max_slice = Timing::MAX_SLICE_LENGTH;
         for (const auto& cpu_core : cpu_cores) {
-            cpu_core->GetTimer().RunEvents();
+            kernel->SetRunningCPU(cpu_core);
+            cpu_core->GetTimer().Advance();
+            cpu_core->PrepareReschedule();
+            kernel->GetThreadManager(cpu_core->GetID()).Reschedule();
             max_slice = std::min(max_slice, cpu_core->GetTimer().GetMaxSliceLength());
         }
         for (auto& cpu_core : cpu_cores) {
-            cpu_core->GetTimer().Advance(max_slice);
-        }
-        for (auto& cpu_core : cpu_cores) {
+            cpu_core->GetTimer().SetNextSlice(max_slice);
+            auto start_ticks = cpu_core->GetTimer().GetTicks();
             LOG_TRACE(Core_ARM11, "Core {} running for {} ticks", cpu_core->GetID(),
                       cpu_core->GetTimer().GetDowncount());
             running_core = cpu_core.get();
@@ -206,6 +211,7 @@ System::ResultStatus System::RunLoop(bool tight_loop) {
                     cpu_core->Step();
                 }
             }
+            max_slice = cpu_core->GetTimer().GetTicks() - start_ticks;
         }
     }
 

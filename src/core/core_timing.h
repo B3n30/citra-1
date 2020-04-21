@@ -180,9 +180,9 @@ public:
 
         s64 GetMaxSliceLength() const;
 
-        void RunEvents();
+        void Advance();
 
-        void Advance(s64 max_slice_length = MAX_SLICE_LENGTH);
+        void SetNextSlice(s64 max_slice_length = MAX_SLICE_LENGTH);
 
         void Idle();
 
