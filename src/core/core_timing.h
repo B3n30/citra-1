@@ -229,6 +229,8 @@ public:
         void serialize(Archive& ar, const unsigned int) {
             MoveEvents();
             // NOTE: ts_queue should be empty now
+            s64 x;
+            ar& x; // to keep compatibility with old save states that stored global_timer
             ar& event_queue;
             ar& event_fifo_id;
             ar& slice_length;
