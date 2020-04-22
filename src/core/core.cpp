@@ -148,7 +148,7 @@ System::ResultStatus System::RunLoop(bool tight_loop) {
     for (auto& cpu_core : cpu_cores) {
         if (cpu_core->GetTimer().GetTicks() < global_ticks) {
             s64 delay = global_ticks - cpu_core->GetTimer().GetTicks();
-            kernel->SetRunningCPU(cpu_core);
+            kernel->SetRunningCPU(cpu_core.get());
             cpu_core->GetTimer().Advance();
             cpu_core->PrepareReschedule();
             kernel->GetThreadManager(cpu_core->GetID()).Reschedule();
@@ -166,8 +166,8 @@ System::ResultStatus System::RunLoop(bool tight_loop) {
     static constexpr s64 min_delay = 100;
     if (max_delay > min_delay) {
         LOG_CRITICAL(Core_ARM11, "Core {} running (delayed) for {} ticks",
-                  current_core_to_execute->GetID(),
-                  current_core_to_execute->GetTimer().GetDowncount());
+                     current_core_to_execute->GetID(),
+                     current_core_to_execute->GetTimer().GetDowncount());
         if (running_core != current_core_to_execute) {
             running_core = current_core_to_execute;
             kernel->SetRunningCPU(running_core);
@@ -189,7 +189,7 @@ System::ResultStatus System::RunLoop(bool tight_loop) {
         // TODO: Make special check for idle since we can easily revert the time of idle cores
         s64 max_slice = Timing::MAX_SLICE_LENGTH;
         for (const auto& cpu_core : cpu_cores) {
-            kernel->SetRunningCPU(cpu_core);
+            kernel->SetRunningCPU(cpu_core.get());
             cpu_core->GetTimer().Advance();
             cpu_core->PrepareReschedule();
             kernel->GetThreadManager(cpu_core->GetID()).Reschedule();
