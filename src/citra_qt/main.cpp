@@ -512,13 +512,13 @@ void GMainWindow::InitializeHotkeys() {
             &QShortcut::activated, this, [&] {
                 if (Settings::values.use_frame_limit_alternate) {
                     if (Settings::values.frame_limit_alternate < 9999 - SPEED_LIMIT_STEP) {
-                    Settings::values.frame_limit_alternate += SPEED_LIMIT_STEP;
-                    UpdateStatusBar();
+                        Settings::values.frame_limit_alternate += SPEED_LIMIT_STEP;
+                        UpdateStatusBar();
                     }
                 } else {
                     if (Settings::values.frame_limit < 9999 - SPEED_LIMIT_STEP) {
-                    Settings::values.frame_limit += SPEED_LIMIT_STEP;
-                    UpdateStatusBar();
+                        Settings::values.frame_limit += SPEED_LIMIT_STEP;
+                        UpdateStatusBar();
                     }
                 }
             });
@@ -526,13 +526,13 @@ void GMainWindow::InitializeHotkeys() {
             &QShortcut::activated, this, [&] {
                 if (Settings::values.use_frame_limit_alternate) {
                     if (Settings::values.frame_limit_alternate > SPEED_LIMIT_STEP) {
-                    Settings::values.frame_limit_alternate -= SPEED_LIMIT_STEP;
-                    UpdateStatusBar();
+                        Settings::values.frame_limit_alternate -= SPEED_LIMIT_STEP;
+                        UpdateStatusBar();
                     }
                 } else {
                     if (Settings::values.frame_limit > SPEED_LIMIT_STEP) {
-                    Settings::values.frame_limit -= SPEED_LIMIT_STEP;
-                    UpdateStatusBar();
+                        Settings::values.frame_limit -= SPEED_LIMIT_STEP;
+                        UpdateStatusBar();
                     }
                 }
             });
