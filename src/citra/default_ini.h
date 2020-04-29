@@ -143,6 +143,15 @@ use_frame_limit =
 # 1 - 9999: Speed limit as a percentage of target game speed. 100 (default)
 frame_limit =
 
+# Overrides the frame limiter to use frame_limit_alternate instead of frame_limit. Will only have
+# an effect if use_frame_limit is enabled
+# 0: Off (default), 1: On
+use_frame_limit_alternate =
+
+# Alternate speed limit to be used instead of frame_limit if use_frame_limit_alternate is enabled
+# 1 - 9999: Speed limit as a percentage of target game speed. 200 (default)
+frame_limit_alternate =
+
 # The clear color for the renderer. What shows up on the sides of the bottom screen.
 # Must be in range of 0.0-1.0. Defaults to 0.0 for all.
 bg_red =

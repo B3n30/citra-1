@@ -147,8 +147,9 @@ struct Values {
     bool use_shader_jit;
     u16 resolution_factor;
     bool use_frame_limit;
+    bool use_frame_limit_alternate;
     u16 frame_limit;
-    u16 frame_limit_custom;
+    u16 frame_limit_alternate;
     std::string texture_filter_name;
 
     LayoutOption layout_option;

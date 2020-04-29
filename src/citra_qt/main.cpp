@@ -493,17 +493,13 @@ void GMainWindow::InitializeHotkeys() {
             });
     connect(hotkey_registry.GetHotkey(main_window, QStringLiteral("Toggle Speed Limit"), this),
             &QShortcut::activated, this, [&] {
-                if (Settings::values.frame_limit != 100) {
-                    Settings::values.frame_limit = 100;
-                    UpdateStatusBar();
-                } else {
-                    Settings::values.frame_limit = Settings::values.frame_limit_custom;
-                    UpdateStatusBar();
-                }
-            });
-    connect(hotkey_registry.GetHotkey(main_window, QStringLiteral("Unthrottle"), this),
-            &QShortcut::activated, this, [&] {
                 Settings::values.use_frame_limit = !Settings::values.use_frame_limit;
+                UpdateStatusBar();
+            });
+    connect(hotkey_registry.GetHotkey(main_window, QStringLiteral("Toggle Alternate Speed"), this),
+            &QShortcut::activated, this, [&] {
+                Settings::values.use_frame_limit_alternate =
+                    !Settings::values.use_frame_limit_alternate;
                 UpdateStatusBar();
             });
     connect(hotkey_registry.GetHotkey(main_window, QStringLiteral("Toggle Texture Dumping"), this),
@@ -514,22 +510,30 @@ void GMainWindow::InitializeHotkeys() {
     static constexpr u16 SPEED_LIMIT_STEP = 5;
     connect(hotkey_registry.GetHotkey(main_window, QStringLiteral("Increase Speed Limit"), this),
             &QShortcut::activated, this, [&] {
-                if (Settings::values.frame_limit_custom < 9999 - SPEED_LIMIT_STEP) {
-                    Settings::values.frame_limit_custom += SPEED_LIMIT_STEP;
-                    if (Settings::values.frame_limit != 100) {
-                        Settings::values.frame_limit = Settings::values.frame_limit_custom;
-                    }
+                if (Settings::values.use_frame_limit_alternate) {
+                    if (Settings::values.frame_limit_alternate < 9999 - SPEED_LIMIT_STEP) {
+                    Settings::values.frame_limit_alternate += SPEED_LIMIT_STEP;
                     UpdateStatusBar();
+                    }
+                } else {
+                    if (Settings::values.frame_limit < 9999 - SPEED_LIMIT_STEP) {
+                    Settings::values.frame_limit += SPEED_LIMIT_STEP;
+                    UpdateStatusBar();
+                    }
                 }
             });
     connect(hotkey_registry.GetHotkey(main_window, QStringLiteral("Decrease Speed Limit"), this),
             &QShortcut::activated, this, [&] {
-                if (Settings::values.frame_limit_custom > SPEED_LIMIT_STEP) {
-                    Settings::values.frame_limit_custom -= SPEED_LIMIT_STEP;
-                    if (Settings::values.frame_limit != 100) {
-                        Settings::values.frame_limit = Settings::values.frame_limit_custom;
-                    }
+                if (Settings::values.use_frame_limit_alternate) {
+                    if (Settings::values.frame_limit_alternate > SPEED_LIMIT_STEP) {
+                    Settings::values.frame_limit_alternate -= SPEED_LIMIT_STEP;
                     UpdateStatusBar();
+                    }
+                } else {
+                    if (Settings::values.frame_limit > SPEED_LIMIT_STEP) {
+                    Settings::values.frame_limit -= SPEED_LIMIT_STEP;
+                    UpdateStatusBar();
+                    }
                 }
             });
     connect(hotkey_registry.GetHotkey(main_window, QStringLiteral("Toggle Frame Advancing"), this),
@@ -2038,9 +2042,16 @@ void GMainWindow::UpdateStatusBar() {
     auto results = Core::System::GetInstance().GetAndResetPerfStats();
 
     if (Settings::values.use_frame_limit) {
-        emu_speed_label->setText(tr("Speed: %1% / %2%")
+        if (Settings::values.use_frame_limit_alternate)
+        {
+            emu_speed_label->setText(tr("Speed: %1% / %2%")
+                                     .arg(results.emulation_speed * 100.0, 0, 'f', 0)
+                                     .arg(Settings::values.frame_limit_alternate));
+        } else {
+            emu_speed_label->setText(tr("Speed: %1% / %2%")
                                      .arg(results.emulation_speed * 100.0, 0, 'f', 0)
                                      .arg(Settings::values.frame_limit));
+        }
     } else {
         emu_speed_label->setText(tr("Speed: %1%").arg(results.emulation_speed * 100.0, 0, 'f', 0));
     }

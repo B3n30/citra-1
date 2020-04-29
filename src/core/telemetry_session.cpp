@@ -168,6 +168,10 @@ void TelemetrySession::AddInitialInfo(Loader::AppLoader& app_loader) {
     AddField(Telemetry::FieldType::UserConfig, "Renderer_UseFrameLimit",
              Settings::values.use_frame_limit);
     AddField(Telemetry::FieldType::UserConfig, "Renderer_FrameLimit", Settings::values.frame_limit);
+    AddField(Telemetry::FieldType::UserConfig, "Renderer_UseFrameLimitAlternate",
+             Settings::values.use_frame_limit_alternate);
+    AddField(Telemetry::FieldType::UserConfig, "Renderer_FrameLimitAlternate",
+             Settings::values.frame_limit_alternate);
     AddField(Telemetry::FieldType::UserConfig, "Renderer_UseHwRenderer",
              Settings::values.use_hw_renderer);
     AddField(Telemetry::FieldType::UserConfig, "Renderer_UseHwShader",

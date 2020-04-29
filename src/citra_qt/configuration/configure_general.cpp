@@ -16,6 +16,9 @@ ConfigureGeneral::ConfigureGeneral(QWidget* parent)
     SetConfiguration();
 
     connect(ui->toggle_frame_limit, &QCheckBox::toggled, ui->frame_limit, &QSpinBox::setEnabled);
+    
+    connect(ui->toggle_alternate_speed, &QCheckBox::toggled, ui->frame_limit_alternate,
+            &QSpinBox::setEnabled);
 
     ui->updateBox->setVisible(UISettings::values.updater_found);
     connect(ui->button_reset_defaults, &QPushButton::clicked, this,
@@ -37,7 +40,11 @@ void ConfigureGeneral::SetConfiguration() {
 
     ui->toggle_frame_limit->setChecked(Settings::values.use_frame_limit);
     ui->frame_limit->setEnabled(ui->toggle_frame_limit->isChecked());
-    ui->frame_limit->setValue(Settings::values.frame_limit_custom);
+    ui->frame_limit->setValue(Settings::values.frame_limit);
+
+    ui->toggle_alternate_speed->setChecked(Settings::values.use_frame_limit_alternate);
+    ui->frame_limit_alternate->setEnabled(ui->toggle_alternate_speed->isChecked());
+    ui->frame_limit_alternate->setValue(Settings::values.frame_limit_alternate);
 }
 
 void ConfigureGeneral::ResetDefaults() {
@@ -64,7 +71,10 @@ void ConfigureGeneral::ApplyConfiguration() {
     Settings::values.region_value = ui->region_combobox->currentIndex() - 1;
 
     Settings::values.use_frame_limit = ui->toggle_frame_limit->isChecked();
-    Settings::values.frame_limit_custom = ui->frame_limit->value();
+    Settings::values.frame_limit = ui->frame_limit->value();
+
+    Settings::values.use_frame_limit_alternate = ui->toggle_alternate_speed->isChecked();
+    Settings::values.frame_limit_alternate = ui->frame_limit_alternate->value();
 }
 
 void ConfigureGeneral::RetranslateUI() {

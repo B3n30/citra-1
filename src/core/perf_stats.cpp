@@ -140,6 +140,10 @@ void FrameLimiter::DoFrameLimiting(microseconds current_system_time_us) {
     auto now = Clock::now();
     double sleep_scale = Settings::values.frame_limit / 100.0;
 
+    if (Settings::values.use_frame_limit_alternate) {
+        sleep_scale = Settings::values.frame_limit_alternate / 100.0;
+    }
+
     // Max lag caused by slow frames. Shouldn't be more than the length of a frame at the current
     // speed percent or it will clamp too much and prevent this from properly limiting to that
     // percent. High values means it'll take longer after a slow frame to recover and start limiting
