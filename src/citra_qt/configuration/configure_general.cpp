@@ -37,7 +37,7 @@ void ConfigureGeneral::SetConfiguration() {
 
     ui->toggle_frame_limit->setChecked(Settings::values.use_frame_limit);
     ui->frame_limit->setEnabled(ui->toggle_frame_limit->isChecked());
-    ui->frame_limit->setValue(Settings::values.frame_limit);
+    ui->frame_limit->setValue(Settings::values.frame_limit_custom);
 }
 
 void ConfigureGeneral::ResetDefaults() {
@@ -64,7 +64,7 @@ void ConfigureGeneral::ApplyConfiguration() {
     Settings::values.region_value = ui->region_combobox->currentIndex() - 1;
 
     Settings::values.use_frame_limit = ui->toggle_frame_limit->isChecked();
-    Settings::values.frame_limit = ui->frame_limit->value();
+    Settings::values.frame_limit_custom = ui->frame_limit->value();
 }
 
 void ConfigureGeneral::RetranslateUI() {

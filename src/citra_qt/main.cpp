@@ -493,6 +493,16 @@ void GMainWindow::InitializeHotkeys() {
             });
     connect(hotkey_registry.GetHotkey(main_window, QStringLiteral("Toggle Speed Limit"), this),
             &QShortcut::activated, this, [&] {
+                if (Settings::values.frame_limit != 100) {
+                    Settings::values.frame_limit = 100;
+                    UpdateStatusBar();
+                } else {
+                    Settings::values.frame_limit = Settings::values.frame_limit_custom;
+                    UpdateStatusBar();
+                }
+            });
+    connect(hotkey_registry.GetHotkey(main_window, QStringLiteral("Unthrottle"), this),
+            &QShortcut::activated, this, [&] {
                 Settings::values.use_frame_limit = !Settings::values.use_frame_limit;
                 UpdateStatusBar();
             });
@@ -504,15 +514,21 @@ void GMainWindow::InitializeHotkeys() {
     static constexpr u16 SPEED_LIMIT_STEP = 5;
     connect(hotkey_registry.GetHotkey(main_window, QStringLiteral("Increase Speed Limit"), this),
             &QShortcut::activated, this, [&] {
-                if (Settings::values.frame_limit < 9999 - SPEED_LIMIT_STEP) {
-                    Settings::values.frame_limit += SPEED_LIMIT_STEP;
+                if (Settings::values.frame_limit_custom < 9999 - SPEED_LIMIT_STEP) {
+                    Settings::values.frame_limit_custom += SPEED_LIMIT_STEP;
+                    if (Settings::values.frame_limit != 100) {
+                        Settings::values.frame_limit = Settings::values.frame_limit_custom;
+                    }
                     UpdateStatusBar();
                 }
             });
     connect(hotkey_registry.GetHotkey(main_window, QStringLiteral("Decrease Speed Limit"), this),
             &QShortcut::activated, this, [&] {
-                if (Settings::values.frame_limit > SPEED_LIMIT_STEP) {
-                    Settings::values.frame_limit -= SPEED_LIMIT_STEP;
+                if (Settings::values.frame_limit_custom > SPEED_LIMIT_STEP) {
+                    Settings::values.frame_limit_custom -= SPEED_LIMIT_STEP;
+                    if (Settings::values.frame_limit != 100) {
+                        Settings::values.frame_limit = Settings::values.frame_limit_custom;
+                    }
                     UpdateStatusBar();
                 }
             });
