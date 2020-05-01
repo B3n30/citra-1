@@ -630,10 +630,8 @@ public:
          *      2: u8 output: 0 = Old3DS, 1 = New3DS.
          *  Note:
          *  This uses PTMSYSM:CheckNew3DS.
-         *  When a certain NS state field is non-zero, the output value is zero,
+         *  When screen_capture_post_permission is non-zero, the output value is zero,
          *  Otherwise the output is from PTMSYSM:CheckNew3DS.
-         *  Normally this NS state field is zero, however this state field is set to 1
-         *  when APT:PrepareToStartApplication is used with flags bit8 is set.
          */
         void CheckNew3DSApp(Kernel::HLERequestContext& ctx);
 
@@ -685,9 +683,6 @@ private:
     std::shared_ptr<Kernel::Mutex> lock;
 
     u32 cpu_percent = 0; ///< CPU time available to the running application
-
-    // APT::CheckNew3DSApp will check this unknown_ns_state_field to determine processing mode
-    u8 unknown_ns_state_field = 0;
 
     std::vector<u8> screen_capture_buffer;
     std::array<u8, SysMenuArgSize> sys_menu_arg_buffer;

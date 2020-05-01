@@ -40,6 +40,8 @@ void Module::serialize(Archive& ar, const unsigned int) {
     ar& shared_font_relocated;
     ar& lock;
     ar& cpu_percent;
+    // TODO(B3N30): remove this when we break compatibility with old save states
+    u8 unknown_ns_state_field;
     ar& unknown_ns_state_field;
     ar& screen_capture_buffer;
     ar& screen_capture_post_permission;
@@ -488,7 +490,7 @@ void Module::APTInterface::PrepareToStartApplication(Kernel::HLERequestContext& 
     u32 flags = rp.Pop<u32>();
 
     if (flags & 0x00000100) {
-        apt->unknown_ns_state_field = 1;
+        apt->screen_capture_post_permission = ScreencapPostPermission::NoExplicitSetting;
     }
 
     IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
@@ -901,14 +903,14 @@ void Module::APTInterface::CheckNew3DSApp(Kernel::HLERequestContext& ctx) {
     IPC::RequestParser rp(ctx, 0x101, 0, 0); // 0x01010000
 
     IPC::RequestBuilder rb = rp.MakeBuilder(2, 0);
-    if (apt->unknown_ns_state_field) {
+    if (apt->screen_capture_post_permission != ScreencapPostPermission::CleanThePermission) {
         rb.Push(RESULT_SUCCESS);
         rb.Push<u32>(0);
     } else {
         PTM::CheckNew3DS(rb);
     }
 
-    LOG_WARNING(Service_APT, "(STUBBED) called");
+    LOG_DEBUG(Service_APT, "called");
 }
 
 void Module::APTInterface::CheckNew3DS(Kernel::HLERequestContext& ctx) {
@@ -917,7 +919,7 @@ void Module::APTInterface::CheckNew3DS(Kernel::HLERequestContext& ctx) {
 
     PTM::CheckNew3DS(rb);
 
-    LOG_WARNING(Service_APT, "(STUBBED) called");
+    LOG_DEBUG(Service_APT, "called");
 }
 
 void Module::APTInterface::IsTitleAllowed(Kernel::HLERequestContext& ctx) {
