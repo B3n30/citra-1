@@ -57,7 +57,7 @@ const std::array<std::array<int, 5>, Settings::NativeAnalog::NumAnalogs> Config:
 // This must be in alphabetical order according to action name as it must have the same order as
 // UISetting::values.shortcuts, which is alphabetically ordered.
 // clang-format off
-const std::array<UISettings::Shortcut, 23> default_hotkeys{
+const std::array<UISettings::Shortcut, 24> default_hotkeys{
     {{QStringLiteral("Advance Frame"),            QStringLiteral("Main Window"), {QStringLiteral("\\"), Qt::ApplicationShortcut}},
      {QStringLiteral("Capture Screenshot"),       QStringLiteral("Main Window"), {QStringLiteral("Ctrl+P"), Qt::ApplicationShortcut}},
      {QStringLiteral("Continue/Pause Emulation"), QStringLiteral("Main Window"), {QStringLiteral("F4"), Qt::WindowShortcut}},
@@ -78,7 +78,8 @@ const std::array<UISettings::Shortcut, 23> default_hotkeys{
      {QStringLiteral("Toggle Filter Bar"),        QStringLiteral("Main Window"), {QStringLiteral("Ctrl+F"), Qt::WindowShortcut}},
      {QStringLiteral("Toggle Frame Advancing"),   QStringLiteral("Main Window"), {QStringLiteral("Ctrl+A"), Qt::ApplicationShortcut}},
      {QStringLiteral("Toggle Screen Layout"),     QStringLiteral("Main Window"), {QStringLiteral("F10"), Qt::WindowShortcut}},
-     {QStringLiteral("Toggle Speed Limit"),       QStringLiteral("Main Window"), {QStringLiteral("Ctrl+Z"), Qt::ApplicationShortcut}},
+     {QStringLiteral("Unthrottle"),               QStringLiteral("Main Window"), {QStringLiteral("Tab"), Qt::ApplicationShortcut}},
+     {QStringLiteral("Toggle Alternate Speed"),   QStringLiteral("Main Window"), {QStringLiteral("Ctrl+X"), Qt::ApplicationShortcut}},
      {QStringLiteral("Toggle Status Bar"),        QStringLiteral("Main Window"), {QStringLiteral("Ctrl+S"), Qt::WindowShortcut}},
      {QStringLiteral("Toggle Texture Dumping"),   QStringLiteral("Main Window"), {QStringLiteral("Ctrl+D"), Qt::ApplicationShortcut}}}};
 // clang-format on
@@ -445,9 +446,12 @@ void Config::ReadRendererValues() {
     Settings::values.use_vsync_new = ReadSetting(QStringLiteral("use_vsync_new"), true).toBool();
     Settings::values.resolution_factor =
         static_cast<u16>(ReadSetting(QStringLiteral("resolution_factor"), 1).toInt());
-    Settings::values.use_frame_limit =
-        ReadSetting(QStringLiteral("use_frame_limit"), true).toBool();
+    Settings::values.unthrottled = ReadSetting(QStringLiteral("unthrottled"), false).toBool();
     Settings::values.frame_limit = ReadSetting(QStringLiteral("frame_limit"), 100).toInt();
+    Settings::values.use_frame_limit_alternate =
+        ReadSetting(QStringLiteral("use_frame_limit_alternate"), false).toBool();
+    Settings::values.frame_limit_alternate =
+        ReadSetting(QStringLiteral("frame_limit_alternate"), 200).toInt();
 
     Settings::values.bg_red = ReadSetting(QStringLiteral("bg_red"), 0.0).toFloat();
     Settings::values.bg_green = ReadSetting(QStringLiteral("bg_green"), 0.0).toFloat();
@@ -929,8 +933,12 @@ void Config::SaveRendererValues() {
     WriteSetting(QStringLiteral("use_shader_jit"), Settings::values.use_shader_jit, true);
     WriteSetting(QStringLiteral("use_vsync_new"), Settings::values.use_vsync_new, true);
     WriteSetting(QStringLiteral("resolution_factor"), Settings::values.resolution_factor, 1);
-    WriteSetting(QStringLiteral("use_frame_limit"), Settings::values.use_frame_limit, true);
+    WriteSetting(QStringLiteral("unthrottled"), Settings::values.unthrottled, false);
     WriteSetting(QStringLiteral("frame_limit"), Settings::values.frame_limit, 100);
+    WriteSetting(QStringLiteral("use_frame_limit_alternate"),
+                 Settings::values.use_frame_limit_alternate, false);
+    WriteSetting(QStringLiteral("frame_limit_alternate"),
+                 Settings::values.frame_limit_alternate, 200);
 
     // Cast to double because Qt's written float values are not human-readable
     WriteSetting(QStringLiteral("bg_red"), (double)Settings::values.bg_red, 0.0);
