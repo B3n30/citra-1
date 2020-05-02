@@ -133,15 +133,16 @@ void FrameLimiter::DoFrameLimiting(microseconds current_system_time_us) {
         return;
     }
 
-    if (Settings::values.unthrottled) {
-        return;
-    }
-
     auto now = Clock::now();
     double sleep_scale = Settings::values.frame_limit / 100.0;
 
     if (Settings::values.use_frame_limit_alternate) {
+        if (Settings::values.frame_limit_alternate == 0) {
+            return;
+        }
         sleep_scale = Settings::values.frame_limit_alternate / 100.0;
+    } else if (Settings::values.frame_limit == 0) {
+        return;
     }
 
     // Max lag caused by slow frames. Shouldn't be more than the length of a frame at the current

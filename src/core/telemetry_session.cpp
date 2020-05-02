@@ -165,8 +165,6 @@ void TelemetrySession::AddInitialInfo(Loader::AppLoader& app_loader) {
     AddField(Telemetry::FieldType::UserConfig, "Core_UseCpuJit", Settings::values.use_cpu_jit);
     AddField(Telemetry::FieldType::UserConfig, "Renderer_ResolutionFactor",
              Settings::values.resolution_factor);
-    AddField(Telemetry::FieldType::UserConfig, "Renderer_Unthrottled",
-             Settings::values.unthrottled);
     AddField(Telemetry::FieldType::UserConfig, "Renderer_FrameLimit", Settings::values.frame_limit);
     AddField(Telemetry::FieldType::UserConfig, "Renderer_UseFrameLimitAlternate",
              Settings::values.use_frame_limit_alternate);

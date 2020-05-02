@@ -81,7 +81,6 @@ void LogSettings() {
     LogSetting("Renderer_ShadersAccurateMul", Settings::values.shaders_accurate_mul);
     LogSetting("Renderer_UseShaderJit", Settings::values.use_shader_jit);
     LogSetting("Renderer_UseResolutionFactor", Settings::values.resolution_factor);
-    LogSetting("Renderer_Unthrottled", Settings::values.unthrottled);
     LogSetting("Renderer_FrameLimit", Settings::values.frame_limit);
     LogSetting("Renderer_UseFrameLimitAlternate", Settings::values.use_frame_limit_alternate);
     LogSetting("Renderer_FrameLimitAlternate", Settings::values.frame_limit_alternate);

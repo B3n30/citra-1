@@ -146,7 +146,6 @@ struct Values {
     bool shaders_accurate_mul;
     bool use_shader_jit;
     u16 resolution_factor;
-    bool unthrottled;
     bool use_frame_limit_alternate;
     u16 frame_limit;
     u16 frame_limit_alternate;
