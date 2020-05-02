@@ -135,16 +135,17 @@ resolution_factor =
 # Texture filter name
 texture_filter_name =
 
-# Turns on the frame limiter, which will limit frames output to the target game speed
-# 0: Off, 1: On (default)
-use_frame_limit =
+# Turns off the frame limiter, which will make the game speed go as high as it can.
+# 0: Off (default), 1: On
+unthrottled =
 
-# Limits the speed of the game to run no faster than this value as a percentage of target speed
+# Limits the speed of the game to run no faster than this value as a percentage of target speed.
+# Will not have an effect if unthrottled is enabled.
 # 1 - 9999: Speed limit as a percentage of target game speed. 100 (default)
 frame_limit =
 
-# Overrides the frame limiter to use frame_limit_alternate instead of frame_limit. Will only have
-# an effect if use_frame_limit is enabled
+# Overrides the frame limiter to use frame_limit_alternate instead of frame_limit. Will not have an
+# effect if unthrottled is enabled.
 # 0: Off (default), 1: On
 use_frame_limit_alternate =
 
