@@ -33,8 +33,10 @@ SERVICE_CONSTRUCT_IMPL(Service::APT::Module)
 
 namespace Service::APT {
 
+std::vector<u8> Module::wireless_reboot_info;
+
 template <class Archive>
-void Module::serialize(Archive& ar, const unsigned int) {
+void Module::serialize(Archive& ar, const unsigned int file_version) {
     ar& shared_font_mem;
     ar& shared_font_loaded;
     ar& shared_font_relocated;
@@ -44,6 +46,9 @@ void Module::serialize(Archive& ar, const unsigned int) {
     ar& screen_capture_buffer;
     ar& screen_capture_post_permission;
     ar& applet_manager;
+    if (file_version > 0) {
+        ar&wireless_reboot_info;
+    }
 }
 
 SERIALIZE_IMPL(Module)
@@ -52,6 +57,19 @@ Module::NSInterface::NSInterface(std::shared_ptr<Module> apt, const char* name, 
     : ServiceFramework(name, max_session), apt(std::move(apt)) {}
 
 Module::NSInterface::~NSInterface() = default;
+
+void Module::NSInterface::SetWirelessRebootInfo(Kernel::HLERequestContext& ctx) {
+    IPC::RequestParser rp(ctx, 0x06, 1, 2); // 0x00060042
+    u32 size = rp.Pop<u32>();
+    auto buffer = rp.PopStaticBuffer();
+
+    APT::Module::wireless_reboot_info = std::move(buffer);
+
+    auto rb = rp.MakeBuilder(1, 0);
+    rb.Push(RESULT_SUCCESS);
+
+    LOG_WARNING(Service_APT, "called size={}", size);
+}
 
 void Module::APTInterface::Initialize(Kernel::HLERequestContext& ctx) {
     IPC::RequestParser rp(ctx, 0x2, 2, 0); // 0x20080
@@ -255,6 +273,17 @@ void Module::APTInterface::GetSharedFont(Kernel::HLERequestContext& ctx) {
     // (using svcQueryMemory) and searches for an allocation of the same size as the Shared Font.
     rb.Push(target_address);
     rb.PushCopyObjects(apt->shared_font_mem);
+}
+
+void Module::APTInterface::GetWirelessRebootInfo(Kernel::HLERequestContext& ctx) {
+    IPC::RequestParser rp(ctx, 0x45, 1, 0); // 0x00450040
+    u32 size = rp.Pop<u32>();
+
+    LOG_WARNING(Service_APT, "(STUBBED) called size={:08X}", size);
+
+    IPC::RequestBuilder rb = rp.MakeBuilder(1, 2);
+    rb.Push(RESULT_SUCCESS);
+    rb.PushStaticBuffer(APT::Module::wireless_reboot_info, 0);
 }
 
 void Module::APTInterface::NotifyToWait(Kernel::HLERequestContext& ctx) {

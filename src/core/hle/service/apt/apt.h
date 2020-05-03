@@ -65,6 +65,8 @@ public:
     explicit Module(Core::System& system);
     ~Module();
 
+    static std::vector<u8> wireless_reboot_info;
+
     class NSInterface : public ServiceFramework<NSInterface> {
     public:
         NSInterface(std::shared_ptr<Module> apt, const char* name, u32 max_session);
@@ -72,6 +74,17 @@ public:
 
     protected:
         std::shared_ptr<Module> apt;
+
+        /**
+         * NS::SetWirelessRebootInfo service function. This sets the wireless reboot info.
+         * Inputs:
+         *     1 : size
+         *     2 : (Size<<14) | 2
+         *     3 : Wireless reboot info buffer ptr
+         * Outputs:
+         *     0 : Result of function, 0 on success, otherwise error code
+         */
+        void SetWirelessRebootInfo(Kernel::HLERequestContext& ctx);
     };
 
     class APTInterface : public ServiceFramework<APTInterface> {
@@ -138,6 +151,16 @@ public:
          *      5 : Output buffer address
          */
         void Unwrap(Kernel::HLERequestContext& ctx);
+
+        /**
+         * APT::GetWirelessRebootInfo service function
+         *  Inputs:
+         *      1 : size
+         *  Outputs:
+         *      1 : Result of function, 0 on success, otherwise error code
+         *      2 : Output parameter buffer ptr
+         */
+        void GetWirelessRebootInfo(Kernel::HLERequestContext& ctx);
 
         /**
          * APT::NotifyToWait service function
@@ -707,3 +730,4 @@ void InstallInterfaces(Core::System& system);
 } // namespace Service::APT
 
 SERVICE_CONSTRUCT(Service::APT::Module)
+BOOST_CLASS_VERSION(Service::APT::Module, 1)
