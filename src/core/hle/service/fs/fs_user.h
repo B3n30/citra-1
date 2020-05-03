@@ -526,6 +526,20 @@ private:
     void ObsoletedDeleteExtSaveData(Kernel::HLERequestContext& ctx);
 
     /**
+     * FS_User::GetSpecialContentIndex service function.
+     *  Inputs:
+     *      0 : 0x083A0100
+     *      1 : Media type
+     *    2-3 : Program ID
+     *      4 : Special content type
+     *  Outputs:
+     *      0 : 0x083A0080
+     *      1 : Result of function, 0 on success, otherwise error code
+     *      2 : Special content index
+     */
+    void GetSpecialContentIndex(Kernel::HLERequestContext& ctx);
+
+    /**
      * FS_User::GetNumSeeds service function.
      *  Inputs:
      *      0 : 0x087D0000
