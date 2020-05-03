@@ -75,7 +75,7 @@ enum class NetworkStatus {
 
 struct ConnectionStatus {
     u32_le status;
-    INSERT_PADDING_WORDS(1);
+    u32_le disconnect_reason;
     u16_le network_node_id;
     u16_le changed_nodes;
     u16_le nodes[UDSMaxNodes];
@@ -396,6 +396,17 @@ private:
      *      1 : Result of function, 0 on success, otherwise error code
      */
     void ConnectToNetworkDeprecated(Kernel::HLERequestContext& ctx);
+
+    /**
+     * NWM_UDS::EjectClient Disconnects clients.
+     *  Inputs:
+     *      0 : Command header
+     *      1 : Network node id
+     *  Outputs:
+     *      0 : Return header
+     *      1 : Result of function, 0 on success, otherwise error code
+     */
+    void EjectClient(Kernel::HLERequestContext& ctx);
 
     /**
      * NWM_UDS::DecryptBeaconData service function.
