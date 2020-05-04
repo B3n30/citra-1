@@ -165,7 +165,7 @@ System::ResultStatus System::RunLoop(bool tight_loop) {
     // performance. Thus we don't sync delays below min_delay
     static constexpr s64 min_delay = 100;
     if (max_delay > min_delay) {
-        LOG_CRITICAL(Core_ARM11, "Core {} running (delayed) for {} ticks",
+        LOG_TRACE(Core_ARM11, "Core {} running (delayed) for {} ticks",
                      current_core_to_execute->GetID(),
                      current_core_to_execute->GetTimer().GetDowncount());
         if (running_core != current_core_to_execute) {

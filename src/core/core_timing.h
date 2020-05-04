@@ -235,6 +235,7 @@ public:
         void serialize(Archive& ar, const unsigned int) {
             MoveEvents();
             // NOTE: ts_queue should be empty now
+            // TODO(SaveState): Remove the next two lines when we break compatibility
             s64 x;
             ar& x; // to keep compatibility with old save states that stored global_timer
             ar& event_queue;
