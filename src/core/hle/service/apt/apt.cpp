@@ -33,8 +33,6 @@ SERVICE_CONSTRUCT_IMPL(Service::APT::Module)
 
 namespace Service::APT {
 
-std::vector<u8> Module::wireless_reboot_info;
-
 template <class Archive>
 void Module::serialize(Archive& ar, const unsigned int file_version) {
     ar& shared_font_mem;
@@ -47,7 +45,7 @@ void Module::serialize(Archive& ar, const unsigned int file_version) {
     ar& screen_capture_post_permission;
     ar& applet_manager;
     if (file_version > 0) {
-        ar&wireless_reboot_info;
+        ar& wireless_reboot_info;
     }
 }
 
@@ -63,7 +61,7 @@ void Module::NSInterface::SetWirelessRebootInfo(Kernel::HLERequestContext& ctx) 
     u32 size = rp.Pop<u32>();
     auto buffer = rp.PopStaticBuffer();
 
-    APT::Module::wireless_reboot_info = std::move(buffer);
+    apt->wireless_reboot_info = std::move(buffer);
 
     auto rb = rp.MakeBuilder(1, 0);
     rb.Push(RESULT_SUCCESS);
@@ -283,7 +281,7 @@ void Module::APTInterface::GetWirelessRebootInfo(Kernel::HLERequestContext& ctx)
 
     IPC::RequestBuilder rb = rp.MakeBuilder(1, 2);
     rb.Push(RESULT_SUCCESS);
-    rb.PushStaticBuffer(APT::Module::wireless_reboot_info, 0);
+    rb.PushStaticBuffer(apt->wireless_reboot_info, 0);
 }
 
 void Module::APTInterface::NotifyToWait(Kernel::HLERequestContext& ctx) {

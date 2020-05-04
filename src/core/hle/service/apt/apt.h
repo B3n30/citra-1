@@ -65,8 +65,6 @@ public:
     explicit Module(Core::System& system);
     ~Module();
 
-    static std::vector<u8> wireless_reboot_info;
-
     class NSInterface : public ServiceFramework<NSInterface> {
     public:
         NSInterface(std::shared_ptr<Module> apt, const char* name, u32 max_session);
@@ -719,6 +717,8 @@ private:
         ScreencapPostPermission::CleanThePermission; // TODO(JamePeng): verify the initial value
 
     std::shared_ptr<AppletManager> applet_manager;
+
+    std::vector<u8> wireless_reboot_info;
 
     template <class Archive>
     void serialize(Archive& ar, const unsigned int);
