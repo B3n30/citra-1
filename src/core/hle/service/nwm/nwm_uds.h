@@ -73,6 +73,12 @@ enum class NetworkStatus {
     ConnectedAsSpectator = 10,
 };
 
+enum class DisconnectStatus {
+    Connected = 1,
+    NotConnected = 2,
+    // TODO(B3N30): Figure out the other values
+};
+
 struct ConnectionStatus {
     u32_le status;
     u32_le disconnect_reason;
