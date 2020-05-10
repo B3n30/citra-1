@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <unordered_map>
 #include <boost/serialization/base_object.hpp>
 #include "common/common_types.h"
 #include "core/hle/service/service.h"
@@ -37,6 +38,10 @@ private:
 class FS_USER final : public ServiceFramework<FS_USER, ClientSlot> {
 public:
     explicit FS_USER(Core::System& system);
+
+    // On real HW this is part of FS:Reg. But since that module is only used by loader and pm, which
+    // we HLEed, we can just directly use it here
+    void Register(u32 process_id, u64 program_id, MediaType media_type);
 
 private:
     void Initialize(Kernel::HLERequestContext& ctx);
@@ -576,6 +581,13 @@ private:
      *      3-4 : Secure Value
      */
     void GetSaveDataSecureValue(Kernel::HLERequestContext& ctx);
+
+    struct ProgramInfo {
+        u64 program_id;
+        MediaType media_type;
+    };
+
+    std::unordered_map<u32, ProgramInfo> program_info_map;
 
     u32 priority = -1; ///< For SetPriority and GetPriority service functions
 

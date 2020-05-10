@@ -682,13 +682,11 @@ void FS_USER::GetProgramLaunchInfo(Kernel::HLERequestContext& ctx) {
 
     LOG_DEBUG(Service_FS, "process_id={}", process_id);
 
-    // TODO(Subv): The real FS service manages its own process list and only checks the processes
-    // that were registered with the 'fs:REG' service.
-    auto process = system.Kernel().GetProcessById(process_id);
+    auto program_info = program_info_map.find(process_id);
 
     IPC::RequestBuilder rb = rp.MakeBuilder(5, 0);
 
-    if (process == nullptr) {
+    if (program_info == program_info_map.end()) {
         // Note: In this case, the rest of the parameters are not changed but the command header
         // remains the same.
         rb.Push(ResultCode(FileSys::ErrCodes::ArchiveNotMounted, ErrorModule::FS,
@@ -697,13 +695,9 @@ void FS_USER::GetProgramLaunchInfo(Kernel::HLERequestContext& ctx) {
         return;
     }
 
-    u64 program_id = process->codeset->program_id;
-
-    auto media_type = Service::AM::GetTitleMediaType(program_id);
-
     rb.Push(RESULT_SUCCESS);
-    rb.Push(program_id);
-    rb.Push(static_cast<u8>(media_type));
+    rb.Push(program_info->second.program_id);
+    rb.Push(static_cast<u8>(program_info->second.media_type));
 
     // TODO(Subv): Find out what this value means.
     rb.Push<u32>(0);
@@ -806,6 +800,11 @@ void FS_USER::GetSaveDataSecureValue(Kernel::HLERequestContext& ctx) {
 
     rb.Push<bool>(false); // indicates that the secure value doesn't exist
     rb.Push<u64>(0);      // the secure value
+}
+
+
+void FS_USER::Register(u32 process_id, u64 program_id, MediaType media_type) {
+    program_info_map[process_id] = ProgramInfo{program_id, media_type};
 }
 
 FS_USER::FS_USER(Core::System& system)
