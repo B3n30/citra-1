@@ -145,9 +145,10 @@ ResultStatus AppLoader_NCCH::LoadExec(std::shared_ptr<Kernel::Process>& process)
         u32 stack_size = overlay_ncch->exheader_header.codeset_info.stack_size;
 
         // On real HW this is done with FS:Reg, but we can be lazy
-        auto fs_user = Core::System::GetInstance().ServiceManager().GetService<Service::FS::FS_USER>("fs:USER");
-        fs_user->Register(process->process_id, process->codeset->program_id,
-                          Service::FS::GetMediaTypeFromPath(filepath));
+        auto fs_user =
+            Core::System::GetInstance().ServiceManager().GetService<Service::FS::FS_USER>(
+                "fs:USER");
+        fs_user->Register(process->process_id, process->codeset->program_id, filepath);
 
         process->Run(priority, stack_size);
         return ResultStatus::Success;

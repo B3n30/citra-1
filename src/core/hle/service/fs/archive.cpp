@@ -31,7 +31,7 @@
 
 namespace Service::FS {
 
-MediaType GetMediaTypeFromPath(const std::string& path) {
+MediaType GetMediaTypeFromPath(std::string_view path) {
     if (path.rfind(FileUtil::GetUserPath(FileUtil::UserPath::NANDDir), 0) == 0) {
         return MediaType::NAND;
     }

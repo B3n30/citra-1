@@ -12,6 +12,7 @@
 #include "common/string_util.h"
 #include "core/core.h"
 #include "core/file_sys/errors.h"
+#include "core/file_sys/ncch_container.h"
 #include "core/file_sys/seed_db.h"
 #include "core/hle/ipc.h"
 #include "core/hle/ipc_helpers.h"
@@ -746,6 +747,32 @@ void FS_USER::ObsoletedDeleteExtSaveData(Kernel::HLERequestContext& ctx) {
               static_cast<u32>(media_type));
 }
 
+void FS_USER::GetSpecialContentIndex(Kernel::HLERequestContext& ctx) {
+    IPC::RequestParser rp(ctx, 0x83A, 4, 0);
+    const MediaType media_type = static_cast<MediaType>(rp.Pop<u8>());
+    const u64 title_id = rp.Pop<u64>();
+    const auto type = rp.PopEnum<SpecialContentType>();
+
+    LOG_DEBUG(Service_FS, "called, media_type={:08X} type={:08X}, title_id={:016X}",
+              static_cast<u32>(media_type), static_cast<u32>(type), title_id);
+
+    ResultVal<u16> index;
+    if (media_type == MediaType::GameCard) {
+        index = GetSpecialContentIndexFromGameCard(title_id, type);
+    } else {
+        index = GetSpecialContentIndexFromTDM(media_type, title_id, type);
+    }
+
+    if (index.Succeeded()) {
+        IPC::RequestBuilder rb = rp.MakeBuilder(2, 0);
+        rb.Push(RESULT_SUCCESS);
+        rb.Push(index.Unwrap());
+    } else {
+        IPC::RequestBuilder rb = rp.MakeBuilder(1, 0);
+        rb.Push(index.Code());
+    }
+}
+
 void FS_USER::GetNumSeeds(Kernel::HLERequestContext& ctx) {
     IPC::RequestBuilder rb{ctx, 0x87D, 2, 0};
     rb.Push(RESULT_SUCCESS);
@@ -802,9 +829,64 @@ void FS_USER::GetSaveDataSecureValue(Kernel::HLERequestContext& ctx) {
     rb.Push<u64>(0);      // the secure value
 }
 
+void FS_USER::Register(u32 process_id, u64 program_id, const std::string& filepath) {
+    const MediaType media_type = GetMediaTypeFromPath(filepath);
+    program_info_map.insert_or_assign(process_id, ProgramInfo{program_id, media_type};
+    if (media_type == MediaType::GameCard) {
+        current_gamecard_path = filepath;
+    }ƒ
+}
 
-void FS_USER::Register(u32 process_id, u64 program_id, MediaType media_type) {
-    program_info_map[process_id] = ProgramInfo{program_id, media_type};
+std::string FS_USER::GetCurrentGamecardPath() const {
+    return current_gamecard_path;
+}
+
+ResultVal<u16> FS_USER::GetSpecialContentIndexFromGameCard(u64 title_id, SpecialContentType type) {
+    // TODO(B3N30) check if on real 3DS NCSD is checked if partition exists
+
+    if (type > SpecialContentType::DLPChild) {
+        // maybe type 4 is n3ds update/partition 6 but this needs more research
+        // TODO(B3N30): Find correct result code
+        return ResultCode(-1);
+    }
+
+    switch (type) {
+    case SpecialContentType::Update:
+        return MakeResult(static_cast<u16>(NCSDContentIndex::Update));
+    case SpecialContentType::Manual:
+        return MakeResult(static_cast<u16>(NCSDContentIndex::Manual));
+    case SpecialContentType::DLPChild:
+        return MakeResult(static_cast<u16>(NCSDContentIndex::DLP));
+    default:
+        ASSERT(false);
+    }
+}
+
+ResultVal<u16> FS_USER::GetSpecialContentIndexFromTDM(MediaType media_type, u64 title_id,
+                                                      SpecialContentType type) {
+    if (type > SpecialContentType::DLPChild) {
+        // TODO(B3N30): Find correct result code
+        return ResultCode(-1);
+    }
+
+    std::string tmd_path = AM::GetTitleMetadataPath(media_type, title_id);
+
+    FileSys::TitleMetadata tmd;
+    if (tmd.Load(tmd_path) != Loader::ResultStatus::Success || type == SpecialContentType::Update) {
+        // TODO(B3N30): Find correct result code
+        return ResultCode(-1);
+    }
+
+    // TODO(B3N30): Does real 3ds check if content exists in tmd?
+
+    switch (type) {
+    case SpecialContentType::Manual:
+        return MakeResult(static_cast<u16>(FileSys::TMDContentIndex::Manual));
+    case SpecialContentType::DLPChild:
+        return MakeResult(static_cast<u16>(FileSys::TMDContentIndex::DLP));
+    default:
+        ASSERT(false);
+    }
 }
 
 FS_USER::FS_USER(Core::System& system)
@@ -869,7 +951,7 @@ FS_USER::FS_USER(Core::System& system)
         {0x08370040, nullptr, "SetCardSpiBaudRate"},
         {0x08380040, nullptr, "SetCardSpiBusMode"},
         {0x08390000, nullptr, "SendInitializeInfoTo9"},
-        {0x083A0100, nullptr, "GetSpecialContentIndex"},
+        {0x083A0100, &FS_USER::GetSpecialContentIndex, "GetSpecialContentIndex"},
         {0x083B00C2, nullptr, "GetLegacyRomHeader"},
         {0x083C00C2, nullptr, "GetLegacyBannerData"},
         {0x083D0100, nullptr, "CheckAuthorityToAccessExtSaveData"},
