@@ -599,7 +599,7 @@ private:
     void GetSaveDataSecureValue(Kernel::HLERequestContext& ctx);
 
     static ResultVal<u16> GetSpecialContentIndexFromGameCard(u64 title_id, SpecialContentType type);
-    static ResultVal<u16> GetSpecialContentIndexFromTDM(MediaType media_type, u64 title_id,
+    static ResultVal<u16> GetSpecialContentIndexFromTMD(MediaType media_type, u64 title_id,
                                                         SpecialContentType type);
 
     struct ProgramInfo {

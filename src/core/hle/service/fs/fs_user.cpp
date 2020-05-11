@@ -760,7 +760,7 @@ void FS_USER::GetSpecialContentIndex(Kernel::HLERequestContext& ctx) {
     if (media_type == MediaType::GameCard) {
         index = GetSpecialContentIndexFromGameCard(title_id, type);
     } else {
-        index = GetSpecialContentIndexFromTDM(media_type, title_id, type);
+        index = GetSpecialContentIndexFromTMD(media_type, title_id, type);
     }
 
     if (index.Succeeded()) {
@@ -831,10 +831,10 @@ void FS_USER::GetSaveDataSecureValue(Kernel::HLERequestContext& ctx) {
 
 void FS_USER::Register(u32 process_id, u64 program_id, const std::string& filepath) {
     const MediaType media_type = GetMediaTypeFromPath(filepath);
-    program_info_map.insert_or_assign(process_id, ProgramInfo{program_id, media_type};
+    program_info_map.insert_or_assign(process_id, ProgramInfo{program_id, media_type});
     if (media_type == MediaType::GameCard) {
         current_gamecard_path = filepath;
-    }ƒ
+    }
 }
 
 std::string FS_USER::GetCurrentGamecardPath() const {
@@ -862,7 +862,7 @@ ResultVal<u16> FS_USER::GetSpecialContentIndexFromGameCard(u64 title_id, Special
     }
 }
 
-ResultVal<u16> FS_USER::GetSpecialContentIndexFromTDM(MediaType media_type, u64 title_id,
+ResultVal<u16> FS_USER::GetSpecialContentIndexFromTMD(MediaType media_type, u64 title_id,
                                                       SpecialContentType type) {
     if (type > SpecialContentType::DLPChild) {
         // TODO(B3N30): Find correct result code
