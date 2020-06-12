@@ -37,7 +37,8 @@ ArchiveBackend* ArchiveManager::GetArchive(ArchiveHandle handle) {
 }
 
 ResultVal<ArchiveHandle> ArchiveManager::OpenArchive(ArchiveIdCode id_code,
-                                                     FileSys::Path& archive_path, u64 program_id) {
+                                                     const FileSys::Path& archive_path,
+                                                     u64 program_id) {
     LOG_TRACE(Service_FS, "Opening archive with id code 0x{:08X}", static_cast<u32>(id_code));
 
     auto itr = id_code_map.find(id_code);
@@ -91,7 +92,7 @@ ArchiveManager::OpenFileFromArchive(ArchiveHandle archive_handle, const FileSys:
     if (backend.Failed())
         return std::make_tuple(backend.Code(), open_timeout_ns);
 
-    auto file = std::shared_ptr<File>(new File(system.Kernel(), std::move(backend).Unwrap(), path));
+    auto file = std::make_shared<File>(system.Kernel(), std::move(backend).Unwrap(), path);
     return std::make_tuple(MakeResult<std::shared_ptr<File>>(std::move(file)), open_timeout_ns);
 }
 
@@ -184,7 +185,7 @@ ResultVal<std::shared_ptr<Directory>> ArchiveManager::OpenDirectoryFromArchive(
     if (backend.Failed())
         return backend.Code();
 
-    auto directory = std::shared_ptr<Directory>(new Directory(std::move(backend).Unwrap(), path));
+    auto directory = std::make_shared<Directory>(std::move(backend).Unwrap(), path);
     return MakeResult<std::shared_ptr<Directory>>(std::move(directory));
 }
 
@@ -207,7 +208,7 @@ ResultCode ArchiveManager::FormatArchive(ArchiveIdCode id_code,
 }
 
 ResultVal<FileSys::ArchiveFormatInfo> ArchiveManager::GetArchiveFormatInfo(
-    ArchiveIdCode id_code, FileSys::Path& archive_path, u64 program_id) {
+    ArchiveIdCode id_code, const FileSys::Path& archive_path, u64 program_id) {
     auto archive = id_code_map.find(id_code);
     if (archive == id_code_map.end()) {
         return UnimplementedFunction(ErrorModule::FS); // TODO(Subv): Find the right error

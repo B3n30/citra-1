@@ -1013,7 +1013,6 @@ void GMainWindow::BootGame(const QString& filename) {
         mouse_hide_timer.start();
         setMouseTracking(true);
         ui.centralwidget->setMouseTracking(true);
-        ui.menubar->setMouseTracking(true);
     }
 
     // show and hide the render_window to create the context
@@ -1116,7 +1115,6 @@ void GMainWindow::ShutdownGame() {
 
     setMouseTracking(false);
     ui.centralwidget->setMouseTracking(false);
-    ui.menubar->setMouseTracking(false);
 
     // Disable status bar updates
     status_bar_update_timer.stop();
@@ -1695,6 +1693,7 @@ void GMainWindow::OnConfigure() {
     auto old_theme = UISettings::values.theme;
     const int old_input_profile_index = Settings::values.current_input_profile_index;
     const auto old_input_profiles = Settings::values.input_profiles;
+    const auto old_touch_from_button_maps = Settings::values.touch_from_button_maps;
     const bool old_discord_presence = UISettings::values.enable_discord_presence;
     auto result = configureDialog.exec();
     if (result == QDialog::Accepted) {
@@ -1713,15 +1712,14 @@ void GMainWindow::OnConfigure() {
         if (UISettings::values.hide_mouse && emulation_running) {
             setMouseTracking(true);
             ui.centralwidget->setMouseTracking(true);
-            ui.menubar->setMouseTracking(true);
             mouse_hide_timer.start();
         } else {
             setMouseTracking(false);
             ui.centralwidget->setMouseTracking(false);
-            ui.menubar->setMouseTracking(false);
         }
     } else {
         Settings::values.input_profiles = old_input_profiles;
+        Settings::values.touch_from_button_maps = old_touch_from_button_maps;
         Settings::LoadProfile(old_input_profile_index);
     }
 }

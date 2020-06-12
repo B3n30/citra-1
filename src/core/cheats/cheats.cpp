@@ -11,6 +11,7 @@
 #include "core/core.h"
 #include "core/core_timing.h"
 #include "core/hle/kernel/process.h"
+#include "core/hw/gpu.h"
 
 namespace Cheats {
 

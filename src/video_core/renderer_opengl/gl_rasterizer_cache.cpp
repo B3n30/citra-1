@@ -92,9 +92,8 @@ const FormatTuple& GetFormatTuple(PixelFormat pixel_format) {
  * texture to a framebuffer.
  * Originally from https://github.com/apitrace/apitrace/blob/master/retrace/glstate_images.cpp
  */
-static inline void GetTexImageOES(GLenum target, GLint level, GLenum format, GLenum type,
-                                  GLint height, GLint width, GLint depth, GLubyte* pixels,
-                                  GLuint size) {
+static void GetTexImageOES(GLenum target, GLint level, GLenum format, GLenum type, GLint height,
+                           GLint width, GLint depth, GLubyte* pixels, std::size_t size) {
     memset(pixels, 0x80, size);
 
     OpenGLState cur_state = OpenGLState::GetCurState();
@@ -162,7 +161,7 @@ static inline void GetTexImageOES(GLenum target, GLint level, GLenum format, GLe
 }
 
 template <typename Map, typename Interval>
-constexpr auto RangeFromInterval(Map& map, const Interval& interval) {
+static constexpr auto RangeFromInterval(Map& map, const Interval& interval) {
     return boost::make_iterator_range(map.equal_range(interval));
 }
 
@@ -174,8 +173,8 @@ static void MortonCopyTile(u32 stride, u8* tile_buffer, u8* gl_buffer) {
         for (u32 x = 0; x < 8; ++x) {
             u8* tile_ptr = tile_buffer + VideoCore::MortonInterleave(x, y) * bytes_per_pixel;
             u8* gl_ptr = gl_buffer + ((7 - y) * stride + x) * gl_bytes_per_pixel;
-            if (morton_to_gl) {
-                if (format == PixelFormat::D24S8) {
+            if constexpr (morton_to_gl) {
+                if constexpr (format == PixelFormat::D24S8) {
                     gl_ptr[0] = tile_ptr[3];
                     std::memcpy(gl_ptr + 1, tile_ptr, 3);
                 } else if (format == PixelFormat::RGBA8 && GLES) {
@@ -193,7 +192,7 @@ static void MortonCopyTile(u32 stride, u8* tile_buffer, u8* gl_buffer) {
                     std::memcpy(gl_ptr, tile_ptr, bytes_per_pixel);
                 }
             } else {
-                if (format == PixelFormat::D24S8) {
+                if constexpr (format == PixelFormat::D24S8) {
                     std::memcpy(tile_ptr, gl_ptr + 1, 3);
                     tile_ptr[3] = gl_ptr[0];
                 } else {
@@ -692,37 +691,38 @@ void CachedSurface::FlushGLBuffer(PAddr flush_start, PAddr flush_end) {
     }
 }
 
-bool CachedSurface::LoadCustomTexture(u64 tex_hash, Core::CustomTexInfo& tex_info) {
-    bool result = false;
+bool CachedSurface::LoadCustomTexture(u64 tex_hash) {
     auto& custom_tex_cache = Core::System::GetInstance().CustomTexCache();
     const auto& image_interface = Core::System::GetInstance().GetImageInterface();
 
     if (custom_tex_cache.IsTextureCached(tex_hash)) {
-        tex_info = custom_tex_cache.LookupTexture(tex_hash);
-        result = true;
-    } else {
-        if (custom_tex_cache.CustomTextureExists(tex_hash)) {
-            const auto& path_info = custom_tex_cache.LookupTexturePathInfo(tex_hash);
-            if (image_interface->DecodePNG(tex_info.tex, tex_info.width, tex_info.height,
-                                           path_info.path)) {
-                std::bitset<32> width_bits(tex_info.width);
-                std::bitset<32> height_bits(tex_info.height);
-                if (width_bits.count() == 1 && height_bits.count() == 1) {
-                    LOG_DEBUG(Render_OpenGL, "Loaded custom texture from {}", path_info.path);
-                    Common::FlipRGBA8Texture(tex_info.tex, tex_info.width, tex_info.height);
-                    custom_tex_cache.CacheTexture(tex_hash, tex_info.tex, tex_info.width,
-                                                  tex_info.height);
-                    result = true;
-                } else {
-                    LOG_ERROR(Render_OpenGL, "Texture {} size is not a power of 2", path_info.path);
-                }
-            } else {
-                LOG_ERROR(Render_OpenGL, "Failed to load custom texture {}", path_info.path);
-            }
-        }
+        custom_tex_info = custom_tex_cache.LookupTexture(tex_hash);
+        return true;
     }
 
-    return result;
+    if (!custom_tex_cache.CustomTextureExists(tex_hash)) {
+        return false;
+    }
+
+    const auto& path_info = custom_tex_cache.LookupTexturePathInfo(tex_hash);
+    if (!image_interface->DecodePNG(custom_tex_info.tex, custom_tex_info.width,
+                                    custom_tex_info.height, path_info.path)) {
+        LOG_ERROR(Render_OpenGL, "Failed to load custom texture {}", path_info.path);
+        return false;
+    }
+
+    const std::bitset<32> width_bits(custom_tex_info.width);
+    const std::bitset<32> height_bits(custom_tex_info.height);
+    if (width_bits.count() != 1 || height_bits.count() != 1) {
+        LOG_ERROR(Render_OpenGL, "Texture {} size is not a power of 2", path_info.path);
+        return false;
+    }
+
+    LOG_DEBUG(Render_OpenGL, "Loaded custom texture from {}", path_info.path);
+    Common::FlipRGBA8Texture(custom_tex_info.tex, custom_tex_info.width, custom_tex_info.height);
+    custom_tex_cache.CacheTexture(tex_hash, custom_tex_info.tex, custom_tex_info.width,
+                                  custom_tex_info.height);
+    return true;
 }
 
 void CachedSurface::DumpTexture(GLuint target_tex, u64 tex_hash) {
@@ -788,14 +788,15 @@ void CachedSurface::UploadGLTexture(Common::Rectangle<u32> rect, GLuint read_fb_
 
     ASSERT(gl_buffer.size() == width * height * GetGLBytesPerPixel(pixel_format));
 
-    std::string dump_path; // Has to be declared here for logging later
     u64 tex_hash = 0;
 
-    if (Settings::values.dump_textures || Settings::values.custom_textures)
+    if (Settings::values.dump_textures || Settings::values.custom_textures) {
         tex_hash = Common::ComputeHash64(gl_buffer.data(), gl_buffer.size());
+    }
 
-    if (Settings::values.custom_textures)
-        is_custom = LoadCustomTexture(tex_hash, custom_tex_info);
+    if (Settings::values.custom_textures) {
+        is_custom = LoadCustomTexture(tex_hash);
+    }
 
     // Load data from memory to the surface
     GLint x0 = static_cast<GLint>(rect.left);
@@ -967,25 +968,25 @@ enum MatchFlags {
     TexCopy = 1 << 5  // Surface that will match a display transfer "texture copy" parameters
 };
 
-constexpr MatchFlags operator|(MatchFlags lhs, MatchFlags rhs) {
+static constexpr MatchFlags operator|(MatchFlags lhs, MatchFlags rhs) {
     return static_cast<MatchFlags>(static_cast<int>(lhs) | static_cast<int>(rhs));
 }
 
 /// Get the best surface match (and its match type) for the given flags
 template <MatchFlags find_flags>
-Surface FindMatch(const SurfaceCache& surface_cache, const SurfaceParams& params,
-                  ScaleMatch match_scale_type,
-                  std::optional<SurfaceInterval> validate_interval = {}) {
+static Surface FindMatch(const SurfaceCache& surface_cache, const SurfaceParams& params,
+                         ScaleMatch match_scale_type,
+                         std::optional<SurfaceInterval> validate_interval = std::nullopt) {
     Surface match_surface = nullptr;
     bool match_valid = false;
     u32 match_scale = 0;
     SurfaceInterval match_interval{};
 
-    for (auto& pair : RangeFromInterval(surface_cache, params.GetInterval())) {
-        for (auto& surface : pair.second) {
-            bool res_scale_matched = match_scale_type == ScaleMatch::Exact
-                                         ? (params.res_scale == surface->res_scale)
-                                         : (params.res_scale <= surface->res_scale);
+    for (const auto& pair : RangeFromInterval(surface_cache, params.GetInterval())) {
+        for (const auto& surface : pair.second) {
+            const bool res_scale_matched = match_scale_type == ScaleMatch::Exact
+                                               ? (params.res_scale == surface->res_scale)
+                                               : (params.res_scale <= surface->res_scale);
             // validity will be checked in GetCopyableInterval
             bool is_valid =
                 find_flags & MatchFlags::Copy
@@ -1301,17 +1302,18 @@ Surface RasterizerCacheOpenGL::GetTextureSurface(const Pica::Texture::TextureInf
         state.draw.read_framebuffer = read_framebuffer.handle;
         state.draw.draw_framebuffer = draw_framebuffer.handle;
         state.ResetTexture(surface->texture.handle);
-        SurfaceParams params = *surface;
+        SurfaceParams surface_params = *surface;
         for (u32 level = 1; level <= max_level; ++level) {
             // In PICA all mipmap levels are stored next to each other
-            params.addr += params.width * params.height * params.GetFormatBpp() / 8;
-            params.width /= 2;
-            params.height /= 2;
-            params.stride = 0; // reset stride and let UpdateParams re-initialize it
-            params.UpdateParams();
+            surface_params.addr +=
+                surface_params.width * surface_params.height * surface_params.GetFormatBpp() / 8;
+            surface_params.width /= 2;
+            surface_params.height /= 2;
+            surface_params.stride = 0; // reset stride and let UpdateParams re-initialize it
+            surface_params.UpdateParams();
             auto& watcher = surface->level_watchers[level - 1];
             if (!watcher || !watcher->Get()) {
-                auto level_surface = GetSurface(params, ScaleMatch::Ignore, true);
+                auto level_surface = GetSurface(surface_params, ScaleMatch::Ignore, true);
                 if (level_surface) {
                     watcher = level_surface->CreateWatcher();
                 } else {
@@ -1338,7 +1340,7 @@ Surface RasterizerCacheOpenGL::GetTextureSurface(const Pica::Texture::TextureInf
                                            GL_TEXTURE_2D, 0, 0);
 
                     auto src_rect = level_surface->GetScaledRect();
-                    auto dst_rect = params.GetScaledRect();
+                    auto dst_rect = surface_params.GetScaledRect();
                     glBlitFramebuffer(src_rect.left, src_rect.bottom, src_rect.right, src_rect.top,
                                       dst_rect.left, dst_rect.bottom, dst_rect.right, dst_rect.top,
                                       GL_COLOR_BUFFER_BIT, GL_LINEAR);
@@ -1596,12 +1598,12 @@ void RasterizerCacheOpenGL::DuplicateSurface(const Surface& src_surface,
     dest_surface->invalid_regions += src_surface->invalid_regions;
 
     SurfaceRegions regions;
-    for (auto& pair : RangeFromInterval(dirty_regions, src_surface->GetInterval())) {
+    for (const auto& pair : RangeFromInterval(dirty_regions, src_surface->GetInterval())) {
         if (pair.second == src_surface) {
             regions += pair.first;
         }
     }
-    for (auto& interval : regions) {
+    for (const auto& interval : regions) {
         dirty_regions.set({interval, dest_surface});
     }
 }
@@ -1774,7 +1776,6 @@ void RasterizerCacheOpenGL::ClearAll(bool flush) {
     // Unmark all of the marked pages
     for (auto& pair : RangeFromInterval(cached_pages, flush_interval)) {
         const auto interval = pair.first & flush_interval;
-        const int count = pair.second;
 
         const PAddr interval_start_addr = boost::icl::first(interval) << Memory::PAGE_BITS;
         const PAddr interval_end_addr = boost::icl::last_next(interval) << Memory::PAGE_BITS;
@@ -1840,8 +1841,8 @@ void RasterizerCacheOpenGL::InvalidateRegion(PAddr addr, u32 size, const Surface
         region_owner->invalid_regions.erase(invalid_interval);
     }
 
-    for (auto& pair : RangeFromInterval(surface_cache, invalid_interval)) {
-        for (auto& cached_surface : pair.second) {
+    for (const auto& pair : RangeFromInterval(surface_cache, invalid_interval)) {
+        for (const auto& cached_surface : pair.second) {
             if (cached_surface == region_owner)
                 continue;
 
@@ -1870,7 +1871,7 @@ void RasterizerCacheOpenGL::InvalidateRegion(PAddr addr, u32 size, const Surface
     else
         dirty_regions.erase(invalid_interval);
 
-    for (auto& remove_surface : remove_surfaces) {
+    for (const auto& remove_surface : remove_surfaces) {
         if (remove_surface == region_owner) {
             Surface expanded_surface = FindMatch<MatchFlags::SubRect | MatchFlags::Invalid>(
                 surface_cache, *region_owner, ScaleMatch::Ignore);
@@ -1932,7 +1933,7 @@ void RasterizerCacheOpenGL::UpdatePagesCachedCount(PAddr addr, u32 size, int del
     if (delta > 0)
         cached_pages.add({pages_interval, delta});
 
-    for (auto& pair : RangeFromInterval(cached_pages, pages_interval)) {
+    for (const auto& pair : RangeFromInterval(cached_pages, pages_interval)) {
         const auto interval = pair.first & pages_interval;
         const int count = pair.second;
 

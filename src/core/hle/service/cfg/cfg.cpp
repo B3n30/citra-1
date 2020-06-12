@@ -3,6 +3,7 @@
 // Refer to the license.txt file included.
 
 #include <algorithm>
+#include <array>
 #include <tuple>
 #include <boost/serialization/array.hpp>
 #include <boost/serialization/unique_ptr.hpp>
@@ -40,7 +41,7 @@ void Module::serialize(Archive& ar, const unsigned int) {
 SERIALIZE_IMPL(Module)
 
 /// The maximum number of block entries that can exist in the config file
-static const u32 CONFIG_FILE_MAX_BLOCK_ENTRIES = 1479;
+constexpr u32 CONFIG_FILE_MAX_BLOCK_ENTRIES = 1479;
 
 namespace {
 
@@ -74,6 +75,7 @@ enum ConfigBlockID {
     StateNameBlockID = 0x000B0002,
     EULAVersionBlockID = 0x000D0000,
     ConsoleModelBlockID = 0x000F0004,
+    DebugModeBlockID = 0x00130000,
 };
 
 struct UsernameBlock {
@@ -102,30 +104,30 @@ struct ConsoleCountryInfo {
 static_assert(sizeof(ConsoleCountryInfo) == 4, "ConsoleCountryInfo must be exactly 4 bytes");
 } // namespace
 
-static const EULAVersion MAX_EULA_VERSION = {0x7F, 0x7F};
-static const ConsoleModelInfo CONSOLE_MODEL_OLD = {NINTENDO_3DS_XL, {0, 0, 0}};
-static const ConsoleModelInfo CONSOLE_MODEL_NEW = {NEW_NINTENDO_3DS_XL, {0, 0, 0}};
-static const u8 CONSOLE_LANGUAGE = LANGUAGE_EN;
-static const UsernameBlock CONSOLE_USERNAME_BLOCK = {u"CITRA", 0, 0};
-static const BirthdayBlock PROFILE_BIRTHDAY = {3, 25}; // March 25th, 2014
-static const u8 SOUND_OUTPUT_MODE = SOUND_SURROUND;
-static const u8 UNITED_STATES_COUNTRY_ID = 49;
+constexpr EULAVersion MAX_EULA_VERSION{0x7F, 0x7F};
+constexpr ConsoleModelInfo CONSOLE_MODEL_OLD{NINTENDO_3DS_XL, {0, 0, 0}};
+constexpr ConsoleModelInfo CONSOLE_MODEL_NEW{NEW_NINTENDO_3DS_XL, {0, 0, 0}};
+constexpr u8 CONSOLE_LANGUAGE = LANGUAGE_EN;
+constexpr UsernameBlock CONSOLE_USERNAME_BLOCK{u"CITRA", 0, 0};
+constexpr BirthdayBlock PROFILE_BIRTHDAY{3, 25}; // March 25th, 2014
+constexpr u8 SOUND_OUTPUT_MODE = SOUND_SURROUND;
+constexpr u8 UNITED_STATES_COUNTRY_ID = 49;
 /// TODO(Subv): Find what the other bytes are
-static const ConsoleCountryInfo COUNTRY_INFO = {{0, 0, 0}, UNITED_STATES_COUNTRY_ID};
+constexpr ConsoleCountryInfo COUNTRY_INFO{{0, 0, 0}, UNITED_STATES_COUNTRY_ID};
 
 /**
  * TODO(Subv): Find out what this actually is, these values fix some NaN uniforms in some games,
  * for example Nintendo Zone
  * Thanks Normmatt for providing this information
  */
-static const std::array<float, 8> STEREO_CAMERA_SETTINGS = {
+constexpr std::array<float, 8> STEREO_CAMERA_SETTINGS = {
     62.0f, 289.0f, 76.80000305175781f, 46.08000183105469f,
     10.0f, 5.0f,   55.58000183105469f, 21.56999969482422f,
 };
 static_assert(sizeof(STEREO_CAMERA_SETTINGS) == 0x20,
               "STEREO_CAMERA_SETTINGS must be exactly 0x20 bytes");
 
-static const std::vector<u8> cfg_system_savedata_id = {
+constexpr std::array<u8, 8> cfg_system_savedata_id{
     0x00, 0x00, 0x00, 0x00, 0x17, 0x00, 0x01, 0x00,
 };
 
@@ -464,9 +466,7 @@ ResultCode Module::FormatConfig() {
     if (!res.IsSuccess())
         return res;
 
-    u32 random_number;
-    u64 console_id;
-    GenerateConsoleUniqueId(random_number, console_id);
+    const auto [random_number, console_id] = GenerateConsoleUniqueId();
 
     u64_le console_id_le = console_id;
     res = CreateConfigInfoBlk(ConsoleUniqueID1BlockID, sizeof(console_id_le), 0xE, &console_id_le);
@@ -539,6 +539,11 @@ ResultCode Module::FormatConfig() {
 
     res = CreateConfigInfoBlk(ConsoleModelBlockID, sizeof(CONSOLE_MODEL_OLD), 0xC,
                               &CONSOLE_MODEL_OLD);
+    if (!res.IsSuccess())
+        return res;
+
+    // 0x00130000 - DebugMode (0x100 for debug mode)
+    res = CreateConfigInfoBlk(DebugModeBlockID, 0x4, 0xE, zero_buffer);
     if (!res.IsSuccess())
         return res;
 
@@ -721,13 +726,18 @@ u8 Module::GetCountryCode() {
     return block.country_code;
 }
 
-void Module::GenerateConsoleUniqueId(u32& random_number, u64& console_id) {
+std::pair<u32, u64> Module::GenerateConsoleUniqueId() const {
     CryptoPP::AutoSeededRandomPool rng;
-    random_number = rng.GenerateWord32(0, 0xFFFF);
+    const u32 random_number = rng.GenerateWord32(0, 0xFFFF);
+
     u64_le local_friend_code_seed;
     rng.GenerateBlock(reinterpret_cast<CryptoPP::byte*>(&local_friend_code_seed),
                       sizeof(local_friend_code_seed));
-    console_id = (local_friend_code_seed & 0x3FFFFFFFF) | (static_cast<u64>(random_number) << 48);
+
+    const u64 console_id =
+        (local_friend_code_seed & 0x3FFFFFFFF) | (static_cast<u64>(random_number) << 48);
+
+    return std::make_pair(random_number, console_id);
 }
 
 ResultCode Module::SetConsoleUniqueId(u32 random_number, u64 console_id) {
