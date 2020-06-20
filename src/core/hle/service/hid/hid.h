@@ -8,6 +8,7 @@
 #include <atomic>
 #include <cstddef>
 #include <memory>
+#include <vector>
 #include <boost/serialization/version.hpp>
 #include "common/bit_field.h"
 #include "common/common_funcs.h"
@@ -318,6 +319,14 @@ private:
     // Storing this here was necessary for emulation specific tasks like cheats or scripting.
     PadState state;
 
+    // xperia64: These are used to averate the previous N raw circle pad inputs with the current raw
+    // input to simulate the sluggishness of a real 3DS circle pad
+    // The Theatrhythm games rely on the circle pad being fairly slow to move, and from empircal
+    // testing, need a minimum of 3 averaging to not drop inputs
+    static constexpr s16 CIRCLE_PAD_AVERAGING = 3;
+    std::vector<s16> circle_pad_old_x = std::vector<s16>(CIRCLE_PAD_AVERAGING - 1, 0);
+    std::vector<s16> circle_pad_old_y = std::vector<s16>(CIRCLE_PAD_AVERAGING - 1, 0);
+
     u32 next_pad_index = 0;
     u32 next_touch_index = 0;
     u32 next_accelerometer_index = 0;
@@ -336,6 +345,7 @@ private:
     std::unique_ptr<Input::AnalogDevice> circle_pad;
     std::unique_ptr<Input::MotionDevice> motion_device;
     std::unique_ptr<Input::TouchDevice> touch_device;
+    std::unique_ptr<Input::TouchDevice> touch_btn_device;
 
     template <class Archive>
     void serialize(Archive& ar, const unsigned int);
