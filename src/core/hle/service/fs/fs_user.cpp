@@ -845,7 +845,7 @@ ResultVal<u16> FS_USER::GetSpecialContentIndexFromGameCard(u64 title_id, Special
     // TODO(B3N30) check if on real 3DS NCSD is checked if partition exists
 
     if (type > SpecialContentType::DLPChild) {
-        // maybe type 4 is n3ds update/partition 6 but this needs more research
+        // Maybe type 4 is New 3DS update/partition 6 but this needs more research
         // TODO(B3N30): Find correct result code
         return ResultCode(-1);
     }
