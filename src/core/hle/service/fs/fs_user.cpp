@@ -877,7 +877,7 @@ ResultVal<u16> FS_USER::GetSpecialContentIndexFromTMD(MediaType media_type, u64 
         return ResultCode(-1);
     }
 
-    // TODO(B3N30): Does real 3ds check if content exists in tmd?
+    // TODO(B3N30): Does real 3DS check if content exists in TMD?
 
     switch (type) {
     case SpecialContentType::Manual:
