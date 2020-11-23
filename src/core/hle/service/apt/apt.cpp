@@ -277,7 +277,7 @@ void Module::APTInterface::GetWirelessRebootInfo(Kernel::HLERequestContext& ctx)
     IPC::RequestParser rp(ctx, 0x45, 1, 0); // 0x00450040
     u32 size = rp.Pop<u32>();
 
-    LOG_WARNING(Service_APT, "(STUBBED) called size={:08X}", size);
+    LOG_WARNING(Service_APT, "called size={:08X}", size);
 
     IPC::RequestBuilder rb = rp.MakeBuilder(1, 2);
     rb.Push(RESULT_SUCCESS);
